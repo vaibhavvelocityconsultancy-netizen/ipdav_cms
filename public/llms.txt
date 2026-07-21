@@ -1,0 +1,39 @@
+# AI & LLM Content Index
+
+**Generated:** 2026-07-14T06:43:39.389Z
+**Site:** http://localhost:3000
+
+---
+
+## Robots.txt Rules
+
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api
+Disallow: /login
+Disallow: /signup
+
+---
+
+## Pages (1)
+
+- **Home** (Updated: 2026-07-13)
+  http://localhost:3000
+
+---
+
+## Posts (0)
+
+(No posts)
+
+---
+
+## Summary
+
+- Total Pages: 1
+- Total Posts: 0
+- Total Items: 1
+- Site: http://localhost:3000
