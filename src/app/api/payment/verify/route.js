@@ -7,17 +7,17 @@ import { requireAuth } from "@/src/app/lib/withPermission";
 export const POST = asyncHandler(async (req) => {
   const { user } = await requireAuth();
 
-  const { paymentIntentId, courseId } = await req.json();
+  const { paypalOrderId, courseId } = await req.json();
 
-  if (!paymentIntentId) {
-    throw new ApiError(400, "Missing payment intent ID");
+  if (!paypalOrderId) {
+    throw new ApiError(400, "Missing PayPal order ID");
   }
 
   if (!courseId) throw new ApiError(400, "Course ID is required");
 
   const enrollment = await verifyCoursePayment(
     user.id,
-    { paymentIntentId },
+    { paypalOrderId },
     courseId,
   );
 

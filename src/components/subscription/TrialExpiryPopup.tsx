@@ -17,7 +17,7 @@
 
 import { AlertCircle, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface TrialExpiryPopupProps {
   show: boolean;
@@ -28,11 +28,18 @@ export function TrialExpiryPopup({ show, onDismiss }: TrialExpiryPopupProps) {
   const router = useRouter();
   const [dismissed, setDismissed] = useState(false);
 
+  useEffect(() => {
+    if (show) {
+      setDismissed(false);
+    }
+  }, [show]);
+
   if (!show || dismissed) return null;
 
   const handleSubscribe = () => {
-    router.push("/admin/plans");
+    router.push("/subscription/plans");
   };
+
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -64,7 +71,8 @@ export function TrialExpiryPopup({ show, onDismiss }: TrialExpiryPopupProps) {
 
         {/* Description */}
         <p className="text-center text-gray-600 mb-6">
-          Subscribe to continue watching premium content and access all course materials.
+          Subscribe to continue watching premium content and access all course
+          materials.
         </p>
 
         {/* Actions */}

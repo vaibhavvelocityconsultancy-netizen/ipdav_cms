@@ -1,5 +1,6 @@
 import { prisma } from "../../prisma.js";
 import { requirePermission } from "../../withPermission.js";
+import { getUserCurrentAccess } from "../course/subscription.service.js";
 
 // ──────────────────────────────────────────────
 // DASHBOARD DATA
@@ -82,43 +83,35 @@ export async function getDashboardData() {
 }
 
 export async function getSubscriberDashboard(userId) {
-  const enrollments = await prisma.courseEnrollment.findMany({
-    where: {
-      userId: Number(userId),
-    },
-    include: {
-      course: {
-        select: {
-          id: true,
-          title: true,
-          thumbnail: true,
-          instructor: true,
-          level: true,
-          billingCycle: true,
-          price: true,
-        },
-      },
-    },
-    orderBy: {
-      purchasedAt: "desc",
-    },
-  });
+  const access = await getUserCurrentAccess(userId);
 
-  const courses = enrollments.map((enrollment) => ({
-    enrollmentId: enrollment.id,
-    purchasedAt: enrollment.purchasedAt,
-    billingCycle: enrollment.billingCycle,
-    ...enrollment.course,
-  }));
+  const { type, record } = access;
+  const plan = record?.plan ?? null;
+
+  let trialDaysRemaining = null;
+  if (type === "subscription" && record.status === "TRIALING") {
+    const now = Date.now();
+    const end = new Date(record.trialEndsAt).getTime();
+    trialDaysRemaining = Math.max(
+      0,
+      Math.floor((end - now) / (1000 * 60 * 60 * 24)),
+    );
+  }
 
   return {
-    stats: {
-      enrolledCourses: courses.length,
-      activeCourses: courses.length,
-      completedCourses: 0, // later
-    },
-    continueLearning: courses[0] || null,
-    recentPurchases: courses.slice(0, 5),
-    courses,
+    accessType: type, // "subscription" | "enrollment" | null
+    plan: plan
+      ? {
+          id: plan.id,
+          title: plan.title,
+          price: plan.price,
+          billingCycle: record.billingCycle,
+        }
+      : null,
+    status: record?.status ?? null, // TRIALING | ACTIVE | EXPIRED | CANCELED (enrollment has no status)
+    trialDaysRemaining,
+    trialEndsAt: record?.trialEndsAt ?? null,
+    currentPeriodEnd: record?.currentPeriodEnd ?? null,
+    startsAt: record?.startsAt ?? record?.purchasedAt ?? null,
   };
 }

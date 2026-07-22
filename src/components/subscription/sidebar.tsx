@@ -1,4 +1,4 @@
-import { BookOpen, Home, LogOut, Receipt, User, X } from "lucide-react";
+import { BookOpen, Home, LogOut, Plane, Receipt, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 
@@ -21,14 +21,14 @@ export function SubscriberSidebar({
       icon: Home,
     },
     {
-      href: "/subscription/courses",
-      label: "My Courses",
-      icon: BookOpen,
-    },
-    {
       href: "/subscription/file-sharing",
       label: "File Sharing System",
       icon: BookOpen,
+    },
+    {
+      href: "/subscription/plans",
+      label: "My Plans",
+      icon: Plane,
     },
     {
       href: "/subscription/billing",

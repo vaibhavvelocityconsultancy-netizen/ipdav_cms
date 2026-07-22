@@ -1,23 +1,35 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Check, Plus, X, Star, Loader2 } from "lucide-react";
+import { 
+  Check, 
+  Plus, 
+  X, 
+  Star, 
+  Loader2, 
+  ChevronUp, 
+  ChevronDown,
+  GripVertical 
+} from "lucide-react";
 
 type BillingCycle = "MONTHLY" | "YEARLY" | "LIFETIME";
 
 interface Feature {
   id: string;
   title: string;
+  sortOrder?: number;
 }
 
 interface Plan {
   id: string;
   title: string;
   tagline: string;
+  trialDays: number | null;
   description: string;
   price: number;
   billingCycle: BillingCycle;
   isFeatured: boolean;
+  sortOrder: number;
   features: Feature[];
 }
 
@@ -44,6 +56,8 @@ const emptyDraft = {
   price: "0",
   billingCycle: "MONTHLY" as BillingCycle,
   isFeatured: false,
+  trialDays: "",
+  sortOrder: "0",
 };
 
 export default function PlanManagementPage() {
@@ -55,6 +69,7 @@ export default function PlanManagementPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
@@ -63,7 +78,11 @@ export default function PlanManagementPage() {
       const res = await fetch("/api/plans");
       if (!res.ok) throw new Error("Failed to load plans");
       const data = await res.json();
-      setPlans(data.data ?? []);
+      // Sort plans by sortOrder
+      const sortedPlans = (data.data ?? []).sort((a: Plan, b: Plan) => 
+        (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      );
+      setPlans(sortedPlans);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -86,6 +105,60 @@ export default function PlanManagementPage() {
     setFeatures((prev) => prev.filter((f) => f.id !== id));
   }
 
+  function moveFeatureUp(index: number) {
+    if (index === 0) return;
+    const newFeatures = [...features];
+    [newFeatures[index], newFeatures[index - 1]] = [newFeatures[index - 1], newFeatures[index]];
+    setFeatures(newFeatures);
+  }
+
+  function moveFeatureDown(index: number) {
+    if (index === features.length - 1) return;
+    const newFeatures = [...features];
+    [newFeatures[index], newFeatures[index + 1]] = [newFeatures[index + 1], newFeatures[index]];
+    setFeatures(newFeatures);
+  }
+
+  // Move plan up in the list
+  function movePlanUp(index: number) {
+    if (index === 0) return;
+    const newPlans = [...plans];
+    [newPlans[index], newPlans[index - 1]] = [newPlans[index - 1], newPlans[index]];
+    setPlans(newPlans);
+    updateSortOrders(newPlans);
+  }
+
+  // Move plan down in the list
+  function movePlanDown(index: number) {
+    if (index === plans.length - 1) return;
+    const newPlans = [...plans];
+    [newPlans[index], newPlans[index + 1]] = [newPlans[index + 1], newPlans[index]];
+    setPlans(newPlans);
+    updateSortOrders(newPlans);
+  }
+
+  // Update sort orders in the database
+  async function updateSortOrders(updatedPlans: Plan[]) {
+    setReordering(true);
+    try {
+      // Update each plan's sortOrder
+      for (let i = 0; i < updatedPlans.length; i++) {
+        await fetch(`/api/plans/${updatedPlans[i].id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: i + 1 }),
+        });
+      }
+      // Reload plans to ensure consistency
+      await loadPlans();
+    } catch (err) {
+      console.error("Failed to update sort orders:", err);
+      setError("Failed to reorder plans. Please try again.");
+    } finally {
+      setReordering(false);
+    }
+  }
+
   function resetForm() {
     setDraft(emptyDraft);
     setFeatures([]);
@@ -105,9 +178,11 @@ export default function PlanManagementPage() {
         .trim()
         .replace(/[^a-z0-9]+/g, "-"),
       description: draft.description,
+      sortOrder: Number(draft.sortOrder) || (plans.length + 1),
       price: Number(draft.price) || 0,
       billingCycle: draft.billingCycle,
       isFeatured: draft.isFeatured,
+      trialDays: draft.trialDays === "" ? null : Number(draft.trialDays),
       features: features.map((f, i) => ({ title: f.title, sortOrder: i })),
     };
 
@@ -137,13 +212,14 @@ export default function PlanManagementPage() {
 
   function handleEdit(plan: Plan) {
     setDraft({
-      id: plan.id,
       title: plan.title,
+      tagline: plan.tagline,
       description: plan.description,
       price: String(plan.price),
       billingCycle: plan.billingCycle,
       isFeatured: plan.isFeatured,
-      tagline: plan.tagline,
+      sortOrder: String(plan.sortOrder ?? 0),
+      trialDays: plan.trialDays?.toString() ?? "",
     });
     setFeatures(plan.features);
     setEditingId(plan.id);
@@ -256,6 +332,21 @@ export default function PlanManagementPage() {
                   <option value="LIFETIME">Lifetime</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Trial Days{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="number"
+                  value={draft.trialDays}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, trialDays: e.target.value }))
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="Uses global default"
+                />
+              </div>
             </div>
 
             <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -291,15 +382,31 @@ export default function PlanManagementPage() {
                 </button>
               </div>
               <div className="space-y-1.5">
-                {features.map((f) => (
+                {features.map((f, index) => (
                   <div
                     key={f.id}
                     className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-1.5"
                   >
                     <span className="text-sm text-gray-700">{f.title}</span>
-                    <button onClick={() => removeFeature(f.id)}>
-                      <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => moveFeatureUp(index)}
+                        disabled={index === 0}
+                        className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => moveFeatureDown(index)}
+                        disabled={index === features.length - 1}
+                        className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => removeFeature(f.id)}>
+                        <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -325,11 +432,19 @@ export default function PlanManagementPage() {
             </div>
           </div>
 
-          {/* Existing plans list */}
+          {/* Existing plans list with Move Up/Down buttons */}
           <div className="mt-8 border-t border-gray-100 pt-6">
-            <p className="text-sm font-semibold text-gray-700 mb-3">
-              Existing Plans {!loading && `(${plans.length})`}
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-gray-700">
+                Existing Plans {!loading && `(${plans.length})`}
+              </p>
+              {reordering && (
+                <span className="text-xs text-blue-600 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Reordering...
+                </span>
+              )}
+            </div>
             {loading ? (
               <div className="flex justify-center py-6">
                 <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
@@ -338,29 +453,60 @@ export default function PlanManagementPage() {
               <p className="text-sm text-gray-400">No plans yet</p>
             ) : (
               <div className="space-y-2">
-                {plans.map((p) => (
+                {plans.map((p, index) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+                    className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 hover:border-gray-200 transition-colors"
                   >
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {p.title}
-                      </span>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {formatUSD(p.price)} {cycleLabel(p.billingCycle)}
-                      </span>
+                    <div className="flex items-center gap-3 flex-1">
+                      {/* Drag handle (visual only) */}
+                      <GripVertical className="w-4 h-4 text-gray-300" />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {p.title}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {formatUSD(p.price)} {cycleLabel(p.billingCycle)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-1">
+                      {/* Move Up Button */}
+                      <button
+                        onClick={() => movePlanUp(index)}
+                        disabled={index === 0 || reordering}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move up"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      
+                      {/* Move Down Button */}
+                      <button
+                        onClick={() => movePlanDown(index)}
+                        disabled={index === plans.length - 1 || reordering}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move down"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+
+                      {/* Order indicator */}
+                      <span className="text-xs text-gray-400 mx-1">
+                        #{index + 1}
+                      </span>
+
+                      <div className="w-px h-6 bg-gray-200 mx-1" />
+                      
                       <button
                         onClick={() => handleEdit(p)}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-blue-600 hover:underline px-2 py-1"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(p.id)}
-                        className="text-xs text-red-600 hover:underline"
+                        className="text-xs text-red-600 hover:underline px-2 py-1"
                       >
                         Delete
                       </button>

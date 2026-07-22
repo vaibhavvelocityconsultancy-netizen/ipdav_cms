@@ -118,7 +118,7 @@ export async function createOrder(input) {
     shippingAddress,
     billingAddress,
     couponCode,
-    paymentMethod = "STRIPE",
+    paymentMethod = "PAYPAL",
   } = input;
 
   if (!items?.length) throw new Error("Order must have at least one item");
@@ -278,7 +278,7 @@ export async function updateOrderStatus(id, status) {
   return order;
 }
 
-export async function updatePaymentStatus(id, paymentStatus, stripeData = {}) {
+export async function updatePaymentStatus(id, paymentStatus) {
   await requirePermission("orders_manage");
 
   const session = await requireAuth();
@@ -291,8 +291,6 @@ export async function updatePaymentStatus(id, paymentStatus, stripeData = {}) {
     where: { id },
     data: {
       paymentStatus,
-      stripeSessionId: stripeData.sessionId ?? undefined,
-      stripePaymentIntentId: stripeData.paymentIntentId ?? undefined,
       status: paymentStatus === "PAID" ? "PROCESSING" : undefined,
     },
   });

@@ -55,7 +55,9 @@ export default function ModuleRow({
 
   // Only allow materials management for saved modules (need a numeric id)
   const savedModuleId =
-    module.id && !String(module.id).startsWith("temp-") ? Number(module.id) : null;
+    module.id && !String(module.id).startsWith("temp-")
+      ? Number(module.id)
+      : null;
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes} min`;
@@ -107,13 +109,6 @@ export default function ModuleRow({
               <GripVertical className="h-4 w-4 text-muted-foreground ml-1" />
             </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium truncate">{module.title}</span>
-              <VideoTypeBadge type={module.videoType} />
-            </div>
-          </div>
-        </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium truncate">{module.title}</span>

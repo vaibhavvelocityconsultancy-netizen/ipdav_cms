@@ -6,8 +6,9 @@ import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { createSubscription } from "@/src/app/lib/services/course/subscription.service";
 import { createToken } from "@/src/app/lib/jwt"; // ← adjust path to wherever your jwt helpers live
+import { startTrial } from "@/src/app/lib/services/course/subscription.service";
+// import { startTrial } from "@/src/app/lib/services/common_urls/payment.service";
 
 export const POST = asyncHandler(async (req) => {
   const {
@@ -42,18 +43,42 @@ export const POST = asyncHandler(async (req) => {
       tenantId: tenant.id,
     },
   });
+
+  console.log("Register route: user created", {
+    userId: user.id,
+    email: user.email,
+    planId,
+    billingCycle,
+  });
+
   // Auto-create subscription if planId provided
   let subscription = null;
   if (planId) {
+    console.log("Register route: planId provided, calling startTrial", {
+      userId: user.id,
+      planId,
+      billingCycle,
+    });
     try {
-      subscription = await createSubscription(user.id, planId, billingCycle);
+      subscription = await startTrial(user.id, planId, billingCycle);
+      console.log("Register route: startTrial returned", {
+        subscriptionId: subscription?.id,
+        userId: user.id,
+        planId,
+      });
     } catch (error) {
-      console.error(
-        "Subscription creation failed during signup:",
-        error.message,
-      );
+      console.error("Subscription creation failed during signup:", error);
+      console.error("startTrial error details", {
+        userId: user.id,
+        planId,
+        billingCycle,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+      });
       // Don't throw — user is created, subscription can be set up later
     }
+  } else {
+    console.log("Register route: no planId provided, skipping startTrial");
   }
 
   // ── Create JWT and set cookie ──────────────────────────────

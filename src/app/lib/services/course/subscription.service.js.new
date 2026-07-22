@@ -64,9 +64,7 @@ async function getTrialDaysForPlan(tenantId, plan) {
 }
 
 export async function getPlanSettings(tenantId) {
-  const settings = await prisma.planSettings.findUnique({
-    where: { tenantId },
-  });
+  const settings = await prisma.planSettings.findUnique({ where: { tenantId } });
   return settings ?? { tenantId, defaultTrialDays: FALLBACK_TRIAL_DAYS };
 }
 
@@ -84,10 +82,7 @@ export async function updatePlanSettings(tenantId, { defaultTrialDays }) {
 
 export async function createPlan(tenantId, input) {
   if (!tenantId) {
-    throw new ApiError(
-      401,
-      "Missing tenant context — check session.user.tenantId",
-    );
+    throw new ApiError(401, "Missing tenant context — check session.user.tenantId");
   }
 
   const { features = [], slug: _ignoredSlug, ...planData } = input;
@@ -128,10 +123,7 @@ export async function updatePlan(id, tenantId, input) {
       where: { slug: planData.slug, NOT: { id: Number(id) } },
     });
     if (duplicateSlug) {
-      throw new ApiError(
-        409,
-        `Slug "${planData.slug}" is already used by another plan`,
-      );
+      throw new ApiError(409, `Slug "${planData.slug}" is already used by another plan`);
     }
   }
 
@@ -289,10 +281,7 @@ export async function getPlansWithCurrentSubscription(userId) {
 
 function computePeriodEnd(plan, billingCycle) {
   if (billingCycle === "LIFETIME") {
-    throw new ApiError(
-      500,
-      "LIFETIME plans should use PlanEnrollment, not PlanSubscription",
-    );
+    throw new ApiError(500, "LIFETIME plans should use PlanEnrollment, not PlanSubscription");
   }
 
   if (billingCycle !== "MONTHLY" && billingCycle !== "YEARLY") {
@@ -318,23 +307,15 @@ async function hasUserEverSubscribed(userId) {
   return Boolean(existing);
 }
 
-export async function createSubscription(
-  userId,
-  planId,
-  billingCycle = "MONTHLY",
-) {
+export async function createSubscription(userId, planId, billingCycle = "MONTHLY") {
   const existing = await prisma.planSubscription.findUnique({
-    where: {
-      userId_planId: { userId: Number(userId), planId: Number(planId) },
-    },
+    where: { userId_planId: { userId: Number(userId), planId: Number(planId) } },
   });
-  if (existing)
-    throw new ApiError(409, "User already has a subscription to this plan.");
+  if (existing) throw new ApiError(409, "User already has a subscription to this plan.");
 
   const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
   if (!plan) throw new ApiError(404, "Plan not found");
-  if (!plan.isPublished)
-    throw new ApiError(400, "This plan is not currently available");
+  if (!plan.isPublished) throw new ApiError(400, "This plan is not currently available");
 
   const now = new Date();
   const currentPeriodEnd = computePeriodEnd(plan, billingCycle);
@@ -353,97 +334,27 @@ export async function createSubscription(
 }
 
 export async function startTrial(userId, planId) {
-  console.log("startTrial: called", { userId, planId });
-
   const existing = await prisma.planSubscription.findUnique({
-    where: {
-      userId_planId: { userId: Number(userId), planId: Number(planId) },
-    },
+    where: { userId_planId: { userId: Number(userId), planId: Number(planId) } },
   });
-  console.log("startTrial: existing subscription lookup", {
-    userId: Number(userId),
-    planId: Number(planId),
-    existing: Boolean(existing),
-  });
-  if (existing)
-    throw new ApiError(409, "User already has a subscription to this plan.");
+  if (existing) throw new ApiError(409, "User already has a subscription to this plan.");
 
   const alreadyUsedTrial = await hasUserEverSubscribed(userId);
-  console.log("startTrial: has user ever subscribed", {
-    userId: Number(userId),
-    alreadyUsedTrial,
-  });
   if (alreadyUsedTrial) throw new ApiError(400, "Trial already used.");
 
   const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
   if (!plan) throw new ApiError(404, "Plan not found");
 
   const trialDays = await getTrialDaysForPlan(plan.tenantId, plan);
-  if (trialDays <= 0)
-    throw new ApiError(400, "This plan has no trial available.");
+  if (trialDays <= 0) throw new ApiError(400, "This plan has no trial available.");
 
   const now = new Date();
   const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
-  console.log("startTrial: creating planSubscription", {
-    userId: Number(userId),
-    planId: Number(planId),
-    billingCycle: "MONTHLY",
-    status: "TRIALING",
-    startsAt: now.toISOString(),
-    trialEndsAt: trialEndsAt.toISOString(),
-    currentPeriodEnd: trialEndsAt.toISOString(),
-  });
-
-  const subscription = await prisma.planSubscription.create({
-    data: {
-      userId: Number(userId),
-      planId: Number(planId),
-      billingCycle: "MONTHLY",
-      status: "TRIALING",
-      startsAt: now,
-      trialEndsAt,
-      currentPeriodEnd: trialEndsAt,
-    },
-    include: { plan: true },
-  });
-
-  console.log("startTrial: created planSubscription", {
-    subscriptionId: subscription.id,
-    userId: subscription.userId,
-    planId: subscription.planId,
-    status: subscription.status,
-  });
-
-  return subscription;
-}
-
-const DEFAULT_TRIAL_DAYS = 1;
-
-export async function startDefaultTrial(userId, tenantId) {
-  const alreadyUsedTrial = await hasUserEverSubscribed(userId);
-  if (alreadyUsedTrial) {
-    throw new ApiError(400, "Trial already used or subscription exists.");
-  }
-
-  const defaultPlan = await prisma.plan.findFirst({
-    where: { tenantId, isPublished: true },
-    orderBy: { sortOrder: "asc" },
-  });
-
-  if (!defaultPlan) {
-    throw new ApiError(500, "No default plan configured for trial.");
-  }
-
-  const now = new Date();
-  const trialEndsAt = new Date(
-    now.getTime() + DEFAULT_TRIAL_DAYS * 24 * 60 * 60 * 1000,
-  );
-
   return prisma.planSubscription.create({
     data: {
       userId: Number(userId),
-      planId: defaultPlan.id,
+      planId: Number(planId),
       billingCycle: "MONTHLY",
       status: "TRIALING",
       startsAt: now,

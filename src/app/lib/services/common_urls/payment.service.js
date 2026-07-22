@@ -1,145 +1,150 @@
-import Stripe from "stripe";
+import paypal from "@paypal/checkout-server-sdk";
 import { prisma } from "../../prisma";
 import { ApiError } from "../../utils/ApiError";
 import { sendTriggerEmails } from "../../email";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const TRIGGER_BY_TYPE = {
   PLAN: "ORDER_PLACED",
-  COURSE: "COURSE_ENROLLED",
   PRODUCT: "PRODUCT_PURCHASED",
 };
 
-function buildPaymentReference(paymentType, referenceId) {
-  if (!paymentType || !referenceId) return {};
-  if (paymentType === "COURSE") return { courseId: Number(referenceId) };
-  if (paymentType === "PLAN") return { planId: Number(referenceId) };
-  return {};
+function paypalClient() {
+  const env =
+    process.env.PAYPAL_MODE === "live"
+      ? new paypal.core.LiveEnvironment(
+          process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+          process.env.PAYPAL_CLIENT_SECRET,
+        )
+      : new paypal.core.SandboxEnvironment(
+          process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+          process.env.PAYPAL_CLIENT_SECRET,
+        );
+  return new paypal.core.PayPalHttpClient(env);
 }
 
-function normalizeMetadata(metadata = {}) {
-  return Object.entries(metadata).reduce((result, [key, value]) => {
-    if (value !== undefined && value !== null) {
-      result[key] = String(value);
-    }
-    return result;
-  }, {});
+function buildPaymentReference(paymentType, referenceId) {
+  if (!paymentType || !referenceId) return {};
+  if (paymentType === "PLAN") return { planId: Number(referenceId) };
+  return {};
 }
 
 export async function createPayment({
   userId,
   amount,
-  currency = "INR",
+  currency = "USD",
   billingCycle = "LIFETIME",
   paymentType,
   referenceId,
-  metadata = {},
+  returnUrl,
+  cancelUrl,
 }) {
-  const amountInSmallestUnit = Math.round(Number(amount) * 100);
-  const normalizedCurrency = currency.toUpperCase();
-
   if (!userId) throw new ApiError(400, "User ID is required");
-  if (!amountInSmallestUnit || amountInSmallestUnit <= 0) {
+  const numericAmount = Number(amount);
+  if (!numericAmount || numericAmount <= 0) {
     throw new ApiError(400, "Payment amount must be greater than zero");
   }
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amountInSmallestUnit,
-    currency: normalizedCurrency.toLowerCase(),
-    metadata: normalizeMetadata({
-      userId,
-      paymentType,
-      referenceId,
-      billingCycle,
-      ...metadata,
-    }),
+  const client = paypalClient();
+  const request = new paypal.orders.OrdersCreateRequest();
+  request.prefer("return=representation");
+  request.requestBody({
+    intent: "CAPTURE",
+    application_context: {
+      return_url: returnUrl,
+      cancel_url: cancelUrl,
+    },
+    purchase_units: [
+      {
+        amount: {
+          currency_code: currency.toUpperCase(),
+          value: numericAmount.toFixed(2),
+        },
+        custom_id: `${userId}:${paymentType}:${referenceId ?? ""}`,
+      },
+    ],
   });
+
+  const { result: order } = await client.execute(request);
 
   await prisma.payment.create({
     data: {
       userId: Number(userId),
       ...buildPaymentReference(paymentType, referenceId),
       billingCycle,
-      stripePaymentIntentId: paymentIntent.id,
-      amount: amountInSmallestUnit,
-      currency: normalizedCurrency,
+      paypalOrderId: order.id,
+      amount: Math.round(numericAmount * 100),
+      currency: currency.toUpperCase(),
       status: "PENDING",
     },
   });
 
   return {
-    clientSecret: paymentIntent.client_secret,
-    amount: paymentIntent.amount,
-    currency: paymentIntent.currency,
-    paymentIntent,
+    orderId: order.id,
+    status: order.status,
+    approvalUrl: order.links?.find((link) => link.rel === "approve")?.href,
+    amount: Math.round(numericAmount * 100),
+    currency: currency.toUpperCase(),
   };
 }
 
-export async function updatePaymentStatus(paymentIntentId, status) {
+export async function updatePaymentStatus(paypalOrderId, status) {
   return prisma.payment.updateMany({
-    where: { stripePaymentIntentId: paymentIntentId },
+    where: { paypalOrderId },
     data: { status },
   });
 }
 
-export async function getPayment(paymentIntentId) {
-  return prisma.payment.findUnique({
-    where: { stripePaymentIntentId: paymentIntentId },
-  });
+export async function getPayment(paypalOrderId) {
+  return prisma.payment.findUnique({ where: { paypalOrderId } });
 }
 
-export async function verifyPayment(paymentIntentId) {
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+export async function capturePayment(orderId) {
+  const client = paypalClient();
+  const request = new paypal.orders.OrdersCaptureRequest(orderId);
+  request.requestBody({});
 
-  if (paymentIntent.status !== "succeeded") {
-    await updatePaymentStatus(paymentIntentId, "FAILED");
+  const { result: capture } = await client.execute(request);
+
+  if (capture.status !== "COMPLETED") {
+    await updatePaymentStatus(orderId, "FAILED");
     throw new ApiError(400, "Payment not completed");
   }
 
-  const payment = await prisma.payment.findUnique({
-    where: { stripePaymentIntentId: paymentIntentId },
-    include: { user: true, course: true },
+  const captureId = capture.purchase_units[0]?.payments?.captures[0]?.id;
+
+  await prisma.payment.updateMany({
+    where: { paypalOrderId: orderId },
+    data: { status: "SUCCESS", paypalCaptureId: captureId },
   });
 
-  await updatePaymentStatus(paymentIntentId, "SUCCESS");
+  const payment = await prisma.payment.findUnique({
+    where: { paypalOrderId: orderId },
+    include: { user: true, plan: true },
+  });
 
-  const emailResult = {
-    success: true,
-  };
-
-  console.log("emailResult", emailResult);
-
+  const emailResult = { success: true };
   if (payment) {
     try {
       await sendPaymentSuccessEmail(payment);
     } catch (err) {
-        console.error("[Email Error]", err);
+      console.error("[Email Error]", err);
       emailResult.success = false;
       emailResult.error = err.message;
     }
   }
 
-  return {
-    paymentIntent,
-    emailResult,
-  };
+  return { capture, emailResult };
 }
 
 async function sendPaymentSuccessEmail(payment) {
-  const paymentType = payment.planId
-    ? "PLAN"
-    : payment.courseId
-      ? "COURSE"
-      : "PRODUCT";
+  const paymentType = payment.planId ? "PLAN" : "PRODUCT";
   const triggerEvent = TRIGGER_BY_TYPE[paymentType];
   if (!triggerEvent) return;
 
   await sendTriggerEmails(triggerEvent, {
     name: payment.user?.name,
     email: payment.user?.email,
-    planName: payment.metadata?.planName,
-    courseName: payment.course?.title,
+    planName: payment.plan?.title,
     amount: payment.amount / 100,
     currency: payment.currency,
     billingCycle: payment.billingCycle,
@@ -149,7 +154,7 @@ async function sendPaymentSuccessEmail(payment) {
 export async function getPaymentHistory(userId) {
   return prisma.payment.findMany({
     where: { userId: Number(userId) },
-    include: { course: true },
+    include: { plan: true },
     orderBy: { createdAt: "desc" },
   });
 }

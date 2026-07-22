@@ -2,7 +2,7 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,6 @@ import { useQueryClient } from "@tanstack/react-query";
 function RegisterFormContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  // const [searchParams] = [useState(null)[0]]; // Will be set via useEffect
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,26 +19,30 @@ function RegisterFormContent() {
   const [loading, setLoading] = useState(false);
 
   const searchParams = useSearchParams();
-
-  const planId = searchParams.get("plan");
-  // const billingCycle = searchParams.get("billingCycle") || "MONTHLY";
   const redirect = searchParams.get("redirect");
-  const courseId = searchParams.get("course");
-  const billingCycle = searchParams.get("billingCycle") || "MONTHLY";
 
-  // replace router.push("/dashboard") after success
+  let planId = searchParams.get("plan");
+  let billingCycle = searchParams.get("billingCycle") || "MONTHLY";
+
+  if (!planId && redirect) {
+    try {
+      const redirectParams = new URLSearchParams(redirect.split("?")[1] || "");
+      planId = redirectParams.get("plan");
+      billingCycle = redirectParams.get("billingCycle") || billingCycle;
+    } catch {
+      // ignore malformed redirect param
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // Create user account with automatic subscription if plan selected
       const registerResponse = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           email,
@@ -50,7 +53,6 @@ function RegisterFormContent() {
       });
 
       const registerResult = await registerResponse.json();
-      console.log(registerResponse.ok);
 
       if (!registerResponse.ok) {
         setError(registerResult?.message || "Registration failed");
@@ -60,8 +62,11 @@ function RegisterFormContent() {
       queryClient.setQueryData(["me"], registerResult?.data?.user ?? null);
       await queryClient.invalidateQueries({ queryKey: ["me"] });
 
-      // Redirect to plan dashboard under admin panel
-      router.push(redirect || "/dashboard");
+      if (registerResult?.data?.subscription) {
+        router.push("/dashboard");
+      } else {
+        router.push(redirect || "/dashboard");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

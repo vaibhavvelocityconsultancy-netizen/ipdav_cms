@@ -2,7 +2,7 @@ import { prisma } from "../../prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import {
   createPayment,
-  verifyPayment,
+  capturePayment,
 } from "../common_urls/payment.service.js";
 
 export async function createCourseOrder(userId, courseId) {
@@ -26,15 +26,16 @@ export async function createCourseOrder(userId, courseId) {
   });
 
   return {
-    clientSecret: payment.clientSecret,
+    orderId: payment.orderId,
+    status: payment.status,
     amount: payment.amount,
     currency: payment.currency,
     courseName: course.title,
   };
 }
 
-export async function verifyCoursePayment(userId, { paymentIntentId }, courseId) {
-  await verifyPayment(paymentIntentId);
+export async function verifyCoursePayment(userId, { paypalOrderId }, courseId) {
+  await capturePayment(paypalOrderId);
 
   const existingEnrollment = await prisma.courseEnrollment.findUnique({
     where: {
@@ -46,7 +47,7 @@ export async function verifyCoursePayment(userId, { paymentIntentId }, courseId)
 
   const enrollment = await prisma.$transaction(async (tx) => {
     await tx.payment.updateMany({
-      where: { stripePaymentIntentId: paymentIntentId },
+      where: { paypalOrderId },
       data: { status: "SUCCESS" },
     });
 

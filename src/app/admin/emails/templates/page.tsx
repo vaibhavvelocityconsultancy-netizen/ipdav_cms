@@ -4,17 +4,13 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, CircleX, Loader2, Send } from "lucide-react";
 
-
-
 interface EmailTemplate {
-    id: string;
-    name: string;
-    subject: string;
-    bodyHtml: string;
-    variables: string[];
+  id: string;
+  name: string;
+  subject: string;
+  bodyHtml: string;
+  variables: string[];
 }
-
-
 
 async function fetchSettings() {
   const res = await fetch("/api/emails/settings");
@@ -47,7 +43,10 @@ export default function EmailSettingsPage() {
   const [testEmail, setTestEmail] = useState("");
   const [testResult, setTestResult] = useState(null);
 
-  const { data, isLoading } = useQuery({ queryKey: ["email-settings"], queryFn: fetchSettings });
+  const { data, isLoading } = useQuery({
+    queryKey: ["email-settings"],
+    queryFn: fetchSettings,
+  });
 
   useEffect(() => {
     if (data?.settings) setForm(data.settings);
@@ -55,7 +54,8 @@ export default function EmailSettingsPage() {
 
   const saveMutation = useMutation({
     mutationFn: saveSettings,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-settings"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["email-settings"] }),
   });
 
   const testMutation = useMutation({
@@ -67,7 +67,11 @@ export default function EmailSettingsPage() {
   });
 
   if (isLoading || !form) {
-    return <div className="p-8 max-w-2xl mx-auto text-sm text-gray-400">Loading...</div>;
+    return (
+      <div className="p-8 max-w-2xl mx-auto text-sm text-gray-400">
+        Loading...
+      </div>
+    );
   }
 
   const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -90,7 +94,9 @@ export default function EmailSettingsPage() {
 
       <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
         <div className="p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Sender identity</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            Sender identity
+          </h2>
 
           <div className="space-y-5">
             <Field
@@ -98,7 +104,7 @@ export default function EmailSettingsPage() {
               value={form.senderName}
               onChange={(v) => update("senderName", v)}
               placeholder="IPDAV"
-              help="Shown to recipients instead of a raw email address, e.g. \"IPDAV\"."
+              help='Shown to recipients instead of a raw email address, e.g. "IPDAV".'
             />
             <Field
               label="From email"
@@ -118,7 +124,9 @@ export default function EmailSettingsPage() {
         </div>
 
         <div className="p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Notifications</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            Notifications
+          </h2>
           <Field
             label="Admin notification email"
             value={form.adminEmail}
@@ -129,7 +137,9 @@ export default function EmailSettingsPage() {
         </div>
 
         <div className="p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-1">Send a test email</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-1">
+            Send a test email
+          </h2>
           <p className="text-xs text-gray-500 mb-4">
             Confirm your emails are going out correctly before relying on them.
           </p>
@@ -159,17 +169,26 @@ export default function EmailSettingsPage() {
           {testResult && (
             <div
               className={`mt-3 flex items-center gap-2 text-sm rounded-lg px-3 py-2 ${
-                testResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                testResult.success
+                  ? "bg-green-50 text-green-700"
+                  : "bg-red-50 text-red-700"
               }`}
             >
-              {testResult.success ? <CircleCheck className="w-4 h-4" /> : <CircleX className="w-4 h-4" />}
-              {testResult.success ? "Test email sent successfully." : testResult.error}
+              {testResult.success ? (
+                <CircleCheck className="w-4 h-4" />
+              ) : (
+                <CircleX className="w-4 h-4" />
+              )}
+              {testResult.success
+                ? "Test email sent successfully."
+                : testResult.error}
             </div>
           )}
 
           {!testResult && form.lastTestAt && (
             <p className="mt-3 text-xs text-gray-400">
-              Last test: {form.lastTestStatus === "SUCCESS" ? "Succeeded" : "Failed"} on{" "}
+              Last test:{" "}
+              {form.lastTestStatus === "SUCCESS" ? "Succeeded" : "Failed"} on{" "}
               {new Date(form.lastTestAt).toLocaleString()}
             </p>
           )}
@@ -180,17 +199,19 @@ export default function EmailSettingsPage() {
 }
 
 interface FieldProps {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    placeholder?: string;
-    help?: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  help?: string;
 }
 
 function Field({ label, value, onChange, placeholder, help }: FieldProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-900 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-900 mb-1">
+        {label}
+      </label>
       {help && <p className="text-xs text-gray-500 mb-1.5">{help}</p>}
       <input
         value={value}
