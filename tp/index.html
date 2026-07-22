@@ -1,156 +1,193 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- tailwind cdn -->
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Document</title>
-</head>
-<body>
-    <header class="sticky top-0 z-50 bg-[#f6f7fb]/95 backdrop-blur border-b border-black/10">
-  <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
-    <a href="/" class="flex items-center gap-2">
-      <img src="/assets/logo.png" alt="Momentum" class="h-8 w-auto" />
-    </a>
-
-    <nav class="hidden items-center gap-8 text-sm font-medium text-[#111827] lg:flex">
-      <a href="#services" class="hover:text-[#4f78df]">Services</a>
-      <a href="#why-us" class="hover:text-[#4f78df]">Why Us</a>
-      <a href="#results" class="hover:text-[#4f78df]">Results</a>
-      <a href="#process" class="hover:text-[#4f78df]">Process</a>
-      <a href="#faq" class="hover:text-[#4f78df]">FAQs</a>
-    </nav>
-
-    <div class="hidden items-center gap-3 lg:flex">
-      <a href="#contact" class="rounded-full border border-[#111827]/20 px-5 py-2 text-sm font-semibold text-[#111827] hover:bg-white">
-        Talk With Us
-      </a>
-      <a href="#lead-calculator" class="rounded-full bg-[#f6c431] px-5 py-2 text-sm font-bold text-[#101010] shadow-sm hover:bg-[#ffd84f]">
-        Calculate Leads
-      </a>
-    </div>
-
-    <button class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 lg:hidden">
-      <span class="sr-only">Open Menu</span>
-      <span class="block h-0.5 w-5 bg-black"></span>
-    </button>
-  </div>
-</header>
-  <!-- Hero Section -->
-  <section class="relative bg-[#426fd6] text-white">
-    <div class="absolute inset-0 opacity-20">
+  </head>
+  <body>
+    <header
+      class="sticky top-0 z-50 bg-[#f6f7fb]/95 backdrop-blur border-b border-black/10"
+    >
       <div
-        class="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,.22)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.22)_1px,transparent_1px)] bg-[size:64px_64px]">
-      </div>
-    </div>
+        class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6"
+      >
+        <a href="/" class="flex items-center gap-2">
+          <img src="/assets/logo.png" alt="IPDAV" class="h-8 w-auto" />
+        </a>
 
-    <div class="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:px-6 lg:py-24">
-      <div>
-        <div
-          class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide">
-          AI SEO • Websites • Automation
-        </div>
+        <nav
+          class="hidden items-center gap-8 text-sm font-medium text-[#111827] lg:flex"
+        >
+          <a href="#services" class="hover:text-[#4f78df]">Services</a>
+          <a href="#why-us" class="hover:text-[#4f78df]">Why Us</a>
+          <a href="#results" class="hover:text-[#4f78df]">Results</a>
+          <a href="#process" class="hover:text-[#4f78df]">Process</a>
+          <a href="#faq" class="hover:text-[#4f78df]">FAQs</a>
+        </nav>
 
-        <h1 class="max-w-2xl text-4xl font-extrabold leading-tight tracking-tight md:text-5xl lg:text-6xl">
-          AI SEO, Website & <span class="text-[#f6c431]">Automation</span> That Generate More Leads
-        </h1>
-
-        <p class="mt-6 max-w-xl text-base leading-7 text-white/85 md:text-lg">
-          We help businesses turn slow websites, weak SEO, and manual follow-ups into a smarter growth system that
-          captures, nurtures, and converts more leads.
-        </p>
-
-        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a href="#contact"
-            class="inline-flex items-center justify-center rounded-full bg-[#f6c431] px-6 py-3 text-sm font-bold text-[#101010] hover:bg-[#ffd84f]">
-            Get Free Strategy Call
+        <div class="hidden items-center gap-3 lg:flex">
+          <a
+            href="#contact"
+            class="rounded-full border border-[#111827]/20 px-5 py-2 text-sm font-semibold text-[#111827] hover:bg-white"
+          >
+            Talk With Us
           </a>
-          <a href="#lead-calculator"
-            class="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10">
-            Calculate Your Lead Loss
+          <a
+            href="#lead-calculator"
+            class="rounded-full bg-[#f6c431] px-5 py-2 text-sm font-bold text-[#101010] shadow-sm hover:bg-[#ffd84f]"
+          >
+            Calculate Leads
           </a>
         </div>
 
-        <div class="mt-7 flex flex-wrap gap-5 text-sm text-white/90">
-          <span>✓ Fast websites</span>
-          <span>✓ AI-ready SEO</span>
-          <span>✓ Better lead conversion</span>
-        </div>
+        <button
+          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 lg:hidden"
+        >
+          <span class="sr-only">Open Menu</span>
+          <span class="block h-0.5 w-5 bg-black"></span>
+        </button>
+      </div>
+    </header>
+    <!-- Hero Section -->
+    <section class="relative bg-[#426fd6] text-white">
+      <div class="absolute inset-0 opacity-20">
+        <div
+          class="h-full w-full bg-[linear-gradient(to_right,rgba(255,255,255,.22)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.22)_1px,transparent_1px)] bg-[size:64px_64px]"
+        ></div>
       </div>
 
-      <div class="relative">
-        <div
-          class="absolute -left-6 top-8 hidden rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#101010] shadow-xl md:block">
-          +37% lead growth
-        </div>
+      <div
+        class="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:px-6 lg:py-24"
+      >
+        <div>
+          <div
+            class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide"
+          >
+            AI SEO • Websites • Automation
+          </div>
 
-        <div class="rounded-3xl border border-white/20 bg-white/10 p-4 shadow-2xl backdrop-blur">
-          <div class="rounded-2xl bg-white p-5 text-[#101010]">
-            <div class="mb-4 flex items-center justify-between">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Lead Score</p>
-                <h3 class="text-lg font-bold">Grow Faster With AI & SEO</h3>
-              </div>
-              <div class="rounded-full bg-[#426fd6]/10 px-3 py-1 text-xs font-bold text-[#426fd6]">Live</div>
-            </div>
+          <h1
+            class="max-w-2xl text-4xl font-extrabold leading-tight tracking-tight md:text-5xl lg:text-6xl"
+          >
+            AI SEO, Website &
+            <span class="text-[#f6c431]">Automation</span> That Generate More
+            Leads
+          </h1>
 
-            <div class="space-y-4">
-              <div>
-                <div class="mb-2 flex justify-between text-sm">
-                  <span>Website Speed</span>
-                  <span class="font-bold">88%</span>
-                </div>
-                <div class="h-3 rounded-full bg-[#e5e7eb]">
-                  <div class="h-3 w-[88%] rounded-full bg-[#426fd6]"></div>
-                </div>
-              </div>
+          <p class="mt-6 max-w-xl text-base leading-7 text-white/85 md:text-lg">
+            We help businesses turn slow websites, weak SEO, and manual
+            follow-ups into a smarter growth system that captures, nurtures, and
+            converts more leads.
+          </p>
 
-              <div>
-                <div class="mb-2 flex justify-between text-sm">
-                  <span>AI SEO Readiness</span>
-                  <span class="font-bold">72%</span>
-                </div>
-                <div class="h-3 rounded-full bg-[#e5e7eb]">
-                  <div class="h-3 w-[72%] rounded-full bg-[#f6c431]"></div>
-                </div>
-              </div>
+          <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a
+              href="#contact"
+              class="inline-flex items-center justify-center rounded-full bg-[#f6c431] px-6 py-3 text-sm font-bold text-[#101010] hover:bg-[#ffd84f]"
+            >
+              Get Free Strategy Call
+            </a>
+            <a
+              href="#lead-calculator"
+              class="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
+            >
+              Calculate Your Lead Loss
+            </a>
+          </div>
 
-              <div>
-                <div class="mb-2 flex justify-between text-sm">
-                  <span>Conversion System</span>
-                  <span class="font-bold">64%</span>
-                </div>
-                <div class="h-3 rounded-full bg-[#e5e7eb]">
-                  <div class="h-3 w-[64%] rounded-full bg-[#3f6b3f]"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-6 grid grid-cols-3 gap-3">
-              <div class="rounded-xl bg-[#f8fafc] p-3 text-center">
-                <p class="text-xl font-extrabold text-[#426fd6]">15+</p>
-                <p class="text-xs text-[#64748b]">Years</p>
-              </div>
-              <div class="rounded-xl bg-[#f8fafc] p-3 text-center">
-                <p class="text-xl font-extrabold text-[#426fd6]">300+</p>
-                <p class="text-xs text-[#64748b]">Projects</p>
-              </div>
-              <div class="rounded-xl bg-[#f8fafc] p-3 text-center">
-                <p class="text-xl font-extrabold text-[#426fd6]">5x</p>
-                <p class="text-xs text-[#64748b]">Growth</p>
-              </div>
-            </div>
+          <div class="mt-7 flex flex-wrap gap-5 text-sm text-white/90">
+            <span>✓ Fast websites</span>
+            <span>✓ AI-ready SEO</span>
+            <span>✓ Better lead conversion</span>
           </div>
         </div>
 
-        <div
-          class="absolute -right-4 -top-6 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#3f6b3f] shadow-xl rotate-6">
-          SEO Ready
+        <div class="relative">
+          <div
+            class="absolute -left-6 top-8 hidden rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#101010] shadow-xl md:block"
+          >
+            +37% lead growth
+          </div>
+
+          <div
+            class="rounded-3xl border border-white/20 bg-white/10 p-4 shadow-2xl backdrop-blur"
+          >
+            <div class="rounded-2xl bg-white p-5 text-[#101010]">
+              <div class="mb-4 flex items-center justify-between">
+                <div>
+                  <p
+                    class="text-xs font-semibold uppercase tracking-wide text-[#64748b]"
+                  >
+                    Lead Score
+                  </p>
+                  <h3 class="text-lg font-bold">Grow Faster With AI & SEO</h3>
+                </div>
+                <div
+                  class="rounded-full bg-[#426fd6]/10 px-3 py-1 text-xs font-bold text-[#426fd6]"
+                >
+                  Live
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <div class="mb-2 flex justify-between text-sm">
+                    <span>Website Speed</span>
+                    <span class="font-bold">88%</span>
+                  </div>
+                  <div class="h-3 rounded-full bg-[#e5e7eb]">
+                    <div class="h-3 w-[88%] rounded-full bg-[#426fd6]"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="mb-2 flex justify-between text-sm">
+                    <span>AI SEO Readiness</span>
+                    <span class="font-bold">72%</span>
+                  </div>
+                  <div class="h-3 rounded-full bg-[#e5e7eb]">
+                    <div class="h-3 w-[72%] rounded-full bg-[#f6c431]"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="mb-2 flex justify-between text-sm">
+                    <span>Conversion System</span>
+                    <span class="font-bold">64%</span>
+                  </div>
+                  <div class="h-3 rounded-full bg-[#e5e7eb]">
+                    <div class="h-3 w-[64%] rounded-full bg-[#3f6b3f]"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6 grid grid-cols-3 gap-3">
+                <div class="rounded-xl bg-[#f8fafc] p-3 text-center">
+                  <p class="text-xl font-extrabold text-[#426fd6]">15+</p>
+                  <p class="text-xs text-[#64748b]">Years</p>
+                </div>
+                <div class="rounded-xl bg-[#f8fafc] p-3 text-center">
+                  <p class="text-xl font-extrabold text-[#426fd6]">300+</p>
+                  <p class="text-xs text-[#64748b]">Projects</p>
+                </div>
+                <div class="rounded-xl bg-[#f8fafc] p-3 text-center">
+                  <p class="text-xl font-extrabold text-[#426fd6]">5x</p>
+                  <p class="text-xs text-[#64748b]">Growth</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="absolute -right-4 -top-6 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#3f6b3f] shadow-xl rotate-6"
+          >
+            SEO Ready
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-
-</body>
+    </section>
+  </body>
 </html>

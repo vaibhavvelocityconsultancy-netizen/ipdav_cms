@@ -138,6 +138,7 @@ export const fetchers = {
   customer: (id: string) => fetcher(`/api/ecommerce/customers/${id}`),
   ecomSettings: () => fetcher("/api/ecommerce/settings"),
   ecomDashboard: () => fetcher("/api/ecommerce/dashboard"),
+  publicPlans: () => fetcher("/api/public/plans"),
 
 
   // customers

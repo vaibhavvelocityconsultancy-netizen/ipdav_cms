@@ -97,8 +97,8 @@ export default function EmailSettingsPage() {
               label="Sender name"
               value={form.senderName}
               onChange={(v) => update("senderName", v)}
-              placeholder="Momentum CMS"
-              help="Shown to recipients instead of a raw email address, e.g. “Momentum CMS”."
+              placeholder="IPDAV"
+              help="Shown to recipients instead of a raw email address, e.g. \"IPDAV\"."
             />
             <Field
               label="From email"

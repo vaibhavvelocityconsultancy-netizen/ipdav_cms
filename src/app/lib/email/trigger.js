@@ -19,7 +19,8 @@ export async function sendTriggerEmail(triggerEvent, data = {}) {
   const results = [];
   const provider = getActiveProvider();
   const templateData = {
-    siteName: process.env.SITE_NAME || process.env.NEXT_PUBLIC_SITE_NAME || "Momentum",
+    siteName:
+      process.env.SITE_NAME || process.env.NEXT_PUBLIC_SITE_NAME || "IPDAV",
     ...data,
   };
 

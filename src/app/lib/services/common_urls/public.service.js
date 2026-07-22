@@ -169,6 +169,21 @@ export async function getPublicPosts(tenantId) {
   });
 }
 
+export async function getPublicPlans(tenantId) {
+  const where = {
+    isPublished: true,
+    ...(tenantId !== undefined ? { tenantId } : {}),
+  };
+
+  return prisma.plan.findMany({
+    where,
+    include: {
+      features: { orderBy: { sortOrder: "asc" } },
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
 export async function getPublicBootstrapData(tenantId) {
   const settings = await getPublicSettings(tenantId);
   const resolvedTenantId = tenantId ?? settings.tenantId;
@@ -185,6 +200,7 @@ export async function getPublicBootstrapData(tenantId) {
   const navbarConfig = await getPublicNavbarConfig(resolvedTenantId);
   const footerConfig = await getPublicFooterConfig(resolvedTenantId);
   const analyticsSettings = await getPublicAnalyticsSettings(resolvedTenantId);
+  
 
   return {
     settings,

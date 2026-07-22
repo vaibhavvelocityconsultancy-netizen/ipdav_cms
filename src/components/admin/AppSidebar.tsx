@@ -191,128 +191,31 @@ const adminNavItems: NavItem[] = [
         description: "Styling & themes",
         href: "/admin/setting/global-css",
       },
-      {
-        id: "navbar-config",
-        label: "Navbar Config",
-        icon: Code,
-        description: "Navbar configuration",
-        href: "/admin/customize/navbar-config",
-      },
+      // {
+      //   id: "navbar-config",
+      //   label: "Navbar Config",
+      //   icon: Code,
+      //   description: "Navbar configuration",
+      //   href: "/admin/customize/navbar-config",
+      // },
     ],
   },
+
   {
-    id: "courses",
-    label: "Courses",
-    icon: BookOpen,
-    description: "Manage courses",
-    href: "/admin/courses",
-  },
-  {
-    id: "email-management",
-    label: "Email Management",
-    icon: Mail,
-    description: "Manage email communications",
-    href: "/admin/emails/templates",
-  },
-  {
-    id: "ecommerce",
-    label: "E-commerce",
+    id: "plan-management",
+    label: "Plan Management",
     icon: ShoppingBag,
-    description: "Products, brands & catalog",
-    children: [
-      {
-        id: "ecommerce-dashboard",
-        label: "Dashboard",
-        icon: BarChart3,
-        description: "Sales overview",
-        href: "/admin/ecommerce",
-      },
-      {
-        id: "ecommerce-products",
-        label: "Products",
-        icon: Package,
-        description: "Manage products",
-        href: "/admin/ecommerce/products",
-      },
-      {
-        id: "ecommerce-categories",
-        label: "Categories",
-        icon: LayoutList,
-        description: "Product categories",
-        href: "/admin/ecommerce/categories",
-      },
-      {
-        id: "ecommerce-brands",
-        label: "Brands",
-        icon: TagIcon,
-        description: "Manage brands",
-        href: "/admin/ecommerce/brands",
-      },
-      {
-        id: "ecommerce-attributes",
-        label: "Attributes",
-        icon: SlidersHorizontal,
-        description: "Variant attributes",
-        href: "/admin/ecommerce/attributes",
-      },
-      {
-        id: "ecommerce-orders",
-        label: "Orders",
-        icon: Receipt,
-        description: "Customer orders",
-        href: "/admin/ecommerce/orders",
-      },
-      {
-        id: "ecommerce-customers",
-        label: "Customers",
-        icon: Users,
-        description: "Customer directory",
-        href: "/admin/ecommerce/customers",
-      },
-      {
-        id: "ecommerce-discounts",
-        label: "Discounts",
-        icon: Percent,
-        description: "Coupons & promos",
-        href: "/admin/ecommerce/discounts",
-      },
-      {
-        id: "ecommerce-shipping",
-        label: "Shipping",
-        icon: Truck,
-        description: "Zones & rates",
-        href: "/admin/ecommerce/shipping",
-      },
-      {
-        id: "ecommerce-taxes",
-        label: "Taxes",
-        icon: Percent,
-        description: "Tax classes & rates",
-        href: "/admin/ecommerce/taxes",
-      },
-      {
-        id: "ecommerce-settings",
-        label: "Settings",
-        icon: SlidersHorizontal,
-        description: "Currency, checkout & payments",
-        href: "/admin/ecommerce/settings",
-      },
-    ],
+    description: "Manage plans and subscriptions",
+    // modulePermission: "plans_manage",
+    href: "/admin/plan",
   },
+
   {
     id: "user-management",
     label: "Users Management",
     icon: User,
     description: "Access control",
     children: [
-      // {
-      //   id: "user",
-      //   label: "Users",
-      //   icon: User,
-      //   description: "Manage users",
-      //   modulePermission: "users_view",
-      //   href: "/admin/users",
-      // },
       {
         id: "permissions",
         label: "Permissions",
@@ -689,7 +592,7 @@ export function Sidebar({ userRole }: SidebarProps) {
           {!collapsed && (
             <div className="flex-1 overflow-hidden">
               <span className="block bg-gradient-to-r from-sidebar-foreground to-sidebar-foreground/80 bg-clip-text font-sans text-xl font-bold text-transparent">
-                {isSubscriber ? "My Dashboard" : "CMS Admin"}
+                {isSubscriber ? "My Dashboard" : "IPDAV"}
               </span>
               <span className="block text-[10px] text-sidebar-foreground/40 font-mono">
                 {isSubscriber ? resolvedUserRole : "v2.0.0"}
@@ -763,14 +666,6 @@ export function Sidebar({ userRole }: SidebarProps) {
             <LogOut size={16} />
           </button>
         </div>
-
-        {!collapsed && (
-          <div className="text-center">
-            <p className="text-[10px] text-sidebar-foreground/30 font-mono">
-              © 2024 CMS Platform
-            </p>
-          </div>
-        )}
       </SidebarFooter>
       <SidebarRail />
     </UISidebar>

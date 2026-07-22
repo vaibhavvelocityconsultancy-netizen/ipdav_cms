@@ -119,6 +119,7 @@ model tenant {
   taxClasses         TaxClass[]
   ecommerceSettings  EcommerceSettings?
   sharedFiles        SharedFile[]
+  plans              Plan[]
 }
 
 model EmailTemplate {
@@ -249,6 +250,8 @@ model user {
   orders            Order[]
   sharedFiles       SharedFile[]
   fileShares        FileShare[]
+  planSubscriptions PlanSubscription[]
+  planEnrollments   PlanEnrollment[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -453,6 +456,77 @@ model Subscription {
   @@index([courseId])
   @@index([status])
   @@index([currentPeriodEnd]) // for renewal/expiry cron jobs
+}
+
+model Plan {
+  id                Int          @id @default(autoincrement())
+  tenantId          Int
+  title             String
+  slug              String
+  tagline           String?
+  description       String?
+  price             Decimal      @default(0) @db.Decimal(10, 2)
+  billingCycle      BillingCycle @default(MONTHLY)
+  billingPeriodDays Int? // null for LIFETIME
+  isFeatured        Boolean      @default(false)
+  isPublished       Boolean      @default(true)
+  sortOrder         Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  tenant        tenant             @relation(fields: [tenantId], references: [id])
+  features      PlanFeature[]
+  subscriptions PlanSubscription[]
+  enrollments   PlanEnrollment[]
+
+  @@unique([slug, tenantId])
+  @@index([tenantId])
+}
+
+model PlanFeature {
+  id        Int    @id @default(autoincrement())
+  title     String
+  sortOrder Int    @default(0)
+  plan      Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId    Int
+
+  @@index([planId])
+}
+
+model PlanSubscription {
+  id               Int                @id @default(autoincrement())
+  userId           Int
+  planId           Int
+  billingCycle     BillingCycle       @default(MONTHLY)
+  status           SubscriptionStatus @default(ACTIVE)
+  startsAt         DateTime
+  currentPeriodEnd DateTime
+  canceledAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, planId])
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+model PlanEnrollment {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  planId      Int
+  purchasedAt DateTime @default(now())
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, planId])
+  @@index([userId])
+  @@index([planId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,0 @@
-
-> my-project@0.1.0 build
-> node scripts/vercel-prebuild.mjs && next build ; set EXITCODE=0; type build-output.txt; echo EXITCODE:%EXITCODE%; exit /b %EXITCODE%
-
-DATABASE_URL is not set; skipping Prisma migrations.
-Invalid project directory provided, no such directory: C:\Users\Velocity\Desktop\NextCRM-momentum\;

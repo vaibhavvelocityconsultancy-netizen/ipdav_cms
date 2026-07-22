@@ -6,12 +6,12 @@ const prisma = new PrismaClient();
 async function main() {
   const tenant = await prisma.tenant.upsert({
     where: {
-      slug: "momentum",
+      slug: "ipdav",
     },
     update: {},
     create: {
-      name: "Momentum",
-      slug: "momentum",
+      name: "IPDAV",
+      slug: "ipdav",
     },
   });
 

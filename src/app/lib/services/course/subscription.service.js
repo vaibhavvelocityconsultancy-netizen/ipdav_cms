@@ -2,33 +2,216 @@ import { prisma } from "../../prisma";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 
 // ─────────────────────────────────────────────────────────────
-// HELPER: computePeriodEnd
-// ─────────────────────────────────────────────────────────────
-// Calculates when a subscription period ends based on:
-//   - the course's billingPeriodDays (set by admin in CMS —
-//     this is a BILLING field, separate from durationHours
-//     which is just descriptive "X hours of content")
-//   - the billing cycle chosen by user (monthly/yearly)
-//
-// billingPeriodDays is the number of days ONE cycle covers,
-// regardless of whether that cycle is called MONTHLY or YEARLY.
-// We don't multiply by 12 for YEARLY — the admin sets the actual
-// day count for each cycle length directly (e.g. 30 for monthly,
-// 365 for yearly). This avoids baking in assumptions about what
-// "a month" or "a year" means in days.
-//
-// LIFETIME is intentionally NOT handled here — lifetime courses
-// never create a Subscription row at all. They go through
-// CourseEnrollment instead (see createEnrollment below). If this
-// is ever called with billingCycle === "LIFETIME", that's a bug
-// upstream, so we throw rather than silently fudging a fake date.
+// PLAN CRUD (admin management)
 // ─────────────────────────────────────────────────────────────
 
-function computePeriodEnd(course, billingCycle) {
+export async function getAllPlans() {
+  return prisma.plan.findMany({
+    include: { features: { orderBy: { sortOrder: "asc" } } },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
+export async function getPlanById(id) {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    throw new ApiError(400, "Valid plan ID is required");
+  }
+
+  return prisma.plan.findUnique({
+    where: { id: numericId },
+    include: { features: { orderBy: { sortOrder: "asc" } } },
+  });
+}
+
+async function resolveUniqueSlug(tenantId, baseSlug) {
+  const sanitizedBase = (baseSlug || "plan")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const initialSlug = sanitizedBase || "plan";
+  let slug = initialSlug;
+  let counter = 2;
+
+  while (true) {
+    const existing = await prisma.plan.findFirst({
+      where: { tenantId, slug },
+      select: { id: true },
+    });
+
+    if (!existing) return slug;
+
+    slug = `${initialSlug}-${counter}`;
+    counter += 1;
+  }
+}
+
+export async function createPlan(tenantId, input) {
+  if (!tenantId) {
+    throw new ApiError(
+      401,
+      "Missing tenant context — check session.user.tenantId",
+    );
+  }
+
+  const { features = [], slug: _ignoredSlug, ...planData } = input;
+  const baseSlug = input.slug || input.title || "plan";
+  const slug = await resolveUniqueSlug(tenantId, baseSlug);
+
+  return prisma.plan.create({
+    data: {
+      ...planData,
+      slug,
+      tenant: {
+        connect: {
+          id: tenantId,
+        },
+      },
+      features: {
+        create: features.map((f, i) => ({
+          title: f.title,
+          sortOrder: f.sortOrder ?? i,
+        })),
+      },
+    },
+    include: {
+      features: true,
+    },
+  });
+}
+
+export async function updatePlan(id, tenantId, input) {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    throw new ApiError(400, "Valid plan ID is required");
+  }
+
+  const existingPlan = await prisma.plan.findUnique({
+    where: { id: numericId, tenantId },
+  });
+  if (!existingPlan) throw new ApiError(404, "Plan not found");
+
+  const { features = [], ...planData } = input;
+
+  if (planData.slug) {
+    const duplicateSlug = await prisma.plan.findFirst({
+      where: { slug: planData.slug, NOT: { id: Number(id) } },
+    });
+    if (duplicateSlug) {
+      throw new ApiError(
+        409,
+        `Slug "${planData.slug}" is already used by another plan`,
+      );
+    }
+  }
+
+  const incomingFeatureIds = features
+    .filter((f) => f.id)
+    .map((f) => Number(f.id));
+
+  await prisma.planFeature.deleteMany({
+    where: { planId: numericId, id: { notIn: incomingFeatureIds } },
+  });
+
+  return prisma.plan.update({
+    where: { id: numericId },
+    data: {
+      ...planData,
+      features: {
+        update: features
+          .filter((f) => f.id)
+          .map((f) => ({
+            where: { id: Number(f.id) },
+            data: { title: f.title, sortOrder: f.sortOrder },
+          })),
+        create: features
+          .filter((f) => !f.id)
+          .map((f, i) => ({ title: f.title, sortOrder: f.sortOrder ?? i })),
+      },
+    },
+    include: { features: true },
+  });
+}
+
+export async function deletePlan(id, tenantId) {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    throw new ApiError(400, "Valid plan ID is required");
+  }
+
+  return prisma.plan.delete({
+    where: { id: numericId, tenantId },
+  });
+}
+
+export async function togglePlanPublished(id, tenantId) {
+  const existingPlan = await prisma.plan.findUnique({
+    where: { id: Number(id), tenantId },
+  });
+  if (!existingPlan) throw new ApiError(404, "Plan not found");
+
+  return prisma.plan.update({
+    where: { id: Number(id) },
+    data: { isPublished: !existingPlan.isPublished },
+  });
+}
+
+export async function updatePlanOrder(tenantId, plans) {
+  const updates = plans.map((plan, index) =>
+    prisma.plan.update({
+      where: { id: Number(plan.id), tenantId },
+      data: { sortOrder: index },
+    }),
+  );
+  return prisma.$transaction(updates);
+}
+
+export async function getUserCurrentAccess(userId) {
+  const [subscription, enrollment] = await Promise.all([
+    prisma.planSubscription.findFirst({
+      where: { userId: Number(userId) },
+      include: { plan: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.planEnrollment.findFirst({
+      where: { userId: Number(userId) },
+      include: { plan: true },
+      orderBy: { purchasedAt: "desc" },
+    }),
+  ]);
+
+  if (enrollment) return { type: "enrollment", record: enrollment };
+  if (subscription) return { type: "subscription", record: subscription };
+  return { type: null, record: null };
+}
+
+export async function getPublicPlans() {
+  return prisma.plan.findMany({
+    where: { isPublished: true },
+    include: { features: { orderBy: { sortOrder: "asc" } } },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// HELPER: computePeriodEnd
+// ─────────────────────────────────────────────────────────────
+// billingPeriodDays is the number of days ONE cycle covers,
+// set directly by admin per plan (e.g. 30 for monthly, 365 for
+// yearly) — no assumption baked in about what "a month" means.
+//
+// LIFETIME never creates a PlanSubscription — it goes through
+// PlanEnrollment instead (see createEnrollment below).
+// ─────────────────────────────────────────────────────────────
+
+function computePeriodEnd(plan, billingCycle) {
   if (billingCycle === "LIFETIME") {
     throw new ApiError(
       500,
-      "LIFETIME courses should use CourseEnrollment, not Subscription",
+      "LIFETIME plans should use PlanEnrollment, not PlanSubscription",
     );
   }
 
@@ -36,170 +219,120 @@ function computePeriodEnd(course, billingCycle) {
     throw new ApiError(400, `Unknown billing cycle: ${billingCycle}`);
   }
 
-  if (!course.billingPeriodDays || course.billingPeriodDays <= 0) {
-    // Misconfigured course — admin set up a MONTHLY/YEARLY course
-    // without setting how many days that period covers. Fail loud
-    // rather than silently defaulting, since a wrong guess here
-    // means wrong renewal dates and wrong charges.
+  if (!plan.billingPeriodDays || plan.billingPeriodDays <= 0) {
     throw new ApiError(
       500,
-      `Course "${course.slug}" has billingCycle "${billingCycle}" but no billingPeriodDays set`,
+      `Plan "${plan.slug}" has billingCycle "${billingCycle}" but no billingPeriodDays set`,
     );
   }
 
   const now = new Date();
-  return new Date(
-    now.getTime() + course.billingPeriodDays * 24 * 60 * 60 * 1000,
-  );
+  return new Date(now.getTime() + plan.billingPeriodDays * 24 * 60 * 60 * 1000);
 }
 
 // ─────────────────────────────────────────────────────────────
-// createSubscription(userId, courseId, billingCycle)
+// createSubscription(userId, planId, billingCycle)
 // ─────────────────────────────────────────────────────────────
-// Called after successful payment for a MONTHLY or YEARLY course.
+// Called after successful payment for a MONTHLY or YEARLY plan.
 // No trial step — status goes straight to ACTIVE.
-//
-// Flow:
-//   1. Block if user already has a subscription to THIS course
-//      (unique key is now [userId, courseId], not userId alone)
-//   2. Fetch course (need billingPeriodDays for computePeriodEnd)
-//   3. Compute currentPeriodEnd
-//   4. Save and return
 // ─────────────────────────────────────────────────────────────
 
 export async function createSubscription(
   userId,
-  courseId,
+  planId,
   billingCycle = "MONTHLY",
 ) {
-  // ── 1. Check no existing subscription to this course ────────
-  const existing = await prisma.subscription.findUnique({
+  const existing = await prisma.planSubscription.findUnique({
     where: {
-      userId_courseId: {
-        userId: Number(userId),
-        courseId: Number(courseId),
-      },
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
     },
   });
 
   if (existing) {
-    throw new ApiError(409, "User already has a subscription to this course.");
+    throw new ApiError(409, "User already has a subscription to this plan.");
   }
 
-  // ── 2. Fetch the course ──────────────────────────────────────
-  const course = await prisma.course.findUnique({
-    where: { id: Number(courseId) },
-  });
+  const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
 
-  if (!course) {
-    throw new ApiError(404, "Course not found");
+  if (!plan) {
+    throw new ApiError(404, "Plan not found");
   }
 
-  if (!course.isPublished) {
-    throw new ApiError(400, "This course is not currently available");
+  if (!plan.isPublished) {
+    throw new ApiError(400, "This plan is not currently available");
   }
 
-  // ── 3. Compute period end (no trial — straight to ACTIVE) ───
   const now = new Date();
-  const currentPeriodEnd = computePeriodEnd(course, billingCycle);
+  const currentPeriodEnd = computePeriodEnd(plan, billingCycle);
 
-  // ── 4. Save to DB ─────────────────────────────────────────────
-  const subscription = await prisma.subscription.create({
+  return prisma.planSubscription.create({
     data: {
       userId: Number(userId),
-      courseId: Number(courseId),
-      billingCycle: billingCycle,
+      planId: Number(planId),
+      billingCycle,
       status: "ACTIVE",
       startsAt: now,
-      currentPeriodEnd: currentPeriodEnd,
+      currentPeriodEnd,
     },
-    include: {
-      course: true,
-    },
+    include: { plan: true },
   });
-
-  return subscription;
 }
 
 // ─────────────────────────────────────────────────────────────
-// createEnrollment(userId, courseId)
+// createEnrollment(userId, planId)
 // ─────────────────────────────────────────────────────────────
-// Called after successful payment for a LIFETIME course.
-// This is the per-course equivalent of "buying outright" —
-// no recurring period, no expiry, just a permanent access record.
+// Called after successful payment for a LIFETIME plan.
+// Permanent access record, no recurring period, no expiry.
 // ─────────────────────────────────────────────────────────────
 
-export async function createEnrollment(userId, courseId) {
-  const existing = await prisma.courseEnrollment.findUnique({
+export async function createEnrollment(userId, planId) {
+  const existing = await prisma.planEnrollment.findUnique({
     where: {
-      userId_courseId: {
-        userId: Number(userId),
-        courseId: Number(courseId),
-      },
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
     },
   });
 
   if (existing) {
-    throw new ApiError(409, "User is already enrolled in this course.");
+    throw new ApiError(409, "User is already enrolled in this plan.");
   }
 
-  const course = await prisma.course.findUnique({
-    where: { id: Number(courseId) },
-  });
+  const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
 
-  if (!course) {
-    throw new ApiError(404, "Course not found");
+  if (!plan) {
+    throw new ApiError(404, "Plan not found");
   }
 
-  if (!course.isPublished) {
-    throw new ApiError(400, "This course is not currently available");
+  if (!plan.isPublished) {
+    throw new ApiError(400, "This plan is not currently available");
   }
 
-  return prisma.courseEnrollment.create({
-    data: {
-      userId: Number(userId),
-      courseId: Number(courseId),
-    },
-    include: {
-      course: true,
-    },
+  return prisma.planEnrollment.create({
+    data: { userId: Number(userId), planId: Number(planId) },
+    include: { plan: true },
   });
 }
 
 // ─────────────────────────────────────────────────────────────
-// getUserCourseAccess(userId, courseId)
+// getUserPlanAccess(userId, planId)
 // ─────────────────────────────────────────────────────────────
-// Fetches whichever access record exists for this user+course —
-// a Subscription, a CourseEnrollment, or neither.
-//
 // Returns: { type: "subscription" | "enrollment" | null, record }
-//
-// Why one function for both?
-//   Every UI that asks "does this user have this course" needs
-//   to know which one to render (e.g. show "renews on X" for a
-//   subscription vs "owned" for an enrollment) without making
-//   two separate calls and stitching the result together itself.
+// One call so the UI knows which kind of access to render
+// ("renews on X" vs "owned") without stitching two calls together.
 // ─────────────────────────────────────────────────────────────
 
-export async function getUserCourseAccess(userId, courseId) {
+export async function getUserPlanAccess(userId, planId) {
   const [subscription, enrollment] = await Promise.all([
-    prisma.subscription.findUnique({
+    prisma.planSubscription.findUnique({
       where: {
-        userId_courseId: {
-          userId: Number(userId),
-          courseId: Number(courseId),
-        },
+        userId_planId: { userId: Number(userId), planId: Number(planId) },
       },
-      include: { course: true },
+      include: { plan: true },
     }),
-    prisma.courseEnrollment.findUnique({
+    prisma.planEnrollment.findUnique({
       where: {
-        userId_courseId: {
-          userId: Number(userId),
-          courseId: Number(courseId),
-        },
+        userId_planId: { userId: Number(userId), planId: Number(planId) },
       },
-      include: { course: true },
+      include: { plan: true },
     }),
   ]);
 
@@ -215,23 +348,18 @@ export async function getUserCourseAccess(userId, courseId) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// isSubscriptionActive(userId, courseId)
+// isSubscriptionActive(userId, planId)
 // ─────────────────────────────────────────────────────────────
-// Returns true/false — never throws.
-// Checks BOTH access paths:
-//   - CourseEnrollment (lifetime) → always active once it exists,
-//     there's nothing to expire
-//   - Subscription (monthly/yearly) → active only if status is
-//     ACTIVE and currentPeriodEnd hasn't passed (date is always
-//     the source of truth, not just the stored status, since a
-//     cron job may not have run yet)
+// Never throws — enrollment is always active once it exists;
+// subscription is active only if ACTIVE and not past currentPeriodEnd
+// (date is source of truth, not just stored status, in case the
+// cron job hasn't run yet).
 // ─────────────────────────────────────────────────────────────
 
-export async function isSubscriptionActive(userId, courseId) {
-  const access = await getUserCourseAccess(userId, courseId);
+export async function isSubscriptionActive(userId, planId) {
+  const access = await getUserPlanAccess(userId, planId);
 
   if (access.type === "enrollment") {
-    // Lifetime access never expires
     return true;
   }
 
@@ -250,37 +378,26 @@ export async function isSubscriptionActive(userId, courseId) {
     }
   }
 
-  // No access record of either kind
   return false;
 }
 
 // ─────────────────────────────────────────────────────────────
-// cancelSubscription(userId, courseId)
+// cancelSubscription(userId, planId)
 // ─────────────────────────────────────────────────────────────
-// Marks the subscription to a specific course as CANCELED.
-// Does NOT delete the record — we keep history.
-//
-// Only applies to recurring Subscriptions. Lifetime enrollments
-// can't be "canceled" in this sense — there's no recurring charge
-// to stop. If you need refund/revoke logic for enrollments, that's
-// a separate function, not this one.
-//
-// User still has access until currentPeriodEnd (matches how
-// Stripe/Netflix etc work — cancel now, keep access till period end).
+// Marks CANCELED, doesn't delete — keeps history. User keeps
+// access until currentPeriodEnd, same as Stripe/Netflix pattern.
+// Only applies to recurring subscriptions, not lifetime enrollments.
 // ─────────────────────────────────────────────────────────────
 
-export async function cancelSubscription(userId, courseId) {
-  const subscription = await prisma.subscription.findUnique({
+export async function cancelSubscription(userId, planId) {
+  const subscription = await prisma.planSubscription.findUnique({
     where: {
-      userId_courseId: {
-        userId: Number(userId),
-        courseId: Number(courseId),
-      },
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
     },
   });
 
   if (!subscription) {
-    throw new ApiError(404, "No subscription found for this user and course");
+    throw new ApiError(404, "No subscription found for this user and plan");
   }
 
   if (subscription.status === "CANCELED") {
@@ -291,81 +408,48 @@ export async function cancelSubscription(userId, courseId) {
     throw new ApiError(400, "Subscription has already expired");
   }
 
-  const updated = await prisma.subscription.update({
+  return prisma.planSubscription.update({
     where: {
-      userId_courseId: {
-        userId: Number(userId),
-        courseId: Number(courseId),
-      },
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
     },
     data: {
       status: "CANCELED",
       canceledAt: new Date(),
-      // currentPeriodEnd stays as-is — user keeps access until then
     },
-    include: {
-      course: true,
-    },
+    include: { plan: true },
   });
-
-  return updated;
 }
 
 // ─────────────────────────────────────────────────────────────
 // expireSubscriptions()
 // ─────────────────────────────────────────────────────────────
-// Meant to be called by a cron job (Vercel cron / external scheduler).
-//
-// With trials removed, there's only one transition left:
-//   ACTIVE → EXPIRED, when currentPeriodEnd has passed.
-//
-// CourseEnrollments are never touched here — lifetime access
-// doesn't expire.
+// Meant to be called by a cron job. ACTIVE → EXPIRED when
+// currentPeriodEnd has passed. Enrollments never touched.
 // ─────────────────────────────────────────────────────────────
 
 export async function expireSubscriptions() {
   const now = new Date();
 
-  const result = await prisma.subscription.updateMany({
-    where: {
-      status: "ACTIVE",
-      currentPeriodEnd: { lte: now },
-    },
-    data: {
-      status: "EXPIRED",
-    },
+  const result = await prisma.planSubscription.updateMany({
+    where: { status: "ACTIVE", currentPeriodEnd: { lte: now } },
+    data: { status: "EXPIRED" },
   });
 
-  return {
-    expiredTotal: result.count,
-    processedAt: now,
-  };
+  return { expiredTotal: result.count, processedAt: now };
 }
 
 // ─────────────────────────────────────────────────────────────
-// requireActiveSubscription(userId, courseId)
+// requireActiveSubscription(userId, planId)
 // ─────────────────────────────────────────────────────────────
-// Access guard — throws ApiError if the user doesn't have valid
-// access to this course, via EITHER a Subscription or a
-// CourseEnrollment. Use this inside any API route that serves
-// course/lesson content.
-//
-// Usage in a protected route:
-//   const access = await requireActiveSubscription(user.id, courseId)
-//   // access.type tells you "subscription" or "enrollment"
-//   // access.record has the full row (course included)
-//
-// Why return access instead of throwing only?
-//   Callers often need to know which kind of access this is —
-//   e.g. to show "renews on X" vs "owned" in the UI — right after
-//   the check, without a second DB call.
+// Access guard — throws if user lacks valid access via either
+// a PlanSubscription or a PlanEnrollment. Use inside routes
+// serving gated content.
 // ─────────────────────────────────────────────────────────────
 
-export async function requireActiveSubscription(userId, courseId) {
-  const access = await getUserCourseAccess(userId, courseId);
+export async function requireActiveSubscription(userId, planId) {
+  const access = await getUserPlanAccess(userId, planId);
 
   if (access.type === "enrollment") {
-    // Lifetime access — always valid once the row exists
     return access;
   }
 
@@ -376,14 +460,14 @@ export async function requireActiveSubscription(userId, courseId) {
     if (subscription.status === "CANCELED") {
       throw new ApiError(
         403,
-        "Your subscription to this course has been canceled.",
+        "Your subscription to this plan has been canceled.",
       );
     }
 
     if (subscription.status === "EXPIRED") {
       throw new ApiError(
         403,
-        "Your subscription to this course has expired. Please renew.",
+        "Your subscription to this plan has expired. Please renew.",
       );
     }
 
@@ -394,16 +478,14 @@ export async function requireActiveSubscription(userId, courseId) {
       return access;
     }
 
-    // Status says ACTIVE but date has passed and cron hasn't run yet
     throw new ApiError(
       403,
-      "Your subscription to this course has expired. Please renew.",
+      "Your subscription to this plan has expired. Please renew.",
     );
   }
 
-  // No access record of either kind
   throw new ApiError(
     403,
-    "You don't have access to this course. Please purchase or subscribe.",
+    "You don't have access to this plan. Please purchase or subscribe.",
   );
 }

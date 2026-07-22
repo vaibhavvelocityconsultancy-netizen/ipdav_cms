@@ -78,7 +78,7 @@ export default function LoginPage() {
             />
           ) : (
             <h1 className="text-2xl font-bold text-foreground">
-              {settings?.siteName || "CMS Admin"}
+              {settings?.siteName || "IPDAV"}
             </h1>
           )}
           <p className="text-sm text-muted-foreground mt-1">
