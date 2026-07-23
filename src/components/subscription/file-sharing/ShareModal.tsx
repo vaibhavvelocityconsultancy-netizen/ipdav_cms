@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 export default function ShareModal({
-  fileId,
+  fileIds,
   onClose,
 }: {
-  fileId: string;
+  fileIds: string[];
   onClose: () => void;
 }) {
   const [email, setEmail] = useState("");
@@ -18,8 +18,14 @@ export default function ShareModal({
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
 
+  const fileCount = fileIds?.length ?? 0;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!fileIds || fileIds.length === 0) {
+      return setError("No files selected to share.");
+    }
 
     if (passwordMode === "custom" && customPassword.length < 6) {
       return setError("Password must be at least 6 characters");
@@ -29,10 +35,11 @@ export default function ShareModal({
     setError("");
 
     try {
-      const res = await fetch(`/api/files/${fileId}/share`, {
+      const res = await fetch(`/api/files/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fileIds,
           email,
           message,
           password: passwordMode === "custom" ? customPassword : undefined,
@@ -55,7 +62,9 @@ export default function ShareModal({
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
         <div className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-xl">
           <p className="mb-4 font-medium text-slate-900">
-            File shared with {email}
+            {fileCount > 1
+              ? `${fileCount} files shared with ${email}`
+              : `File shared with ${email}`}
           </p>
           <button
             onClick={onClose}
@@ -74,9 +83,14 @@ export default function ShareModal({
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
       >
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">
-          Share File
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
+          {fileCount > 1 ? `Share ${fileCount} Files` : "Share File"}
         </h2>
+        {fileCount > 1 && (
+          <p className="mb-4 text-xs text-slate-500">
+            One link and password will unlock all {fileCount} files.
+          </p>
+        )}
 
         <input
           type="email"
@@ -84,7 +98,9 @@ export default function ShareModal({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="mb-3 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-slate-400"
+          className={`w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-slate-400 ${
+            fileCount > 1 ? "mb-3" : "mb-3 mt-3"
+          }`}
         />
 
         <textarea

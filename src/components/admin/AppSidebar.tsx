@@ -225,6 +225,14 @@ const adminNavItems: NavItem[] = [
         href: "/admin/permissions",
       },
       {
+        id: "customers",
+        label: "Customers",
+        icon: Users,
+        description: "Manage customers",
+        modulePermission: "customers_view",
+        href: "/admin/customers",
+      },
+      {
         id: "profile",
         label: "Profile",
         icon: User,

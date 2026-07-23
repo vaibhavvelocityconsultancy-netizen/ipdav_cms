@@ -1,96 +1,178 @@
 "use client";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// import { DataTable, Column } from "@/src/ui/DataTable"; // adjust path to your actual location
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/src/ui/button";
 import { Badge } from "@/src/ui/badge";
 import { DataTable, Column } from "@/src/ui/data-table";
+import UserDetailsModal from "@/src/components/admin/userDetailsModel";
 
-interface SharedFile {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  size: number;
-  mimeType: string;
-  url: string;
+interface SubscriberRow {
+  id: number;
+  name: string | null;
+  email: string;
+  role: string;
   createdAt: string;
-  uploader: { name: string | null; email: string };
+  plan: {
+    title: string;
+    status: "TRIALING" | "ACTIVE" | "EXPIRED" | "CANCELED" | null;
+    billingCycle: string | null;
+    startsAt: string | null;
+    canceledAt: string | null;
+    currentPeriodEnd: string | null;
+    trialEndsAt: string | null;
+  } | null;
+  sharedFilesCount: number;
 }
 
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function statusVariant(status: string | null) {
+  switch (status) {
+    case "ACTIVE":
+      return "default";
+    case "TRIALING":
+      return "secondary";
+    case "EXPIRED":
+    case "CANCELED":
+      return "destructive";
+    default:
+      return "outline";
+  }
 }
 
-export default function AdminFilesPage() {
-  const queryClient = useQueryClient();
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+function formatDate(date: string | null) {
+  if (!date) return "—";
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
 
-  const { data: files, isLoading } = useQuery<SharedFile[]>({
-    queryKey: ["admin-files"],
+export default function AdminUsersPage() {
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+
+  const { data: users, isLoading } = useQuery<SubscriberRow[]>({
+    queryKey: ["admin-users"],
     queryFn: async () => {
-      const res = await fetch("/api/files/admin");
+      const res = await fetch("/api/subscription-user");
       const json = await res.json();
       return json.data;
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/files/admin/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-files"] });
-      setConfirmingId(null);
-    },
-  });
-
-  const columns: Column<SharedFile>[] = [
+  const columns: Column<SubscriberRow>[] = [
     {
-      key: "title",
-      header: "Title",
+      key: "name",
+      header: "Subscriber",
       cell: (row) => (
         <div>
-          <div className="font-medium">{row.title}</div>
-          {row.description && (
-            <div className="text-muted-foreground text-xs truncate max-w-xs">
-              {row.description}
-            </div>
-          )}
+          <div className="font-medium">{row.name || "—"}</div>
+          <div className="text-muted-foreground text-xs">{row.email}</div>
         </div>
       ),
+      filterValue: (row) => `${row.name ?? ""} ${row.email}`,
     },
     {
-      key: "category",
-      header: "Category",
-      cell: (row) => <Badge variant="secondary">{row.category}</Badge>,
+      key: "role",
+      header: "Role",
+      cell: (row) => <Badge variant="outline">{row.role}</Badge>,
     },
     {
-      key: "uploader",
-      header: "Uploaded By",
+      key: "plan",
+      header: "Plan",
+      cell: (row) =>
+        row.plan ? (
+          <div className="font-medium text-sm">{row.plan.title}</div>
+        ) : (
+          <span className="text-muted-foreground text-sm">No plan</span>
+        ),
+      filterable: false,
+    },
+    {
+      key: "billingCycle",
+      header: "Billing Cycle",
+      cell: (row) =>
+        row.plan?.billingCycle ? (
+          <span className="text-sm">{row.plan.billingCycle}</span>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        ),
+      filterable: false,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (row) =>
+        row.plan?.status ? (
+          <Badge variant={statusVariant(row.plan.status) as any}>
+            {row.plan.status}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        ),
+      filterable: false,
+    },
+    {
+      key: "startsAt",
+      header: "Start Date",
       cell: (row) => (
-        <div>
-          <div>{row.uploader?.name || "—"}</div>
-          <div className="text-muted-foreground text-xs">{row.uploader?.email}</div>
-        </div>
+        <span className="text-sm text-muted-foreground">
+          {formatDate(row.plan?.startsAt || null)}
+        </span>
       ),
-      filterValue: (row) => row.uploader?.email || "",
+      filterable: false,
     },
     {
-      key: "size",
-      header: "Size",
-      cell: (row) => <span className="text-muted-foreground">{formatSize(row.size)}</span>,
+      key: "trialEndsAt",
+      header: "Trial End Date",
+      cell: (row) => {
+        if (row.plan?.trialEndsAt) {
+          return (
+            <span className="text-sm text-muted-foreground">
+              {formatDate(row.plan.trialEndsAt)}
+            </span>
+          );
+        }
+        return <span className="text-sm text-muted-foreground">—</span>;
+      },
+      filterable: false,
+    },
+    {
+      key: "currentPeriodEnd",
+      header: "Period End",
+      cell: (row) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDate(row.plan?.currentPeriodEnd || null)}
+        </span>
+      ),
+      filterable: false,
+    },
+    {
+      key: "canceledAt",
+      header: "Canceled Date",
+      cell: (row) => {
+        if (row.plan?.canceledAt) {
+          return (
+            <span className="text-sm text-muted-foreground">
+              {formatDate(row.plan.canceledAt)}
+            </span>
+          );
+        }
+        return <span className="text-sm text-muted-foreground">—</span>;
+      },
+      filterable: false,
+    },
+    {
+      key: "sharedFilesCount",
+      header: "Files Shared",
+      cell: (row) => <span>{row.sharedFilesCount}</span>,
       filterable: false,
     },
     {
       key: "createdAt",
-      header: "Uploaded",
+      header: "Joined",
       cell: (row) => (
         <span className="text-muted-foreground">
-          {new Date(row.createdAt).toLocaleDateString()}
+          {formatDate(row.createdAt)}
         </span>
       ),
       filterable: false,
@@ -100,34 +182,10 @@ export default function AdminFilesPage() {
       header: "Actions",
       filterable: false,
       cell: (row) => (
-        <div className="flex justify-end gap-2">
-          <a href={row.url} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm">Open</Button>
-          </a>
-          {confirmingId === row.id ? (
-            <>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => deleteMutation.mutate(row.id)}
-                disabled={deleteMutation.isPending}
-              >
-                Confirm
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setConfirmingId(null)}>
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-red-600 border-red-200 hover:bg-red-50"
-              onClick={() => setConfirmingId(row.id)}
-            >
-              Delete
-            </Button>
-          )}
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setSelectedUserId(row.id)}>
+            View Details
+          </Button>
         </div>
       ),
     },
@@ -135,18 +193,22 @@ export default function AdminFilesPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">All Shared Files</h1>
+      <h1 className="text-2xl font-semibold mb-6">Subscriber Management</h1>
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : (
         <DataTable
-          data={files ?? []}
+          data={users ?? []}
           columns={columns}
-          searchPlaceholder="Search by title..."
-          searchKeys={["title"]}
-          emptyMessage="No files uploaded yet."
+          searchPlaceholder="Search by name or email..."
+          searchKeys={["name"]}
+          emptyMessage="No subscribers yet."
         />
+      )}
+
+      {selectedUserId !== null && (
+        <UserDetailsModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
       )}
     </div>
   );

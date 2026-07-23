@@ -71,6 +71,11 @@ const CountdownTimer = ({
       const now = new Date().getTime();
       const target = new Date(targetDate).getTime();
       const difference = target - now;
+      console.log("targetDate:", targetDate);
+      console.log("parsed target:", new Date(targetDate).toString());
+      console.log("parsed target ISO:", new Date(targetDate).toISOString());
+      console.log("now:", new Date().toString());
+      console.log("difference:", target - now);
 
       if (difference <= 0) {
         setIsExpired(true);
@@ -299,6 +304,9 @@ export default function DashboardPage() {
         return subscription.currentPeriodEnd;
     }
   };
+
+  console.log("subscription", subscription);
+  console.log("timer date", getTimerDate(subscription.status));
 
   return (
     <>

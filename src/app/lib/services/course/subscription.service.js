@@ -1,6 +1,53 @@
 import { prisma } from "../../prisma";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 
+// ═════════════════════════════════════════════════════════════
+// SUBSCRIPTION EXPIRATION HELPER
+// ═════════════════════════════════════════════════════════════
+/**
+ * Ensures a subscription's status is up-to-date by expiring it if needed.
+ *
+ * Rules:
+ * - TRIALING: Expires if trialEndsAt <= now
+ * - ACTIVE: Expires if currentPeriodEnd <= now
+ * - Other: Left unchanged
+ *
+ * Returns: The subscription record (updated if expired, otherwise unchanged)
+ * This is called on every access check to avoid stale records.
+ */
+export async function ensureSubscriptionExpired(subscription) {
+  if (!subscription) return subscription;
+
+  const now = new Date();
+  let shouldExpire = false;
+  let reason = null;
+
+  if (subscription.status === "TRIALING") {
+    if (subscription.trialEndsAt && subscription.trialEndsAt <= now) {
+      shouldExpire = true;
+      reason = "Trial period ended";
+    }
+  } else if (subscription.status === "ACTIVE") {
+    if (subscription.currentPeriodEnd && subscription.currentPeriodEnd <= now) {
+      shouldExpire = true;
+      reason = "Billing period ended";
+    }
+  }
+
+  if (shouldExpire) {
+    console.log(
+      `🔄 Expiring subscription [ID: ${subscription.id}, UserID: ${subscription.userId}]: ${reason}`,
+    );
+    return await prisma.planSubscription.update({
+      where: { id: subscription.id },
+      data: { status: "EXPIRED" },
+      include: { plan: true },
+    });
+  }
+
+  return subscription;
+}
+
 // ─────────────────────────────────────────────────────────────
 // PLAN CRUD (admin management)
 // ─────────────────────────────────────────────────────────────
@@ -210,8 +257,14 @@ export async function getUserCurrentAccess(userId) {
     }),
   ]);
 
+  // ✅ Check and expire subscription if needed
+  const validSubscription = subscription
+    ? await ensureSubscriptionExpired(subscription)
+    : null;
+
   if (enrollment) return { type: "enrollment", record: enrollment };
-  if (subscription) return { type: "subscription", record: subscription };
+  if (validSubscription)
+    return { type: "subscription", record: validSubscription };
   return { type: null, record: null };
 }
 
@@ -262,22 +315,28 @@ export async function getPlansWithCurrentSubscription(userId) {
     }),
   ]);
 
+  // ✅ Check and expire subscription if needed
+  const validSubscription = subscription
+    ? await ensureSubscriptionExpired(subscription)
+    : null;
+
   const now = new Date();
 
   return {
     plans,
-    currentPlan: subscription
+    currentPlan: validSubscription
       ? {
-          planId: subscription.planId,
-          status: subscription.status,
-          trialEndsAt: subscription.trialEndsAt,
-          currentPeriodEnd: subscription.currentPeriodEnd,
+          planId: validSubscription.planId,
+          status: validSubscription.status,
+          trialEndsAt: validSubscription.trialEndsAt,
+          currentPeriodEnd: validSubscription.currentPeriodEnd,
           daysRemaining:
-            subscription.status === "TRIALING" && subscription.trialEndsAt
+            validSubscription.status === "TRIALING" &&
+            validSubscription.trialEndsAt
               ? Math.max(
                   0,
                   Math.ceil(
-                    (subscription.trialEndsAt.getTime() - now.getTime()) /
+                    (validSubscription.trialEndsAt.getTime() - now.getTime()) /
                       (1000 * 60 * 60 * 24),
                   ),
                 )
@@ -295,21 +354,23 @@ function computePeriodEnd(plan, billingCycle) {
     );
   }
 
-  if (billingCycle !== "MONTHLY" && billingCycle !== "YEARLY") {
-    throw new ApiError(400, `Unknown billing cycle: ${billingCycle}`);
+  const end = new Date();
+
+  switch (billingCycle) {
+    case "MONTHLY":
+      end.setMonth(end.getMonth() + 1);
+      break;
+
+    case "YEARLY":
+      end.setFullYear(end.getFullYear() + 1);
+      break;
+
+    default:
+      throw new ApiError(400, `Unknown billing cycle: ${billingCycle}`);
   }
 
-  if (!plan.billingPeriodDays || plan.billingPeriodDays <= 0) {
-    throw new ApiError(
-      500,
-      `Plan "${plan.slug}" has billingCycle "${billingCycle}" but no billingPeriodDays set`,
-    );
-  }
-
-  const now = new Date();
-  return new Date(now.getTime() + plan.billingPeriodDays * 24 * 60 * 60 * 1000);
+  return end;
 }
-
 async function hasUserEverSubscribed(userId) {
   const existing = await prisma.planSubscription.findFirst({
     where: { userId: Number(userId) },
@@ -323,21 +384,37 @@ export async function createSubscription(
   planId,
   billingCycle = "MONTHLY",
 ) {
-  const existing = await prisma.planSubscription.findUnique({
-    where: {
-      userId_planId: { userId: Number(userId), planId: Number(planId) },
-    },
-  });
-  if (existing)
-    throw new ApiError(409, "User already has a subscription to this plan.");
-
   const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
   if (!plan) throw new ApiError(404, "Plan not found");
   if (!plan.isPublished)
     throw new ApiError(400, "This plan is not currently available");
 
+  const existing = await prisma.planSubscription.findUnique({
+    where: {
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
+    },
+  });
+
   const now = new Date();
   const currentPeriodEnd = computePeriodEnd(plan, billingCycle);
+
+  if (existing) {
+    if (existing.status === "TRIALING") {
+      return prisma.planSubscription.update({
+        where: { id: existing.id },
+        data: {
+          billingCycle,
+          status: "ACTIVE",
+          startsAt: now,
+          currentPeriodEnd,
+          trialEndsAt: null,
+        },
+        include: { plan: true },
+      });
+    }
+
+    throw new ApiError(409, "User already has a subscription to this plan.");
+  }
 
   return prisma.planSubscription.create({
     data: {
@@ -418,7 +495,7 @@ export async function startTrial(userId, planId) {
   return subscription;
 }
 
-const DEFAULT_TRIAL_DAYS = 1;
+const DEFAULT_TRIAL_DAYS = 14;
 
 export async function startDefaultTrial(userId, tenantId) {
   const alreadyUsedTrial = await hasUserEverSubscribed(userId);
@@ -497,12 +574,17 @@ export async function getUserPlanAccess(userId, planId) {
     }),
   ]);
 
+  // ✅ Check and expire subscription if needed
+  const validSubscription = subscription
+    ? await ensureSubscriptionExpired(subscription)
+    : null;
+
   if (enrollment) {
     return { type: "enrollment", record: enrollment };
   }
 
-  if (subscription) {
-    return { type: "subscription", record: subscription };
+  if (validSubscription) {
+    return { type: "subscription", record: validSubscription };
   }
 
   return { type: null, record: null };
@@ -564,21 +646,214 @@ export async function cancelSubscription(userId, planId) {
   });
 }
 
-export async function expireSubscriptions() {
-  const subscriptions = await prisma.planSubscription.findMany({
-    where: { status: "ACTIVE" },
-    include: { plan: true },
+export async function expireSubscriptions(userId = null) {
+  const now = new Date();
+
+  // ✅ Build filter: if userId provided, only expire that user's subscriptions
+  const filterCriteria = userId ? { userId: Number(userId) } : {};
+
+  // ✅ Find all TRIALING subscriptions that should expire
+  const expiredTrials = await prisma.planSubscription.findMany({
+    where: {
+      ...filterCriteria,
+      status: "TRIALING",
+      trialEndsAt: { lte: now },
+    },
   });
 
-  const now = new Date();
-  const updates = subscriptions
-    .filter((subscription) => subscription.currentPeriodEnd <= now)
-    .map((subscription) =>
-      prisma.planSubscription.update({
-        where: { id: subscription.id },
-        data: { status: "EXPIRED" },
-      }),
-    );
+  // ✅ Find all ACTIVE subscriptions that should expire
+  const expiredActive = await prisma.planSubscription.findMany({
+    where: {
+      ...filterCriteria,
+      status: "ACTIVE",
+      currentPeriodEnd: { lte: now },
+    },
+  });
 
-  return prisma.$transaction(updates);
+  // ✅ Update all expired trials
+  const trialUpdates = expiredTrials.map((subscription) =>
+    prisma.planSubscription.update({
+      where: { id: subscription.id },
+      data: { status: "EXPIRED" },
+    }),
+  );
+
+  // ✅ Update all expired active subscriptions
+  const activeUpdates = expiredActive.map((subscription) =>
+    prisma.planSubscription.update({
+      where: { id: subscription.id },
+      data: { status: "EXPIRED" },
+    }),
+  );
+
+  // ✅ Execute all updates in a transaction
+  if (trialUpdates.length > 0 || activeUpdates.length > 0) {
+    await prisma.$transaction([...trialUpdates, ...activeUpdates]);
+  }
+
+  const totalTrialsExpired = expiredTrials.length;
+  const totalActiveExpired = activeUpdates.length;
+  const totalExpired = totalTrialsExpired + totalActiveExpired;
+  const userInfo = userId ? ` for user ${userId}` : " globally";
+
+  console.log(
+    `✅ Subscription expiry completed${userInfo}: ${totalTrialsExpired} trials expired, ${totalActiveExpired} active subscriptions expired (${totalExpired} total)`,
+  );
+
+  return {
+    trialToActive: totalTrialsExpired,
+    expiredTotal: totalExpired,
+    details: {
+      trialsExpired: totalTrialsExpired,
+      activeExpired: totalActiveExpired,
+    },
+  };
 }
+
+// subscriber users
+export async function getSubscriberUsers() {
+  const users = await prisma.user.findMany({
+    where: {
+      role: {
+        not: "SUPER_ADMIN", // Exclude SUPER_ADMIN users
+      },
+    },
+    include: {
+      // Most recent plan subscription only — a user could have old
+      // canceled ones, we only care about their current standing.
+      planSubscriptions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: { plan: { select: { title: true, billingCycle: true } } },
+      },
+      _count: {
+        select: { fileShares: true }, // shares THEY sent (sharedBy relation)
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return users.map((u) => {
+    const sub = u.planSubscriptions[0] ?? null;
+
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      createdAt: u.createdAt,
+      sharedFilesCount: u._count.fileShares,
+      plan: sub
+        ? {
+            title: sub.plan.title,
+            status: sub.status, // "TRIALING" | "ACTIVE" | "EXPIRED" | "CANCELED"
+            billingCycle: sub.plan.billingCycle,
+            startsAt: sub.startsAt,
+            canceledAt: sub.canceledAt,
+            currentPeriodEnd: sub.currentPeriodEnd,
+            trialEndsAt: sub.trialEndsAt,
+          }
+        : null,
+    };
+  });
+}
+
+// subscriber users details
+
+export const getUserDetails = async (userId) => {
+  const id = Number(userId);
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const subscription = await prisma.planSubscription.findFirst({
+    where: { userId: id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      plan: {
+        select: {
+          title: true,
+          billingCycle: true,
+        },
+      },
+    },
+  });
+
+  const shares = await prisma.fileShare.findMany({
+    where: {
+      sharedBy: id,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      items: {
+        include: {
+          file: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Uploaded files
+  const uploadedFiles = await prisma.sharedFile.findMany({
+    where: {
+      uploadedBy: id,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      title: true,
+      originalName: true,
+      category: true,
+      mimeType: true,
+      size: true,
+      url: true,
+      createdAt: true,
+    },
+  });
+
+  return {
+    user,
+
+    plan: subscription
+      ? {
+          title: subscription.plan.title,
+          status: subscription.status,
+          billingCycle: subscription.plan.billingCycle,
+          startsAt: subscription.startsAt,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          trialEndsAt: subscription.trialEndsAt,
+        }
+      : null,
+
+    uploadedFiles,
+
+    shares: shares.map((share) => ({
+      shareId: share.id,
+      sharedWith: share.sharedWith,
+      createdAt: share.createdAt,
+      viewedAt: share.viewedAt,
+      zipDownloadedAt: share.zipDownloadedAt,
+      fileCount: share.items.length,
+      fileTitles: share.items.map((i) => i.file.title),
+    })),
+  };
+};

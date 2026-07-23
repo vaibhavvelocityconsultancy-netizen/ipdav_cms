@@ -2,13 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { SubscriberSidebar } from "@/src/components/subscription/sidebar";
-// import SiteNavbar from "@/src/components/site/siteNavbar";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 import { useQueries } from "@tanstack/react-query";
 import SiteNavbar from "@/src/components/subscription/dashboard-navbar";
-// import SiteNavbar from "@/src/components/subscription/dashboard-navbar";
-// import { DashboardNavbar } from "@/src/components/subscription/dashboard-navbar";
+import { useSubscription } from "@/src/hooks/use-subscription";
+
+/**
+ * ═════════════════════════════════════════════════════════════════════
+ * SUBSCRIPTION LAYOUT
+ * ═════════════════════════════════════════════════════════════════════
+ *
+ * Single parent layout for all /subscription/* routes.
+ * Fetches subscription data once and passes it to sidebar and children.
+ * This ensures a single source of truth for access/subscription state.
+ */
 
 export default function SubscriptionLayout({
   children,
@@ -17,6 +25,9 @@ export default function SubscriptionLayout({
 }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // ── Fetch subscription data once (cached by React Query) ──
+  const { access, isLoading: subscriptionLoading } = useSubscription();
 
   const [
     { data: bootstrapData, isLoading: bootstrapLoading },
@@ -42,7 +53,7 @@ export default function SubscriptionLayout({
     ],
   });
 
-  // ── 2. Derived content ──
+  // ── Derived content ──
   const settings = useMemo(
     () => bootstrapData?.data?.settings,
     [bootstrapData],
@@ -67,6 +78,8 @@ export default function SubscriptionLayout({
 
       <div className="flex h-[calc(100vh-64px)]">
         <SubscriberSidebar
+          access={access}
+
           isMobileOpen={isMobileOpen}
           setIsMobileOpen={setIsMobileOpen}
           isCollapsed={isSidebarCollapsed}

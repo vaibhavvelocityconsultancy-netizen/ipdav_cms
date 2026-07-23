@@ -1,0 +1,40 @@
+import { markFileDownloaded } from "@/src/app/lib/file_sharing/file-sharing.service";
+import { prisma } from "@/src/app/lib/prisma";
+import { ApiError } from "@/src/app/lib/utils/ApiError";
+import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
+
+export const GET = asyncHandler(async (req, { params }) => {
+  const resolvedParams = await params;
+  const token = resolvedParams?.token?.toString?.();
+  const fileId = resolvedParams?.fileId?.toString?.();
+
+  if (!token) throw new ApiError(400, "Token is required");
+  if (!fileId) throw new ApiError(400, "File ID is required");
+
+  const share = await prisma.fileShare.findUnique({
+    where: { token },
+    include: {
+      items: {
+        where: { fileId },
+        include: { file: true },
+      },
+    },
+  });
+
+  if (!share || !share.items?.length) {
+    throw new ApiError(404, "Invalid link or file not part of this share");
+  }
+
+  await markFileDownloaded(token, fileId);
+
+  const file = share.items[0].file;
+  const res = await fetch(file.url);
+  const blob = await res.arrayBuffer();
+
+  return new Response(blob, {
+    headers: {
+      "Content-Type": file.mimeType,
+      "Content-Disposition": `attachment; filename="${file.originalName}"`,
+    },
+  });
+});

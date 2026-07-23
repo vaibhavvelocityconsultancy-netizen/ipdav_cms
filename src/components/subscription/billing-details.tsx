@@ -13,18 +13,26 @@ type Payment = {
   razorpayPaymentId: string | null;
   plan: {
     id: number;
-    name: string;
-    monthlyPrice: number;
-    annualPrice: number;
+    name?: string;
+    title?: string;
+    monthlyPrice?: number;
+    annualPrice?: number;
   };
 };
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-IN", {
+  return new Date(dateStr).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+}
+
+function formatUSD(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount / 100);
 }
 
 export function BillingPage() {
@@ -102,9 +110,7 @@ export function BillingPage() {
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
             Total Spent
           </p>
-          <p className="text-2xl font-semibold mt-1">
-            ₹{(totalSpent / 100).toLocaleString("en-IN")}
-          </p>
+          <p className="text-2xl font-semibold mt-1">{formatUSD(totalSpent)}</p>
         </div>
         <div className="rounded-xl border bg-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -117,9 +123,7 @@ export function BillingPage() {
             Last Payment
           </p>
           <p className="text-2xl font-semibold mt-1">
-            {lastPayment
-              ? `₹${(lastPayment.amount / 100).toLocaleString("en-IN")}`
-              : "—"}
+            {lastPayment ? formatUSD(lastPayment.amount) : "—"}
           </p>
           {lastPayment && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -140,12 +144,24 @@ export function BillingPage() {
             <table className="w-full text-sm">
               <thead className="border-b">
                 <tr>
-                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">Plan</th>
-                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">Date</th>
-                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">Cycle</th>
-                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">Order ID</th>
-                  <th className="text-right py-3 px-2 text-xs font-medium text-muted-foreground uppercase">Amount</th>
-                  <th className="text-right py-3 px-2 text-xs font-medium text-muted-foreground uppercase">Status</th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">
+                    Plan
+                  </th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">
+                    Date
+                  </th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">
+                    Cycle
+                  </th>
+                  <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground uppercase">
+                    Order ID
+                  </th>
+                  <th className="text-right py-3 px-2 text-xs font-medium text-muted-foreground uppercase">
+                    Amount
+                  </th>
+                  <th className="text-right py-3 px-2 text-xs font-medium text-muted-foreground uppercase">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -162,19 +178,39 @@ export function BillingPage() {
                         <tr key={`change-${payment.id}`}>
                           <td colSpan={6} className="py-2 px-2">
                             <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-1.5">
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                                />
                               </svg>
                               Plan changed from{" "}
-                              <span className="font-medium">{prevPayment.plan?.name}</span>
+                              <span className="font-medium">
+                                {prevPayment.plan?.title ||
+                                  prevPayment.plan?.name}
+                              </span>
                               {" → "}
-                              <span className="font-medium">{payment.plan?.name}</span>
+                              <span className="font-medium">
+                                {payment.plan?.title || payment.plan?.name}
+                              </span>
                             </div>
                           </td>
                         </tr>
                       )}
-                      <tr key={payment.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-3 px-2 font-medium">{payment.plan?.name}</td>
+                      <tr
+                        key={payment.id}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="py-3 px-2 font-medium">
+                          {payment.plan?.title || payment.plan?.name}
+                        </td>
                         <td className="py-3 px-2 text-muted-foreground">
                           {formatDate(payment.createdAt)}
                         </td>
@@ -185,16 +221,18 @@ export function BillingPage() {
                           {payment.razorpayOrderId?.slice(0, 16)}...
                         </td>
                         <td className="py-3 px-2 text-right font-semibold">
-                          ₹{(payment.amount / 100).toLocaleString("en-IN")}
+                          {formatUSD(payment.amount)}
                         </td>
                         <td className="py-3 px-2 text-right">
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                            payment.status === "SUCCESS"
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : payment.status === "FAILED"
-                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                              : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          }`}>
+                          <span
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                              payment.status === "SUCCESS"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : payment.status === "FAILED"
+                                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            }`}
+                          >
                             {payment.status}
                           </span>
                         </td>

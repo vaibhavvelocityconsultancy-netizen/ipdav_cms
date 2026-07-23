@@ -87,10 +87,24 @@ export async function getSubscriberDashboard(userId) {
 
   const { type, record } = access;
   const plan = record?.plan ?? null;
+  const now = Date.now();
+
+  const isTrialExpired =
+    type === "subscription" &&
+    record?.status === "TRIALING" &&
+    record?.trialEndsAt &&
+    new Date(record.trialEndsAt).getTime() <= now;
+
+  const normalizedStatus = isTrialExpired
+    ? "EXPIRED"
+    : (record?.status ?? null);
 
   let trialDaysRemaining = null;
-  if (type === "subscription" && record.status === "TRIALING") {
-    const now = Date.now();
+  if (
+    type === "subscription" &&
+    normalizedStatus === "TRIALING" &&
+    record?.trialEndsAt
+  ) {
     const end = new Date(record.trialEndsAt).getTime();
     trialDaysRemaining = Math.max(
       0,
@@ -108,7 +122,7 @@ export async function getSubscriberDashboard(userId) {
           billingCycle: record.billingCycle,
         }
       : null,
-    status: record?.status ?? null, // TRIALING | ACTIVE | EXPIRED | CANCELED (enrollment has no status)
+    status: normalizedStatus, // TRIALING | ACTIVE | EXPIRED | CANCELED (enrollment has no status)
     trialDaysRemaining,
     trialEndsAt: record?.trialEndsAt ?? null,
     currentPeriodEnd: record?.currentPeriodEnd ?? null,

@@ -37,8 +37,9 @@ export function CustomersPage() {
   const router = useRouter();
   const [filter, setFilter] = useState("all");
 
-  const { data, error, isLoading } = useSWR(["customers", filter].join("|"), () =>
-    fetchers.customersList({ filter, page: 1, pageSize: 1000 }),
+  const { data, error, isLoading } = useSWR(
+    ["customers", filter].join("|"),
+    () => fetchers.customersList({ filter, page: 1, pageSize: 1000 }),
   );
 
   const rows: Customer[] = data?.data?.customers ?? [];
@@ -72,7 +73,9 @@ export function CustomersPage() {
       key: "courses",
       header: "Courses",
       className: "text-right",
-      cell: (row) => <span className="tabular-nums">{row.enrollmentsCount}</span>,
+      cell: (row) => (
+        <span className="tabular-nums">{row.enrollmentsCount}</span>
+      ),
       filterValue: (row) => String(row.enrollmentsCount),
     },
     {
@@ -85,7 +88,9 @@ export function CustomersPage() {
     {
       key: "joined",
       header: "Joined",
-      cell: (row) => <span className="text-xs">{formatDate(row.createdAt)}</span>,
+      cell: (row) => (
+        <span className="text-xs">{formatDate(row.createdAt)}</span>
+      ),
       filterValue: (row) => formatDate(row.createdAt),
     },
     {
@@ -98,7 +103,7 @@ export function CustomersPage() {
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={() => router.push(`/admin/ecommerce/customers/${row.id}`)}
+          onClick={() => router.push(`/admin/customers/${row.id}`)}
         >
           <Eye className="h-3.5 w-3.5" />
         </Button>
@@ -107,11 +112,19 @@ export function CustomersPage() {
   ];
 
   if (isLoading) {
-    return <div className="max-w-6xl mx-auto py-8 px-4 text-sm text-muted-foreground">Loading customers…</div>;
+    return (
+      <div className="max-w-6xl mx-auto py-8 px-4 text-sm text-muted-foreground">
+        Loading customers…
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="max-w-6xl mx-auto py-8 px-4 text-sm text-destructive">Failed to load customers.</div>;
+    return (
+      <div className="max-w-6xl mx-auto py-8 px-4 text-sm text-destructive">
+        Failed to load customers.
+      </div>
+    );
   }
 
   return (

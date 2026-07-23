@@ -411,18 +411,18 @@ model CourseMaterial {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Payment {
-  id                 String        @id @default(cuid())
-  userId             Int
-  courseId           Int?
-  planId             Int?
-  billingCycle       BillingCycle  @default(LIFETIME)
-  paypalOrderId      String?       @unique
-  paypalCaptureId    String?       @unique
-  amount             Int
-  currency           String        @default("INR")
-  status             PaymentStatus @default(PENDING)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  userId          Int
+  courseId        Int?
+  planId          Int?
+  billingCycle    BillingCycle  @default(LIFETIME)
+  paypalOrderId   String?       @unique
+  paypalCaptureId String?       @unique
+  amount          Int
+  currency        String        @default("INR")
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   user   user    @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course? @relation(fields: [courseId], references: [id], onDelete: Restrict)
@@ -434,6 +434,7 @@ model Payment {
   @@index([status])
   @@index([createdAt])
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SUBSCRIPTION  (only used for MONTHLY / YEARLY billing cycles)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1362,18 +1363,18 @@ model CustomerAddress {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Order {
-  id                    String             @id @default(cuid())
-  orderNumber           String             @unique
-  userId                Int
-  status                OrderStatus        @default(PENDING)
-  paymentStatus         OrderPaymentStatus @default(PENDING)
-  paymentMethod         PaymentMethod      @default(PAYPAL)
-  subtotal              Decimal            @db.Decimal(10, 2)
-  shippingCost          Decimal            @default(0) @db.Decimal(10, 2)
-  taxAmount             Decimal            @default(0) @db.Decimal(10, 2)
-  discountAmount        Decimal            @default(0) @db.Decimal(10, 2)
-  total                 Decimal            @db.Decimal(10, 2)
-  currency              String             @default("INR")
+  id             String             @id @default(cuid())
+  orderNumber    String             @unique
+  userId         Int
+  status         OrderStatus        @default(PENDING)
+  paymentStatus  OrderPaymentStatus @default(PENDING)
+  paymentMethod  PaymentMethod      @default(PAYPAL)
+  subtotal       Decimal            @db.Decimal(10, 2)
+  shippingCost   Decimal            @default(0) @db.Decimal(10, 2)
+  taxAmount      Decimal            @default(0) @db.Decimal(10, 2)
+  discountAmount Decimal            @default(0) @db.Decimal(10, 2)
+  total          Decimal            @db.Decimal(10, 2)
+  currency       String             @default("INR")
 
   couponCode      String?
   shippingAddress Json
@@ -1561,29 +1562,44 @@ model SharedFile {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant   tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  uploader user        @relation(fields: [uploadedBy], references: [id])
-  shares   FileShare[]
+  tenant         tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader       user            @relation(fields: [uploadedBy], references: [id])
+  shares         FileShare[]
+  fileShareItems FileShareItem[]
 
   @@index([tenantId])
   @@index([category])
 }
 
 model FileShare {
-  id           String    @id @default(cuid())
-  fileId       String
-  sharedWith   String
-  message      String?   @db.Text
-  password     String
-  sharedBy     Int
-  token        String    @unique @default(cuid())
-  viewedAt     DateTime?
-  downloadedAt DateTime?
-  createdAt    DateTime  @default(now())
+  id              String    @id @default(cuid())
+  sharedWith      String
+  message         String?   @db.Text
+  password        String
+  sharedBy        Int
+  token           String    @unique @default(cuid())
+  viewedAt        DateTime?
+  zipDownloadedAt DateTime?
+  createdAt       DateTime  @default(now())
 
-  file   SharedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  sharer user       @relation(fields: [sharedBy], references: [id])
+  sharer       user            @relation(fields: [sharedBy], references: [id])
+  items        FileShareItem[]
+  sharedFile   SharedFile?     @relation(fields: [sharedFileId], references: [id])
+  sharedFileId String?
 
-  @@index([fileId])
   @@index([token])
+}
+
+model FileShareItem {
+  id           String    @id @default(cuid())
+  shareId      String
+  fileId       String
+  downloadedAt DateTime?
+
+  share FileShare  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  file  SharedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([shareId, fileId])
+  @@index([shareId])
+  @@index([fileId])
 }

@@ -1,18 +1,47 @@
 import { BookOpen, Home, LogOut, Plane, Receipt, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
+import { AccessData } from "@/src/app/subscription/util";
 
-export function SubscriberSidebar({
-  isMobileOpen,
-  setIsMobileOpen,
-  isCollapsed,
-  setIsCollapsed,
-}: {
+/**
+ * ═════════════════════════════════════════════════════════════════════
+ * SUBSCRIBER SIDEBAR
+ * ═════════════════════════════════════════════════════════════════════
+ *
+ * Navigation sidebar for authenticated subscribers.
+ * Receives subscription data from parent layout.
+ *
+ * Props:
+ * - access: Current subscription data (required)
+ * - isMobileOpen: Mobile menu visibility state
+ * - setIsMobileOpen: Toggle mobile menu
+ * - isCollapsed: Sidebar collapse state (desktop)
+ * - setIsCollapsed: Toggle sidebar collapse
+ */
+
+interface SubscriberSidebarProps {
+  access: AccessData | null;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
   isCollapsed: boolean;
   setIsCollapsed: (value: boolean) => void;
-}) {
+}
+
+export function SubscriberSidebar({
+  access,
+  isMobileOpen,
+  setIsMobileOpen,
+  isCollapsed,
+  setIsCollapsed,
+}: SubscriberSidebarProps) {
+  // Check if user has active subscription or valid trial period
+  const now = new Date();
+  const trialValid =
+    access?.status === "TRIALING" &&
+    access?.trialEndsAt &&
+    new Date(access.trialEndsAt) > now;
+
+  const hasSubscription = access?.status === "ACTIVE" || trialValid;
   // const pathname = usePathname();
   const sidebarItems = [
     {
@@ -135,6 +164,14 @@ export function SubscriberSidebar({
                 <button
                   key={item.href}
                   onClick={() => {
+                    if (
+                      item.href === "/subscription/file-sharing" &&
+                      !hasSubscription
+                    ) {
+                      alert("Please subscribe to access File Sharing.");
+                      return;
+                    }
+
                     router.push(item.href);
                     setIsMobileOpen(false);
                   }}

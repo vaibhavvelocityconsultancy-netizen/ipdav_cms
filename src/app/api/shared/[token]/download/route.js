@@ -21,6 +21,7 @@ export const GET = asyncHandler(async (req, { params }) => {
 
   return new Response(blob, {
     headers: {
+      
       "Content-Type": share.file.mimeType,
       "Content-Disposition": `attachment; filename="${share.file.originalName}"`,
     },

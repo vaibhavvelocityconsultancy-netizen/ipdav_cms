@@ -41,9 +41,18 @@ export default function MySubscriptionPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const router = useRouter();
   const plansRef = useRef<HTMLDivElement>(null);
+
+  const formatUSD = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
 
   useEffect(() => {
     async function load() {
@@ -71,10 +80,13 @@ export default function MySubscriptionPage() {
     load();
   }, []);
 
-  const handlePayment = async (planId: number, billingCycle: string = "MONTHLY") => {
+  const handlePayment = async (
+    planId: number,
+    billingCycle: string = "MONTHLY",
+  ) => {
     try {
       setPaymentLoading(planId);
-      
+
       // Create order
       const res = await fetch("/api/payment/create-order", {
         method: "POST",
@@ -99,9 +111,9 @@ export default function MySubscriptionPage() {
         const options = {
           key: keyId,
           amount,
-          currency: "INR",
+          currency: "USD",
           name: "Your Platform",
-          description: `Subscribe to ${plans.find(p => p.id === planId)?.name} Plan`,
+          description: `Subscribe to ${plans.find((p) => p.id === planId)?.name} Plan`,
           order_id: orderId,
           method: {
             netbanking: true,
@@ -122,15 +134,15 @@ export default function MySubscriptionPage() {
                   billingCycle,
                 }),
               });
-              
+
               const verifyData = await verifyRes.json();
-              
+
               if (verifyData.success) {
-                setToast({ 
-                  message: `✅ Successfully subscribed to ${plans.find(p => p.id === planId)?.name} plan!`, 
-                  type: 'success' 
+                setToast({
+                  message: `✅ Successfully subscribed to ${plans.find((p) => p.id === planId)?.name} plan!`,
+                  type: "success",
                 });
-                
+
                 // Refresh subscription data
                 const subRes = await fetch("/api/subscription");
                 if (subRes.ok) {
@@ -138,15 +150,16 @@ export default function MySubscriptionPage() {
                   setSubscription(subData?.data ?? subData ?? null);
                 }
               } else {
-                setToast({ 
-                  message: "Payment verification failed. Please contact support.", 
-                  type: 'error' 
+                setToast({
+                  message:
+                    "Payment verification failed. Please contact support.",
+                  type: "error",
                 });
               }
             } catch (err: any) {
-              setToast({ 
-                message: "An error occurred during payment verification.", 
-                type: 'error' 
+              setToast({
+                message: "An error occurred during payment verification.",
+                type: "error",
               });
             } finally {
               setPaymentLoading(null);
@@ -155,7 +168,7 @@ export default function MySubscriptionPage() {
           modal: {
             ondismiss: () => {
               setPaymentLoading(null);
-            }
+            },
           },
           prefill: { email: "" },
           theme: { color: "#6366f1" },
@@ -164,9 +177,9 @@ export default function MySubscriptionPage() {
         rzp.open();
       };
     } catch (e: any) {
-      setToast({ 
-        message: e.message || "Failed to initiate payment", 
-        type: 'error' 
+      setToast({
+        message: e.message || "Failed to initiate payment",
+        type: "error",
       });
       setPaymentLoading(null);
     }
@@ -174,7 +187,7 @@ export default function MySubscriptionPage() {
 
   const scrollToPlans = () => {
     if (plansRef.current) {
-      plansRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      plansRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -183,7 +196,10 @@ export default function MySubscriptionPage() {
     if (subscription && plansRef.current) {
       // Small delay to ensure DOM is updated
       setTimeout(() => {
-        plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        plansRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       }, 300);
     }
   }, [subscription]);
@@ -207,32 +223,46 @@ export default function MySubscriptionPage() {
     <div className="space-y-8">
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm animate-in slide-in-from-bottom-2 ${
-          toast.type === 'success' 
-            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
-            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-        }`}>
+        <div
+          className={`fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm animate-in slide-in-from-bottom-2 ${
+            toast.type === "success"
+              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+              : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          }`}
+        >
           <div className="flex items-start gap-3">
-            {toast.type === 'success' ? (
+            {toast.type === "success" ? (
               <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
             ) : (
               <Loader2 className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
             )}
             <div>
-              <p className={`text-sm font-medium ${
-                toast.type === 'success' 
-                  ? 'text-green-800 dark:text-green-400' 
-                  : 'text-red-800 dark:text-red-400'
-              }`}>
+              <p
+                className={`text-sm font-medium ${
+                  toast.type === "success"
+                    ? "text-green-800 dark:text-green-400"
+                    : "text-red-800 dark:text-red-400"
+                }`}
+              >
                 {toast.message}
               </p>
             </div>
-            <button 
-              onClick={() => setToast(null)} 
+            <button
+              onClick={() => setToast(null)}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -299,15 +329,21 @@ export default function MySubscriptionPage() {
 
                   <div className="mt-4">
                     <span className="text-2xl font-bold text-gray-900">
-                      ₹{plan.monthlyPrice.toLocaleString("en-IN")}{" "}
+                      {formatUSD(plan.monthlyPrice)}
                     </span>
                     <span className="text-sm text-gray-500">/month</span>
                     {plan.annualPrice && (
                       <div className="text-xs text-gray-500 mt-1">
-                        or ₹{plan.annualPrice.toLocaleString("en-IN")}/year 
+                        or {formatUSD(plan.annualPrice)}/year
                         {plan.annualPrice < plan.monthlyPrice * 12 && (
                           <span className="text-green-600 font-medium ml-1">
-                            (Save {Math.round(((plan.monthlyPrice * 12 - plan.annualPrice) / (plan.monthlyPrice * 12)) * 100)}%)
+                            (Save{" "}
+                            {Math.round(
+                              ((plan.monthlyPrice * 12 - plan.annualPrice) /
+                                (plan.monthlyPrice * 12)) *
+                                100,
+                            )}
+                            %)
                           </span>
                         )}
                       </div>

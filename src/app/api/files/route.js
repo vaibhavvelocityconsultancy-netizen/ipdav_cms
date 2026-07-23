@@ -4,6 +4,7 @@ import { ApiError } from "../../lib/utils/ApiError";
 import { ApiResponse } from "../../lib/utils/ApiResponse";
 import { asyncHandler } from "../../lib/utils/asyncHandler";
 import cloudinary from "@/src/lib/cloudinary";
+import { requireActiveSubscription } from "../../lib/utils/subscription-access";
 
 const ALLOWED_TYPES = [
   // Images
@@ -101,7 +102,7 @@ export const GET = asyncHandler(async () => {
 
 export const POST = asyncHandler(async (req) => {
   const { user } = await requireAuth();
-  await ensureSubscriberCanUpload(user.id);
+  await requireActiveSubscription(user.id);
 
   const formData = await req.formData();
   const file = formData.get("file") ?? formData.getAll("files")[0];

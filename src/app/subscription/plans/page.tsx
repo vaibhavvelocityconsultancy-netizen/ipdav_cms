@@ -4,7 +4,7 @@
  * ═════════════════════════════════════════════════════════════════════
  * PLANS PAGE
  * ═════════════════════════════════════════════════════════════════════
- * 
+ *
  * Displays all available plans with features and pricing
  * Shows current subscription status and badge
  * Allows users to subscribe or upgrade
@@ -13,13 +13,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Check, 
-  Crown, 
+import {
+  Check,
+  Crown,
   Sparkles,
   Clock,
   AlertCircle,
-  Loader2
+  Loader2,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Feature {
@@ -36,6 +38,7 @@ interface Plan {
   description: string;
   price: string;
   billingCycle: string;
+  trialDays?: number;
   isFeatured: boolean;
   isPublished: boolean;
   sortOrder: number;
@@ -53,8 +56,10 @@ interface CurrentPlan {
 interface PlansResponse {
   success: boolean;
   message: string;
-  data: Plan[];
-  currentPlan?: CurrentPlan;
+  data: {
+    plans: Plan[];
+    currentPlan: CurrentPlan | null;
+  };
 }
 
 // API function
@@ -71,41 +76,60 @@ const fetchPlans = async (): Promise<PlansResponse> => {
   }
 
   const result = await response.json();
-  
-  // The API returns data as an array of plans directly
+
+  const payload = result?.data ?? {};
+  const plans = Array.isArray(payload.plans)
+    ? payload.plans
+    : Array.isArray(result?.data)
+      ? result.data
+      : [];
+  const currentPlan = payload.currentPlan ?? result?.currentPlan ?? null;
+
   return {
     success: result.success || true,
     message: result.message || "Plans fetched successfully",
-    data: Array.isArray(result.data) ? result.data : [],
-    currentPlan: result.currentPlan || null
+    data: {
+      plans,
+      currentPlan,
+    },
   };
 };
 
 // Plan Card Component
-const PlanCard = ({ 
-  plan, 
-  isCurrentPlan, 
+const PlanCard = ({
+  plan,
+  isCurrentPlan,
   currentPlanStatus,
-  onSelect 
-}: { 
-  plan: Plan; 
+  onSelect,
+  onCancel,
+  isCancelling,
+}: {
+  plan: Plan;
   isCurrentPlan: boolean;
   currentPlanStatus?: string;
-  onSelect: (planId: number) => void;
+  onSelect: () => void;
+  onCancel: () => void;
+  isCancelling: boolean;
 }) => {
   const isFeatured = plan.isFeatured;
   const isActive = isCurrentPlan && currentPlanStatus === "ACTIVE";
   const isTrialing = isCurrentPlan && currentPlanStatus === "TRIALING";
+  const isExpired = isCurrentPlan && currentPlanStatus === "EXPIRED";
+  const isCancelled = isCurrentPlan && currentPlanStatus === "CANCELLED";
+  
 
   const getButtonText = () => {
     if (isActive) return "Current Plan";
     if (isTrialing) return "Upgrade Now";
+    if (isExpired) return "Subscribe Again";
+    if (isCancelled) return "Resubscribe";
     return "Subscribe Now";
   };
 
   const getButtonStyles = () => {
     if (isActive) return "bg-green-600 hover:bg-green-700";
     if (isTrialing) return "bg-blue-600 hover:bg-blue-700";
+    if (isExpired || isCancelled) return "bg-orange-600 hover:bg-orange-700";
     if (isFeatured) return "bg-blue-600 hover:bg-blue-700";
     return "bg-red-600 hover:bg-red-700";
   };
@@ -125,17 +149,26 @@ const PlanCard = ({
   };
 
   // Sort features by sortOrder
-  const sortedFeatures = [...plan.features].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sortedFeatures = [...plan.features].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   return (
-    <div 
+    <div
       className={`
         relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300
-        ${isActive ? 'border-green-500 shadow-xl' : 
-          isTrialing ? 'border-blue-400 shadow-xl' : 
-          isFeatured ? 'border-blue-500 shadow-xl ring-2 ring-blue-100' : 
-          'border-gray-200 hover:border-red-300 hover:shadow-xl'}
-        ${isCurrentPlan ? 'transform scale-[1.02]' : 'hover:scale-[1.02]'}
+        ${
+          isActive
+            ? "border-green-500 shadow-xl"
+            : isTrialing
+              ? "border-blue-400 shadow-xl"
+              : isExpired || isCancelled
+                ? "border-orange-400 shadow-xl"
+                : isFeatured
+                  ? "border-blue-500 shadow-xl ring-2 ring-blue-100"
+                  : "border-gray-200 hover:border-red-300 hover:shadow-xl"
+        }
+        ${isCurrentPlan ? "transform scale-[1.02]" : "hover:scale-[1.02]"}
         overflow-hidden
       `}
     >
@@ -152,11 +185,34 @@ const PlanCard = ({
       {/* Status Badge */}
       {isCurrentPlan && (
         <div className="absolute top-0 left-0 z-10">
-          <div className={`
-            text-white text-xs font-bold px-4 py-1.5 rounded-br-lg
-            ${isActive ? 'bg-green-600' : 'bg-blue-600'}
-          `}>
-            {isActive ? '✓ ACTIVE' : '⏳ TRIAL'}
+          <div
+            className={`
+            text-white text-xs font-bold px-4 py-1.5 rounded-br-lg flex items-center gap-1
+            ${isActive ? "bg-green-600" : ""}
+            ${isTrialing ? "bg-blue-600" : ""}
+            ${isExpired || isCancelled ? "bg-orange-600" : ""}
+          `}
+          >
+            {isActive && (
+              <>
+                <Check className="w-3 h-3" /> ACTIVE
+              </>
+            )}
+            {isTrialing && (
+              <>
+                <Clock className="w-3 h-3" /> TRIAL
+              </>
+            )}
+            {isExpired && (
+              <>
+                <AlertTriangle className="w-3 h-3" /> EXPIRED
+              </>
+            )}
+            {isCancelled && (
+              <>
+                <X className="w-3 h-3" /> CANCELLED
+              </>
+            )}
           </div>
         </div>
       )}
@@ -209,30 +265,104 @@ const PlanCard = ({
           )}
         </div>
 
-        {/* Subscribe Button */}
-        <button
-          onClick={() => onSelect(plan.id)}
-          disabled={isActive}
-          className={`
-            w-full py-3 px-4 rounded-xl font-semibold text-white transition-all duration-300
-            ${isActive ? 'opacity-70 cursor-not-allowed' : 'transform hover:scale-[1.02] active:scale-[0.98]'}
-            ${getButtonStyles()}
-          `}
-        >
-          {getButtonText()}
-        </button>
+        {/* Action Button */}
+        {isActive ? (
+          // Show Cancel button for Active subscriptions
+          <button
+            onClick={onCancel}
+            disabled={isCancelling}
+            className={`
+              w-full py-3 px-4 rounded-xl font-semibold text-white transition-all duration-300
+              ${isCancelling ? "opacity-70 cursor-not-allowed" : "transform hover:scale-[1.02] active:scale-[0.98]"}
+              bg-red-600 hover:bg-red-700
+            `}
+          >
+            {isCancelling ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Cancelling...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <X className="w-4 h-4" />
+                Cancel Subscription
+              </span>
+            )}
+          </button>
+        ) : isTrialing ? (
+          // Show Upgrade button for Trial
+          <button
+            onClick={onSelect}
+            className={`
+              w-full py-3 px-4 rounded-xl font-semibold text-white transition-all duration-300
+              transform hover:scale-[1.02] active:scale-[0.98]
+              bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+            `}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Crown className="w-4 h-4" />
+              Upgrade Now
+            </span>
+          </button>
+        ) : isExpired || isCancelled ? (
+          // Show Resubscribe button for Expired/Cancelled
+          <button
+            onClick={onSelect}
+            className={`
+              w-full py-3 px-4 rounded-xl font-semibold text-white transition-all duration-300
+              transform hover:scale-[1.02] active:scale-[0.98]
+              bg-orange-600 hover:bg-orange-700
+            `}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              {isExpired ? "Subscribe Again" : "Resubscribe"}
+            </span>
+          </button>
+        ) : (
+          // Show Subscribe button for non-current plans
+          <button
+            onClick={onSelect}
+            className={`
+              w-full py-3 px-4 rounded-xl font-semibold text-white transition-all duration-300
+              transform hover:scale-[1.02] active:scale-[0.98]
+              ${getButtonStyles()}
+            `}
+          >
+            {getButtonText()}
+          </button>
+        )}
 
-        {/* Trial Note */}
+        {/* Status Messages */}
         {isTrialing && (
-          <p className="text-xs text-blue-600 text-center mt-3">
-            ⏳ Your trial ends soon. Upgrade to continue!
-          </p>
+          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-600 text-center">
+              ⏳ Trial ends in {currentPlanStatus?.daysRemaining || 0} days. 
+              Upgrade now to continue!
+            </p>
+          </div>
         )}
 
         {isActive && (
           <p className="text-xs text-green-600 text-center mt-3">
             ✓ Your subscription is active
           </p>
+        )}
+
+        {isExpired && (
+          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-xs text-orange-600 text-center">
+              ⚠️ Your subscription has expired. Subscribe again to continue.
+            </p>
+          </div>
+        )}
+
+        {isCancelled && (
+          <div className="mt-3 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-xs text-gray-600 text-center">
+              Your subscription has been cancelled. Resubscribe to continue.
+            </p>
+          </div>
         )}
 
         {!isCurrentPlan && plan.trialDays && plan.trialDays > 0 && (
@@ -266,35 +396,73 @@ export default function PlansPage() {
   const router = useRouter();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
-  const { 
-    data, 
-    isLoading, 
-    error,
-    refetch 
-  } = useQuery<PlansResponse>({
+  const { data, isLoading, error, refetch } = useQuery<PlansResponse>({
     queryKey: ["plans"],
     queryFn: fetchPlans,
     retry: 1,
   });
 
-  const plans = data?.data || [];
-  const currentPlan = data?.currentPlan || null;
+  const plans = data?.data?.plans || [];
+  const currentPlan = data?.data?.currentPlan || null;
 
-  const handleSubscribe = async (planId: number) => {
-    if (currentPlan?.planId === planId && currentPlan?.status === "ACTIVE") {
-      return; // Already subscribed
+  const handleSubscribe = async (plan: Plan) => {
+    if (currentPlan?.planId === plan.id && currentPlan?.status === "ACTIVE") {
+      return;
     }
 
-    setSelectedPlanId(planId);
+    setSelectedPlanId(plan.id);
     setIsSubscribing(true);
 
     try {
-      // Navigate to checkout or subscription process
-      router.push(`/admin/checkout?planId=${planId}`);
+      router.push(
+        `/checkout?plan=${plan.id}&billingCycle=${plan.billingCycle}`,
+      );
     } catch (error) {
       console.error("Subscription error:", error);
       setIsSubscribing(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!currentPlan) return;
+
+    if (!confirm("Are you sure you want to cancel your subscription?")) {
+      return;
+    }
+
+    setIsCancelling(true);
+
+    try {
+      const response = await fetch("/api/subscription/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planId: currentPlan.planId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to cancel subscription");
+      }
+
+      // Refetch plans to update the UI
+      await refetch();
+      
+      // Show success message
+      alert("Your subscription has been cancelled successfully.");
+    } catch (error) {
+      console.error("Cancel subscription error:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel subscription. Please try again.",
+      );
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -348,8 +516,12 @@ export default function PlansPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md w-full text-center">
-          <h3 className="text-lg font-semibold text-yellow-800">No plans available</h3>
-          <p className="text-yellow-700 mt-2">Please check back later for available plans.</p>
+          <h3 className="text-lg font-semibold text-yellow-800">
+            No plans available
+          </h3>
+          <p className="text-yellow-700 mt-2">
+            Please check back later for available plans.
+          </p>
         </div>
       </div>
     );
@@ -364,19 +536,43 @@ export default function PlansPage() {
             Choose Your Plan
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Select the perfect plan that fits your needs. Upgrade or downgrade anytime.
+            Select the perfect plan that fits your needs. Upgrade or downgrade
+            anytime.
           </p>
-          
+
           {/* Current Subscription Status */}
           {currentPlan && (
             <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-2">
               <Crown className="w-4 h-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-800">
-                Current: {currentPlan.status === "ACTIVE" ? "Active" : "Trial"} Plan
+                Current:{" "}
+                {currentPlan.status === "ACTIVE"
+                  ? "Active"
+                  : currentPlan.status === "TRIALING"
+                    ? "Trial"
+                    : currentPlan.status === "EXPIRED"
+                      ? "Expired"
+                      : "Cancelled"}{" "}
+                Plan
               </span>
-              {currentPlan.daysRemaining !== null && currentPlan.daysRemaining > 0 && (
-                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                  {currentPlan.daysRemaining} days left
+              {currentPlan.daysRemaining !== null &&
+                currentPlan.daysRemaining > 0 &&
+                (currentPlan.status === "ACTIVE" ||
+                  currentPlan.status === "TRIALING") && (
+                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                    {currentPlan.daysRemaining} day
+                    {currentPlan.daysRemaining > 1 ? "s" : ""} left
+                  </span>
+                )}
+              {currentPlan.status === "TRIALING" && (
+                <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                  Trial Mode
+                </span>
+              )}
+              {(currentPlan.status === "EXPIRED" ||
+                currentPlan.status === "CANCELLED") && (
+                <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                  {currentPlan.status}
                 </span>
               )}
             </div>
@@ -387,31 +583,63 @@ export default function PlansPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {plans.map((plan) => {
             const isCurrentPlan = currentPlan?.planId === plan.id;
-            const isActive = isCurrentPlan && currentPlan?.status === "ACTIVE";
-            const isTrialing = isCurrentPlan && currentPlan?.status === "TRIALING";
             const isFeatured = plan.isFeatured;
+            const currentStatus = currentPlan?.status;
 
             return (
-              <div 
+              <div
                 key={plan.id}
                 className={`
                   relative transition-all duration-300
-                  ${isFeatured && !isCurrentPlan ? 'md:transform md:scale-105' : ''}
+                  ${isFeatured && !isCurrentPlan ? "md:transform md:scale-105" : ""}
                 `}
               >
                 <PlanCard
                   plan={plan}
                   isCurrentPlan={!!isCurrentPlan}
-                  currentPlanStatus={currentPlan?.status}
-                  onSelect={handleSubscribe}
+                  currentPlanStatus={currentStatus}
+                  onSelect={() => handleSubscribe(plan)}
+                  onCancel={handleCancelSubscription}
+                  isCancelling={isCancelling}
                 />
-                
+
                 {/* Recommended Badge for Featured Plans */}
                 {isFeatured && !isCurrentPlan && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
                     <span className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg flex items-center gap-1">
                       <Sparkles className="w-3 h-3" />
                       RECOMMENDED
+                    </span>
+                  </div>
+                )}
+
+                {/* Current Plan Badge - Only show for Active or Trial */}
+                {isCurrentPlan && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                    <span
+                      className={`
+                        text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg flex items-center gap-1
+                        ${currentStatus === "ACTIVE" ? "bg-gradient-to-r from-green-500 to-green-600" : ""}
+                        ${currentStatus === "TRIALING" ? "bg-gradient-to-r from-blue-500 to-blue-600" : ""}
+                        ${currentStatus === "EXPIRED" || currentStatus === "CANCELLED" ? "bg-gradient-to-r from-orange-500 to-orange-600" : ""}
+                      `}
+                    >
+                      {currentStatus === "ACTIVE" && (
+                        <>
+                          <Check className="w-3 h-3" /> CURRENT PLAN
+                        </>
+                      )}
+                      {currentStatus === "TRIALING" && (
+                        <>
+                          <Clock className="w-3 h-3" /> TRIAL PLAN
+                        </>
+                      )}
+                      {(currentStatus === "EXPIRED" ||
+                        currentStatus === "CANCELLED") && (
+                        <>
+                          <AlertTriangle className="w-3 h-3" /> {currentStatus}
+                        </>
+                      )}
                     </span>
                   </div>
                 )}
@@ -426,10 +654,14 @@ export default function PlansPage() {
             All plans include a free trial. Cancel anytime.
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            Secure payment powered by Stripe
+            Secure payment powered by PayPal. Your subscription will
+            automatically renew unless canceled.
           </p>
         </div>
       </div>
     </div>
   );
 }
+
+// Add RefreshCw icon import at the top
+import { RefreshCw } from "lucide-react";
