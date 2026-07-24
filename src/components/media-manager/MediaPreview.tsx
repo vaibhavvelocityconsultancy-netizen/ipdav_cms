@@ -65,7 +65,7 @@ export function MediaPreview({
   if (!item) return null;
 
   const isImage = item.mimeType?.startsWith("image/");
-  const fileUrl = item.url;
+const fileUrl = getViewerUrl(item);
 
   const copyUrl = async () => {
     await navigator.clipboard.writeText(fileUrl);
@@ -94,7 +94,7 @@ export function MediaPreview({
   };
 
   function getViewerUrl(item: ExtendedMediaItem) {
-  return `${window.location.origin}/media/${item.id}`;
+  return `${window.location.origin}/api/media/${item.id}`;
 }
   const handleSave = async () => {
     if (!onUpdate) return;
