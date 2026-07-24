@@ -6,9 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
 import { injectBreadcrumb } from "@/src/lib/shortcode/renderBreadcrumbHtml";
-import SiteLayout from "../components/site/SiteLayout";
 import Link from "next/link";
-import { SchemaRenderer } from "../components/admin/pages/SchemaOutput";
+import { SchemaRenderer } from "../../components/admin/pages/SchemaOutput";
 
 interface Post {
   id: string;
@@ -153,20 +152,20 @@ export default function PostsListPage() {
   // ── 10. Homepage is a static page ──
   if (page) {
     return (
-      <SiteLayout pageId={page?.id}>
+      <>
         <SchemaRenderer seoData={page?.seoData} />
         <main
           data-page-content
           className="flex-1"
           dangerouslySetInnerHTML={{ __html: processedPageHtml }}
         />
-      </SiteLayout>
+      </>
     );
   }
 
   // ── 11. Homepage is posts list ──
   return (
-    <SiteLayout pageId={page?.id}>
+    <>
       <header className="bg-gray-50 border-b border-gray-200 py-12 px-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-extrabold text-gray-900">Posts</h1>
@@ -284,6 +283,6 @@ export default function PostsListPage() {
           </div>
         )}
       </main>
-    </SiteLayout>
+    </>
   );
 }

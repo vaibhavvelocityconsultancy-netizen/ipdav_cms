@@ -16,7 +16,6 @@ import {
 } from "@/src/lib/shortcode/renderBreadcrumbHtml";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
-import SiteLayout from "@/src/components/site/SiteLayout";
 import Link from "next/link";
 import { SchemaRenderer } from "@/src/components/admin/pages/SchemaOutput";
 
@@ -371,7 +370,7 @@ export default function PreviewPage() {
 
   if (!page && !pageLoading) {
     return (
-      <SiteLayout>
+      <>
         <main className="flex min-h-screen items-center justify-center bg-white px-6">
           <div className="text-center">
             <h1 className="text-6xl font-bold text-gray-900">404</h1>
@@ -383,14 +382,14 @@ export default function PreviewPage() {
             </Button>
           </div>
         </main>
-      </SiteLayout>
+      </>
     );
   }
 
   // ── posts page with skeleton loading ──
   if (isPostsPage) {
     return (
-      <SiteLayout pageId={page?.id}>
+      <>
         {postsListBreadcrumbHtml && (
           <div dangerouslySetInnerHTML={{ __html: postsListBreadcrumbHtml }} />
         )}
@@ -508,19 +507,19 @@ export default function PreviewPage() {
             </div>
           )}
         </main>
-      </SiteLayout>
+      </>
     );
   }
 
   // ── regular page ──
   return (
-    <SiteLayout pageId={page?.id}>
+    <>
       <SchemaRenderer seoData={page?.seoData} />
       <main
         data-page-content
         className="flex-1"
         dangerouslySetInnerHTML={{ __html: processedHtml }}
       />
-    </SiteLayout>
+    </>
   );
 }

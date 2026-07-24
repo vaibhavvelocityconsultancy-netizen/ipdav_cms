@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
-import SiteLayout from "@/src/components/site/SiteLayout";
 import {
   DEFAULT_BREADCRUMB_SETTINGS,
   injectBreadcrumb,
@@ -438,7 +437,7 @@ export default function PublicPostPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SiteLayout>
+      <>
         <main className="flex-1 w-full max-w-[740px] mx-auto px-4 py-12 pb-16">
           {postBreadcrumbHtml && (
             <div dangerouslySetInnerHTML={{ __html: postBreadcrumbHtml }} />
@@ -447,7 +446,7 @@ export default function PublicPostPage() {
           {/* categories */}
           {post.categories && post.categories.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
-              {post.categories.map((c) => (
+              {post.categories.map((c : any) => (
                 <a
                   key={c.id}
                   href={`/posts?category=${c.slug}`}
@@ -496,7 +495,7 @@ export default function PublicPostPage() {
           {/* tags */}
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-gray-200">
-              {post.tags.map((t) => (
+              {post.tags.map((t : any) => (
                 <a
                   key={t.id}
                   href={`/posts?tag=${t.slug}`}
@@ -540,7 +539,7 @@ export default function PublicPostPage() {
             )}
           </section>
         </main>
-      </SiteLayout>
+      </>
 
       {/* // <SiteFooter footer={footer} footerMenus={footerMenus} /> */}
     </div>
