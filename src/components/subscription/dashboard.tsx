@@ -165,6 +165,10 @@ export default function DashboardPage() {
     queryKey: ["dashboard"],
     queryFn: fetchDashboardData,
     retry: 1,
+
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const subscription = data?.success ? data.data : null;

@@ -207,7 +207,7 @@ const adminNavItems: NavItem[] = [
     icon: ShoppingBag,
     description: "Manage plans and subscriptions",
     // modulePermission: "plans_manage",
-    href: "/admin/plan",
+    href: "/admin/plan-management",
   },
 
   {

@@ -118,7 +118,7 @@ model tenant {
   shippingZones      ShippingZone[]
   taxClasses         TaxClass[]
   ecommerceSettings  EcommerceSettings?
-  uploadedFiles         UploadedFile[]
+  uploadedFiles      UploadedFile[]
   plans              Plan[]
   planSettings       PlanSettings?
 }
@@ -249,8 +249,8 @@ model user {
   enrollments       CourseEnrollment[]
   customerAddresses CustomerAddress[]
   orders            Order[]
-uploadedFiles UploadedFile[]
-fileShares    FileShareLink[]
+  uploadedFiles     UploadedFile[]
+  fileShares        FileShareLink[]
   planSubscriptions PlanSubscription[]
   planEnrollments   PlanEnrollment[]
 }
@@ -462,21 +462,24 @@ model Subscription {
 }
 
 model Plan {
-  id                Int          @id @default(autoincrement())
-  tenantId          Int
-  title             String
-  slug              String
-  tagline           String?
-  description       String?
-  price             Decimal      @default(0) @db.Decimal(10, 2)
-  billingCycle      BillingCycle @default(MONTHLY)
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  title        String
+  slug         String
+  tagline      String?
+  description  String?
+  monthlyPrice Decimal? @db.Decimal(10, 2)
+  yearlyPrice  Decimal? @db.Decimal(10, 2)
+
+  allowMonthly      Boolean  @default(true)
+  allowYearly       Boolean  @default(true)
   billingPeriodDays Int?
   trialDays         Int? // null = use global default; 0 = no trial for this plan
-  isFeatured        Boolean      @default(false)
-  isPublished       Boolean      @default(true)
-  sortOrder         Int          @default(0)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  isFeatured        Boolean  @default(false)
+  isPublished       Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   tenant        tenant             @relation(fields: [tenantId], references: [id])
   features      PlanFeature[]

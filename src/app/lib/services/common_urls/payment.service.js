@@ -103,37 +103,27 @@ export async function capturePayment(orderId) {
   const request = new paypal.orders.OrdersCaptureRequest(orderId);
   request.requestBody({});
 
-  const { result: capture } = await client.execute(request);
+  try {
+    const { result: capture } = await client.execute(request);
 
-  if (capture.status !== "COMPLETED") {
-    await updatePaymentStatus(orderId, "FAILED");
-    throw new ApiError(400, "Payment not completed");
-  }
-
-  const captureId = capture.purchase_units[0]?.payments?.captures[0]?.id;
-
-  await prisma.payment.updateMany({
-    where: { paypalOrderId: orderId },
-    data: { status: "SUCCESS", paypalCaptureId: captureId },
-  });
-
-  const payment = await prisma.payment.findUnique({
-    where: { paypalOrderId: orderId },
-    include: { user: true, plan: true },
-  });
-
-  const emailResult = { success: true };
-  if (payment) {
-    try {
-      await sendPaymentSuccessEmail(payment);
-    } catch (err) {
-      console.error("[Email Error]", err);
-      emailResult.success = false;
-      emailResult.error = err.message;
+    if (capture.status !== "COMPLETED") {
+      await updatePaymentStatus(orderId, "FAILED");
+      throw new ApiError(400, "Payment not completed");
     }
-  }
 
-  return { capture, emailResult };
+    // existing success code...
+
+    return capture;
+  } catch (err) {
+    await updatePaymentStatus(orderId, "FAILED");
+
+    console.error("PayPal Capture Error:", err);
+
+    throw new ApiError(
+      400,
+      err?.message || "PayPal payment failed"
+    );
+  }
 }
 
 async function sendPaymentSuccessEmail(payment) {

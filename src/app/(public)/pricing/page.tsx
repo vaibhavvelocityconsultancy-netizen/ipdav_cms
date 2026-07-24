@@ -2,22 +2,31 @@
 
 import { useRouter } from "next/navigation";
 import { Check, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { fetchers } from "../../../lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 
-type BillingCycle = "LIFETIME" | "MONTHLY" | "YEARLY";
-
-function formatINR(val: number) {
-  if (val === 0) return "Free";
-  return "$" + val.toLocaleString("en-IN");
+interface Plan {
+  id: number;
+  title: string;
+  description: string;
+  monthlyPrice: number | null;
+  yearlyPrice: number | null;
+  allowMonthly: boolean;
+  allowYearly: boolean;
+  isFeatured: boolean;
+  features: Feature[];
 }
 
-function accessTypeLabel(billingCycle: BillingCycle) {
-  if (billingCycle === "LIFETIME") return "Lifetime Access";
-  if (billingCycle === "MONTHLY") return "Monthly Subscription";
-  if (billingCycle === "YEARLY") return "Yearly Subscription";
-  return billingCycle;
+interface Feature {
+  id: number;
+  title: string;
+}
+
+function formatUSD(val: number | null) {
+  if (!val) return "Free";
+  return "$" + val.toLocaleString("en-US");
 }
 
 export default function PricingPlansPage() {
@@ -25,9 +34,38 @@ export default function PricingPlansPage() {
   const { data, isLoading } = useSWR("plans", fetchers.publicPlans);
   const { user: currentUser, loading: userLoading } = useCurrentUser();
 
-  const plans = data?.data ?? [];
+  const allPlans = (data?.data ?? []) as Plan[];
 
-  function handleSelectPlan(planId: number, billingCycle: BillingCycle) {
+  // Check if any plans have monthly/yearly enabled
+  const hasMonthly = useMemo(
+    () => allPlans.some((p: Plan) => p.allowMonthly && p.monthlyPrice != null),
+    [allPlans],
+  );
+  const hasYearly = useMemo(
+    () => allPlans.some((p: Plan) => p.allowYearly && p.yearlyPrice != null),
+    [allPlans],
+  );
+
+  // Toggle only makes sense if BOTH monthly and yearly exist
+  const showToggle = hasMonthly && hasYearly;
+
+  const [selectedCycle, setSelectedCycle] = useState<"MONTHLY" | "YEARLY">(
+    "MONTHLY",
+  );
+
+  // Filter: if toggle is shown, filter by selected cycle.
+  const plans = useMemo(() => {
+    if (!showToggle) return allPlans;
+    return allPlans.filter((p: Plan) => {
+      if (selectedCycle === "MONTHLY") {
+        return p.allowMonthly && p.monthlyPrice != null;
+      } else {
+        return p.allowYearly && p.yearlyPrice != null;
+      }
+    });
+  }, [allPlans, showToggle, selectedCycle]);
+
+  function handleSelectPlan(planId: number, billingCycle: "MONTHLY" | "YEARLY") {
     if (userLoading) return;
     const checkoutUrl = `/checkout?plan=${planId}&billingCycle=${billingCycle}`;
     if (!currentUser) {
@@ -37,13 +75,29 @@ export default function PricingPlansPage() {
     router.push(checkoutUrl);
   }
 
+  function getPlanPrice(plan: Plan, cycle: "MONTHLY" | "YEARLY"): number | null {
+    if (cycle === "MONTHLY") {
+      return plan.allowMonthly ? plan.monthlyPrice : null;
+    } else {
+      return plan.allowYearly ? plan.yearlyPrice : null;
+    }
+  }
+
+  function getPlanLabel(plan: Plan, cycle: "MONTHLY" | "YEARLY"): string {
+    if (cycle === "MONTHLY") {
+      return plan.allowMonthly ? "Monthly" : "";
+    } else {
+      return plan.allowYearly ? "Yearly" : "";
+    }
+  }
+
   return (
     <>
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : !plans.length ? (
+      ) : !allPlans.length ? (
         <div className="min-h-screen flex items-center justify-center">
           <p className="text-gray-600 text-lg">No plans available</p>
         </div>
@@ -95,11 +149,44 @@ export default function PricingPlansPage() {
                 <p className="text-gray-600 text-lg max-w-2xl mx-auto">
                   Pick the plan that fits you — cancel or switch anytime.
                 </p>
+
+                {/* Toggle — only rendered if both MONTHLY and YEARLY exist */}
+                {showToggle && (
+                  <div className="mt-8 inline-flex items-center bg-slate-100 rounded-full p-1">
+                    <button
+                      onClick={() => setSelectedCycle("MONTHLY")}
+                      className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${
+                        selectedCycle === "MONTHLY"
+                          ? "bg-slate-900 text-white"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      onClick={() => setSelectedCycle("YEARLY")}
+                      className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${
+                        selectedCycle === "YEARLY"
+                          ? "bg-slate-900 text-white"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Yearly
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {plans.map((plan) => {
+                {plans.map((plan: Plan) => {
                   const dark = plan.isFeatured;
+                  const currentCycle = showToggle ? selectedCycle : "MONTHLY";
+                  const price = getPlanPrice(plan, currentCycle);
+                  const label = getPlanLabel(plan, currentCycle);
+
+                  // If plan doesn't support the current cycle, skip it
+                  if (!price && !label) return null;
+
                   return (
                     <div
                       key={plan.id}
@@ -127,20 +214,20 @@ export default function PricingPlansPage() {
 
                         <div className="mb-6 flex items-baseline gap-2">
                           <span className="font-serif text-6xl">
-                            {formatINR(plan.price)}
+                            {formatUSD(price)}
                           </span>
                           <span
                             className={`text-lg ${
                               dark ? "text-slate-300" : "text-slate-600"
                             }`}
                           >
-                            / {accessTypeLabel(plan.billingCycle)}
+                            / {label}
                           </span>
                         </div>
 
                         <button
                           onClick={() =>
-                            handleSelectPlan(plan.id, plan.billingCycle)
+                            handleSelectPlan(plan.id, currentCycle)
                           }
                           disabled={userLoading}
                           className={`w-full py-3 text-sm font-medium mb-6 disabled:opacity-60 ${
@@ -160,7 +247,7 @@ export default function PricingPlansPage() {
 
                         {plan.features?.length > 0 && (
                           <div className="flex-grow space-y-3">
-                            {plan.features.map((f) => (
+                            {plan.features.map((f: Feature) => (
                               <div
                                 key={f.id}
                                 className="flex items-start gap-3"

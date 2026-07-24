@@ -384,14 +384,31 @@ export async function createSubscription(
   planId,
   billingCycle = "MONTHLY",
 ) {
-  const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
+  const plan = await prisma.plan.findUnique({
+    where: { id: Number(planId) },
+  });
+
   if (!plan) throw new ApiError(404, "Plan not found");
-  if (!plan.isPublished)
+
+  if (!plan.isPublished) {
     throw new ApiError(400, "This plan is not currently available");
+  }
+
+  // Validate selected billing cycle
+  if (billingCycle === "MONTHLY" && !plan.allowMonthly) {
+    throw new ApiError(400, "Monthly billing is not available.");
+  }
+
+  if (billingCycle === "YEARLY" && !plan.allowYearly) {
+    throw new ApiError(400, "Yearly billing is not available.");
+  }
 
   const existing = await prisma.planSubscription.findUnique({
     where: {
-      userId_planId: { userId: Number(userId), planId: Number(planId) },
+      userId_planId: {
+        userId: Number(userId),
+        planId: Number(planId),
+      },
     },
   });
 
@@ -428,7 +445,6 @@ export async function createSubscription(
     include: { plan: true },
   });
 }
-
 export async function startTrial(userId, planId) {
   console.log("startTrial: called", { userId, planId });
 

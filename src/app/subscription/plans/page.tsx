@@ -22,6 +22,7 @@ import {
   Loader2,
   X,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 
 interface Feature {
@@ -36,8 +37,10 @@ interface Plan {
   title: string;
   tagline: string;
   description: string;
-  price: string;
-  billingCycle: string;
+  monthlyPrice: number | null;
+  yearlyPrice: number | null;
+  allowMonthly: boolean;
+  allowYearly: boolean;
   trialDays?: number;
   isFeatured: boolean;
   isPublished: boolean;
@@ -95,6 +98,91 @@ const fetchPlans = async (): Promise<PlansResponse> => {
   };
 };
 
+// Billing Selection Modal
+const BillingModal = ({
+  plan,
+  onClose,
+  onSelect,
+}: {
+  plan: Plan;
+  onClose: () => void;
+  onSelect: (billingCycle: "MONTHLY" | "YEARLY") => void;
+}) => {
+  const formatPrice = (price: number | null) => {
+    if (!price) return "Free";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-gray-900">Choose Billing</h3>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {plan.allowMonthly && plan.monthlyPrice != null && (
+            <button
+              onClick={() => onSelect("MONTHLY")}
+              className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-semibold text-gray-900">Monthly</p>
+                  <p className="text-sm text-gray-500">Pay month to month</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatPrice(plan.monthlyPrice)}
+                  </p>
+                  <p className="text-xs text-gray-500">/month</p>
+                </div>
+              </div>
+            </button>
+          )}
+
+          {plan.allowYearly && plan.yearlyPrice != null && (
+            <button
+              onClick={() => onSelect("YEARLY")}
+              className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-semibold text-gray-900">Yearly</p>
+                  <p className="text-sm text-gray-500">Best value - save 20%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatPrice(plan.yearlyPrice)}
+                  </p>
+                  <p className="text-xs text-gray-500">/year</p>
+                </div>
+              </div>
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Plan Card Component
 const PlanCard = ({
   plan,
@@ -116,7 +204,6 @@ const PlanCard = ({
   const isTrialing = isCurrentPlan && currentPlanStatus === "TRIALING";
   const isExpired = isCurrentPlan && currentPlanStatus === "EXPIRED";
   const isCancelled = isCurrentPlan && currentPlanStatus === "CANCELLED";
-  
 
   const getButtonText = () => {
     if (isActive) return "Current Plan";
@@ -134,24 +221,21 @@ const PlanCard = ({
     return "bg-red-600 hover:bg-red-700";
   };
 
-  const formatPrice = (price: string) => {
+  const formatPrice = (price: number | null) => {
+    if (!price) return "Free";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 0,
-    }).format(parseFloat(price));
-  };
-
-  const getBillingLabel = (cycle: string) => {
-    if (cycle === "LIFETIME") return "one-time";
-    if (cycle === "YEARLY") return "/year";
-    return "/month";
+    }).format(price);
   };
 
   // Sort features by sortOrder
   const sortedFeatures = [...plan.features].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
+
+  const hasPricing = plan.allowMonthly || plan.allowYearly;
 
   return (
     <div
@@ -230,15 +314,33 @@ const PlanCard = ({
           </p>
         )}
 
-        {/* Price */}
-        <div className="mb-3">
-          <span className="text-4xl font-extrabold text-gray-900">
-            {formatPrice(plan.price)}
-          </span>
-          <span className="text-gray-500 ml-2 text-sm">
-            {getBillingLabel(plan.billingCycle)}
-          </span>
-        </div>
+        {/* Pricing */}
+        {hasPricing ? (
+          <div className="mb-3 space-y-1">
+            {plan.allowMonthly && plan.monthlyPrice != null && (
+              <div>
+                <span className="text-3xl font-extrabold text-gray-900">
+                  {formatPrice(plan.monthlyPrice)}
+                </span>
+                <span className="text-gray-500 ml-1 text-sm">/month</span>
+              </div>
+            )}
+            {plan.allowYearly && plan.yearlyPrice != null && (
+              <div>
+                <span className="text-3xl font-extrabold text-gray-900">
+                  {formatPrice(plan.yearlyPrice)}
+                </span>
+                <span className="text-gray-500 ml-1 text-sm">/year</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mb-3">
+            <span className="text-2xl font-extrabold text-gray-400">
+              Contact Us
+            </span>
+          </div>
+        )}
 
         {/* Description */}
         {plan.description && (
@@ -397,6 +499,7 @@ export default function PlansPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showBillingModal, setShowBillingModal] = useState<Plan | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<PlansResponse>({
     queryKey: ["plans"],
@@ -407,18 +510,41 @@ export default function PlansPage() {
   const plans = data?.data?.plans || [];
   const currentPlan = data?.data?.currentPlan || null;
 
-  const handleSubscribe = async (plan: Plan) => {
+  const handleSubscribe = (plan: Plan) => {
     if (currentPlan?.planId === plan.id && currentPlan?.status === "ACTIVE") {
       return;
     }
 
-    setSelectedPlanId(plan.id);
+    // Check if both monthly and yearly are available
+    const hasMonthly = plan.allowMonthly && plan.monthlyPrice != null;
+    const hasYearly = plan.allowYearly && plan.yearlyPrice != null;
+
+    if (hasMonthly && hasYearly) {
+      // Show billing selection modal
+      setShowBillingModal(plan);
+      return;
+    }
+
+    if (hasMonthly) {
+      navigateToCheckout(plan.id, "MONTHLY");
+      return;
+    }
+
+    if (hasYearly) {
+      navigateToCheckout(plan.id, "YEARLY");
+      return;
+    }
+
+    // No pricing available
+    alert("This plan has no pricing configured. Please contact support.");
+  };
+
+  const navigateToCheckout = (planId: number, billingCycle: "MONTHLY" | "YEARLY") => {
+    setSelectedPlanId(planId);
     setIsSubscribing(true);
 
     try {
-      router.push(
-        `/checkout?plan=${plan.id}&billingCycle=${plan.billingCycle}`,
-      );
+      router.push(`/checkout?plan=${planId}&billingCycle=${billingCycle}`);
     } catch (error) {
       console.error("Subscription error:", error);
       setIsSubscribing(false);
@@ -464,6 +590,11 @@ export default function PlansPage() {
     } finally {
       setIsCancelling(false);
     }
+  };
+
+  const handleBillingSelect = (plan: Plan, billingCycle: "MONTHLY" | "YEARLY") => {
+    setShowBillingModal(null);
+    navigateToCheckout(plan.id, billingCycle);
   };
 
   // Loading state
@@ -659,9 +790,17 @@ export default function PlansPage() {
           </p>
         </div>
       </div>
+
+      {/* Billing Selection Modal */}
+      {showBillingModal && (
+        <BillingModal
+          plan={showBillingModal}
+          onClose={() => setShowBillingModal(null)}
+          onSelect={(billingCycle) =>
+            handleBillingSelect(showBillingModal, billingCycle)
+          }
+        />
+      )}
     </div>
   );
 }
-
-// Add RefreshCw icon import at the top
-import { RefreshCw } from "lucide-react";

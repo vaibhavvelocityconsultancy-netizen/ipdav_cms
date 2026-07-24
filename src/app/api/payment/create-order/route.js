@@ -11,14 +11,33 @@ export const POST = asyncHandler(async (req) => {
   const { planId, billingCycle } = await req.json();
   if (!planId) throw new ApiError(400, "Plan ID is required");
 
+  
+  
   const plan = await getPlanById(planId);
   if (!plan) throw new ApiError(404, "Plan not found");
+  if (billingCycle === "MONTHLY" && !plan.allowMonthly) {
+    throw new ApiError(400, "Monthly billing is not available for this plan.");
+  }
+
+  if (billingCycle === "YEARLY" && !plan.allowYearly) {
+    throw new ApiError(400, "Yearly billing is not available for this plan.");
+  }
+
+  const amount =
+    billingCycle === "YEARLY" ? plan.yearlyPrice : plan.monthlyPrice;
+
+  if (!amount || Number(amount) <= 0) {
+    throw new ApiError(
+      400,
+      `${billingCycle} price is not configured for this plan.`,
+    );
+  }
 
   const order = await createPayment({
     userId: user.id,
-    amount: plan.price,
+    amount: Number(amount),
     currency: "USD",
-    billingCycle: billingCycle || plan.billingCycle,
+    billingCycle: billingCycle || "MONTHLY",
     paymentType: "PLAN",
     referenceId: planId,
   });

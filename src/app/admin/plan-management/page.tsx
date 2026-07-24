@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { 
-  Check, 
-  Plus, 
-  X, 
-  Star, 
-  Loader2, 
-  ChevronUp, 
+import {
+  Check,
+  Plus,
+  X,
+  Star,
+  Loader2,
+  ChevronUp,
   ChevronDown,
-  GripVertical 
+  GripVertical,
 } from "lucide-react";
-
-type BillingCycle = "MONTHLY" | "YEARLY" | "LIFETIME";
 
 interface Feature {
   id: string;
@@ -26,16 +24,17 @@ interface Plan {
   tagline: string;
   trialDays: number | null;
   description: string;
-  price: number;
-  billingCycle: BillingCycle;
+  monthlyPrice: number | null;
+  yearlyPrice: number | null;
+  allowMonthly: boolean;
+  allowYearly: boolean;
   isFeatured: boolean;
   sortOrder: number;
   features: Feature[];
 }
 
-function formatUSD(val: number) {
+function formatUSD(val: number | null) {
   if (!val) return "Free";
-
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -43,18 +42,14 @@ function formatUSD(val: number) {
   }).format(val);
 }
 
-function cycleLabel(cycle: BillingCycle) {
-  if (cycle === "LIFETIME") return "one-time";
-  if (cycle === "MONTHLY") return "/month";
-  return "/year";
-}
-
 const emptyDraft = {
   title: "",
   tagline: "",
   description: "",
-  price: "0",
-  billingCycle: "MONTHLY" as BillingCycle,
+  monthlyPrice: "",
+  yearlyPrice: "",
+  allowMonthly: true,
+  allowYearly: true,
   isFeatured: false,
   trialDays: "",
   sortOrder: "0",
@@ -78,9 +73,8 @@ export default function PlanManagementPage() {
       const res = await fetch("/api/plans");
       if (!res.ok) throw new Error("Failed to load plans");
       const data = await res.json();
-      // Sort plans by sortOrder
-      const sortedPlans = (data.data ?? []).sort((a: Plan, b: Plan) => 
-        (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      const sortedPlans = (data.data ?? []).sort(
+        (a: Plan, b: Plan) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
       );
       setPlans(sortedPlans);
     } catch (err) {
@@ -108,40 +102,48 @@ export default function PlanManagementPage() {
   function moveFeatureUp(index: number) {
     if (index === 0) return;
     const newFeatures = [...features];
-    [newFeatures[index], newFeatures[index - 1]] = [newFeatures[index - 1], newFeatures[index]];
+    [newFeatures[index], newFeatures[index - 1]] = [
+      newFeatures[index - 1],
+      newFeatures[index],
+    ];
     setFeatures(newFeatures);
   }
 
   function moveFeatureDown(index: number) {
     if (index === features.length - 1) return;
     const newFeatures = [...features];
-    [newFeatures[index], newFeatures[index + 1]] = [newFeatures[index + 1], newFeatures[index]];
+    [newFeatures[index], newFeatures[index + 1]] = [
+      newFeatures[index + 1],
+      newFeatures[index],
+    ];
     setFeatures(newFeatures);
   }
 
-  // Move plan up in the list
   function movePlanUp(index: number) {
     if (index === 0) return;
     const newPlans = [...plans];
-    [newPlans[index], newPlans[index - 1]] = [newPlans[index - 1], newPlans[index]];
+    [newPlans[index], newPlans[index - 1]] = [
+      newPlans[index - 1],
+      newPlans[index],
+    ];
     setPlans(newPlans);
     updateSortOrders(newPlans);
   }
 
-  // Move plan down in the list
   function movePlanDown(index: number) {
     if (index === plans.length - 1) return;
     const newPlans = [...plans];
-    [newPlans[index], newPlans[index + 1]] = [newPlans[index + 1], newPlans[index]];
+    [newPlans[index], newPlans[index + 1]] = [
+      newPlans[index + 1],
+      newPlans[index],
+    ];
     setPlans(newPlans);
     updateSortOrders(newPlans);
   }
 
-  // Update sort orders in the database
   async function updateSortOrders(updatedPlans: Plan[]) {
     setReordering(true);
     try {
-      // Update each plan's sortOrder
       for (let i = 0; i < updatedPlans.length; i++) {
         await fetch(`/api/plans/${updatedPlans[i].id}`, {
           method: "PATCH",
@@ -149,7 +151,6 @@ export default function PlanManagementPage() {
           body: JSON.stringify({ sortOrder: i + 1 }),
         });
       }
-      // Reload plans to ensure consistency
       await loadPlans();
     } catch (err) {
       console.error("Failed to update sort orders:", err);
@@ -178,9 +179,11 @@ export default function PlanManagementPage() {
         .trim()
         .replace(/[^a-z0-9]+/g, "-"),
       description: draft.description,
-      sortOrder: Number(draft.sortOrder) || (plans.length + 1),
-      price: Number(draft.price) || 0,
-      billingCycle: draft.billingCycle,
+      sortOrder: Number(draft.sortOrder) || plans.length + 1,
+      monthlyPrice: draft.monthlyPrice === "" ? null : Number(draft.monthlyPrice),
+      yearlyPrice: draft.yearlyPrice === "" ? null : Number(draft.yearlyPrice),
+      allowMonthly: draft.allowMonthly,
+      allowYearly: draft.allowYearly,
       isFeatured: draft.isFeatured,
       trialDays: draft.trialDays === "" ? null : Number(draft.trialDays),
       features: features.map((f, i) => ({ title: f.title, sortOrder: i })),
@@ -215,8 +218,10 @@ export default function PlanManagementPage() {
       title: plan.title,
       tagline: plan.tagline,
       description: plan.description,
-      price: String(plan.price),
-      billingCycle: plan.billingCycle,
+      monthlyPrice: plan.monthlyPrice?.toString() ?? "",
+      yearlyPrice: plan.yearlyPrice?.toString() ?? "",
+      allowMonthly: plan.allowMonthly,
+      allowYearly: plan.allowYearly,
       isFeatured: plan.isFeatured,
       sortOrder: String(plan.sortOrder ?? 0),
       trialDays: plan.trialDays?.toString() ?? "",
@@ -299,54 +304,83 @@ export default function PlanManagementPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* ── Pricing Section ────────────────────────────── */}
+            <div className="space-y-4 border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700">Pricing</h3>
+
+              {/* Monthly Billing */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price ($)
+                <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={draft.allowMonthly}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        allowMonthly: e.target.checked,
+                      }))
+                    }
+                  />
+                  Enable Monthly Billing
                 </label>
                 <input
                   type="number"
-                  value={draft.price}
+                  value={draft.monthlyPrice}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, price: e.target.value }))
+                    setDraft((d) => ({ ...d, monthlyPrice: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  disabled={!draft.allowMonthly}
+                  className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm ${
+                    !draft.allowMonthly ? "bg-gray-100 text-gray-400" : ""
+                  }`}
+                  placeholder="Monthly price (e.g. 19)"
                 />
               </div>
+
+              {/* Yearly Billing */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Billing Cycle
-                </label>
-                <select
-                  value={draft.billingCycle}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      billingCycle: e.target.value as BillingCycle,
-                    }))
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="YEARLY">Yearly</option>
-                  <option value="LIFETIME">Lifetime</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Trial Days{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
+                <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={draft.allowYearly}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        allowYearly: e.target.checked,
+                      }))
+                    }
+                  />
+                  Enable Yearly Billing
                 </label>
                 <input
                   type="number"
-                  value={draft.trialDays}
+                  value={draft.yearlyPrice}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, trialDays: e.target.value }))
+                    setDraft((d) => ({ ...d, yearlyPrice: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="Uses global default"
+                  disabled={!draft.allowYearly}
+                  className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm ${
+                    !draft.allowYearly ? "bg-gray-100 text-gray-400" : ""
+                  }`}
+                  placeholder="Yearly price (e.g. 199)"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Trial Days{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="number"
+                value={draft.trialDays}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, trialDays: e.target.value }))
+                }
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="Uses global default"
+              />
             </div>
 
             <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -459,19 +493,25 @@ export default function PlanManagementPage() {
                     className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 hover:border-gray-200 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1">
-                      {/* Drag handle (visual only) */}
                       <GripVertical className="w-4 h-4 text-gray-300" />
                       <div>
                         <span className="text-sm font-medium text-gray-900">
                           {p.title}
                         </span>
-                        <span className="text-xs text-gray-500 ml-2">
-                          {formatUSD(p.price)} {cycleLabel(p.billingCycle)}
-                        </span>
+                        <div className="text-xs text-gray-500">
+                          {p.allowMonthly && p.monthlyPrice != null && (
+                            <div>{formatUSD(p.monthlyPrice)} /month</div>
+                          )}
+                          {p.allowYearly && p.yearlyPrice != null && (
+                            <div>{formatUSD(p.yearlyPrice)} /year</div>
+                          )}
+                          {!p.allowMonthly && !p.allowYearly && (
+                            <div className="text-gray-400">No pricing set</div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {/* Move Up Button */}
                       <button
                         onClick={() => movePlanUp(index)}
                         disabled={index === 0 || reordering}
@@ -480,8 +520,6 @@ export default function PlanManagementPage() {
                       >
                         <ChevronUp className="w-4 h-4" />
                       </button>
-                      
-                      {/* Move Down Button */}
                       <button
                         onClick={() => movePlanDown(index)}
                         disabled={index === plans.length - 1 || reordering}
@@ -490,14 +528,10 @@ export default function PlanManagementPage() {
                       >
                         <ChevronDown className="w-4 h-4" />
                       </button>
-
-                      {/* Order indicator */}
                       <span className="text-xs text-gray-400 mx-1">
                         #{index + 1}
                       </span>
-
                       <div className="w-px h-6 bg-gray-200 mx-1" />
-                      
                       <button
                         onClick={() => handleEdit(p)}
                         className="text-xs text-blue-600 hover:underline px-2 py-1"
@@ -548,14 +582,31 @@ export default function PlanManagementPage() {
                 {draft.tagline || "Plan tagline"}
               </p>
 
-              <div className="mb-6">
-                <span className="text-3xl font-bold text-gray-900">
-                  {formatUSD(Number(draft.price) || 0)}
-                </span>
-                <span className="text-sm text-gray-500 ml-1">
-                  {cycleLabel(draft.billingCycle)}
-                </span>
+              <div className="mb-4 space-y-1">
+                {draft.allowMonthly && draft.monthlyPrice && (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-gray-900">
+                      {formatUSD(Number(draft.monthlyPrice) || 0)}
+                    </span>
+                    <span className="text-sm text-gray-500">/month</span>
+                  </div>
+                )}
+                {draft.allowYearly && draft.yearlyPrice && (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-gray-900">
+                      {formatUSD(Number(draft.yearlyPrice) || 0)}
+                    </span>
+                    <span className="text-sm text-gray-500">/year</span>
+                  </div>
+                )}
+                {!draft.allowMonthly &&
+                  !draft.allowYearly &&
+                  !draft.monthlyPrice &&
+                  !draft.yearlyPrice && (
+                    <span className="text-sm text-gray-400">No pricing set</span>
+                  )}
               </div>
+
               <p className="text-sm text-gray-500 mb-4">
                 {draft.description || "Plan description goes here"}
               </p>
