@@ -109,7 +109,7 @@ function CheckoutContent() {
 
   return (
     <>
-          {capturePaymentMutation.isPending && (
+      {capturePaymentMutation.isPending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
@@ -120,18 +120,17 @@ function CheckoutContent() {
         </div>
       )}
 
-    
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-sm text-muted-foreground">Complete your payment</p>
-      <div className="w-full max-w-xs">
-        <PayPalButtons
-          style={{ layout: "vertical" }}
-          createOrder={() => Promise.resolve(orderId)}
-          onApprove={() => capturePaymentMutation.mutateAsync(orderId!)}
-          onError={() => setError("Payment failed. Please try again.")}
-        />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-sm text-muted-foreground">Complete your payment</p>
+        <div className="w-full max-w-xs">
+          <PayPalButtons
+            style={{ layout: "vertical" }}
+            createOrder={() => Promise.resolve(orderId)}
+            onApprove={() => capturePaymentMutation.mutateAsync(orderId!)}
+            onError={() => setError("Payment failed. Please try again.")}
+          />
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -139,7 +138,6 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <>
-
       <PayPalScriptProvider
         options={{
           clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
