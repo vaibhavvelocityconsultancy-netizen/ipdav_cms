@@ -1,7 +1,8 @@
 import { prisma } from "../../prisma";
 import { requirePermission } from "../../withPermission";
+import { randomUUID } from "crypto";
 
-const EXPORT_VERSION = "1.0";
+const EXPORT_VERSION = "1.1";
 
 // ─── EXPORT ───────────────────────────────────────────────
 // We fetch each entity separately and bundle into one JSON object.
@@ -49,7 +50,132 @@ export async function exportAll() {
     items: buildMenuTree(menuitem),
   }));
 
+  payload.settings = await exportSettings(tenantId);
+
+  const [categories, tags, posts] = await Promise.all([
+    prisma.category.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.tag.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" } }),
+    prisma.post.findMany({
+      where: { tenantId },
+      include: { category: true, tag: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+  payload.categories = categories.map(({ parentId, ...category }) => ({
+    ...stripRecord(category),
+    parentSlug: categories.find((item) => item.id === parentId)?.slug ?? null,
+  }));
+  payload.tags = tags.map(stripRecord);
+  payload.posts = posts.map(({ category, tag, ...post }) => ({
+    ...stripRecord(post),
+    categorySlugs: category.map((item) => item.slug),
+    tagSlugs: tag.map((item) => item.slug),
+  }));
+
+  const plans = await prisma.plan.findMany({
+    where: { tenantId },
+    include: { features: { orderBy: { sortOrder: "asc" } } },
+    orderBy: { sortOrder: "asc" },
+  });
+  payload.plans = plans.map(({ features, ...plan }) => ({
+    ...stripRecord(plan),
+    features: features.map(({ id, planId, ...feature }) => feature),
+  }));
+  payload.planSettings = await prisma.planSettings.findUnique({
+    where: { tenantId },
+    select: { defaultTrialDays: true },
+  });
+
+  payload.subscribers = await exportSubscribers(tenantId);
+
   return payload;
+}
+
+function stripRecord({ id, createdAt, updatedAt, tenantId: _, ...record }) {
+  return record;
+}
+
+async function exportSettings(tenantId) {
+  const [
+    site,
+    tracking,
+    analytics,
+    aiCrawl,
+    navbar,
+    footer,
+    breadcrumbs,
+    footerSettings,
+  ] = await Promise.all([
+    prisma.sitesettings.findUnique({ where: { tenantId } }),
+    prisma.TrackingSettings.findUnique({ where: { tenantId } }),
+    prisma.analyticsSettings.findUnique({ where: { tenantId } }),
+    prisma.AICrawlSettings.findUnique({ where: { tenantId } }),
+    prisma.navbarConfig.findUnique({ where: { tenantId } }),
+    prisma.footerConfig.findUnique({ where: { tenantId } }),
+    prisma.BreadcrumbSettings.findUnique({ where: { tenantId } }),
+    prisma.footerSettings.findMany({
+      where: { tenantId },
+      orderBy: { key: "asc" },
+    }),
+  ]);
+
+  return {
+    site: site && stripRecord(site),
+    tracking: tracking && stripRecord(tracking),
+    analytics: analytics && stripRecord(analytics),
+    aiCrawl: aiCrawl && stripRecord(aiCrawl),
+    navbar: navbar && stripRecord(navbar),
+    footer: footer && stripRecord(footer),
+    breadcrumbs: breadcrumbs && stripRecord(breadcrumbs),
+    footerSettings: footerSettings.map(
+      ({ id, tenantId: _, ...setting }) => setting,
+    ),
+  };
+}
+
+async function exportSubscribers(tenantId) {
+  const users = await prisma.user.findMany({
+    where: { tenantId, role: { not: "SUPER_ADMIN" } },
+    select: {
+      email: true,
+      name: true,
+      role: true,
+      planSubscriptions: {
+        include: { plan: { select: { slug: true } } },
+      },
+      planEnrollments: {
+        include: { plan: { select: { slug: true } } },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return users.map(({ planSubscriptions, planEnrollments, ...user }) => ({
+    ...user,
+    subscriptions: planSubscriptions.map(
+      ({
+        plan,
+        userId,
+        planId,
+        id,
+        createdAt,
+        updatedAt,
+        ...subscription
+      }) => ({
+        ...subscription,
+        planSlug: plan.slug,
+      }),
+    ),
+    enrollments: planEnrollments.map(
+      ({ plan, userId, planId, id, ...enrollment }) => ({
+        ...enrollment,
+        planSlug: plan.slug,
+      }),
+    ),
+  }));
 }
 
 // ─── Menu Tree Builder ─────────────────────────────────────
@@ -90,7 +216,39 @@ export async function importAll(payload, strategy = "skip") {
   const report = {
     pages: { created: 0, skipped: 0, overwritten: 0, errors: [] },
     menus: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    settings: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    categories: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    tags: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    posts: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    plans: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    subscribers: { created: 0, skipped: 0, overwritten: 0, errors: [] },
   };
+
+  if (payload.settings)
+    await importSettings(payload.settings, report.settings, tenantId);
+  if (payload.categories?.length)
+    await importTaxonomy(
+      payload.categories,
+      "category",
+      strategy,
+      report.categories,
+      tenantId,
+    );
+  if (payload.tags?.length)
+    await importTaxonomy(payload.tags, "tag", strategy, report.tags, tenantId);
+  if (payload.posts?.length)
+    await importPosts(payload.posts, strategy, report.posts, tenantId);
+  if (payload.plans?.length)
+    await importPlans(payload.plans, strategy, report.plans, tenantId);
+  if (payload.planSettings)
+    await importPlanSettings(payload.planSettings, report.settings, tenantId);
+  if (payload.subscribers?.length)
+    await importSubscribers(
+      payload.subscribers,
+      strategy,
+      report.subscribers,
+      tenantId,
+    );
 
   if (payload.pages?.length) {
     await importPages(payload.pages, strategy, report.pages, tenantId);
@@ -116,10 +274,326 @@ function validatePayload(payload) {
       "Invalid file: missing __meta.version — was this exported from this CMS?",
     );
   }
-  if (payload.__meta.version !== EXPORT_VERSION) {
+  if (!["1.0", EXPORT_VERSION].includes(payload.__meta.version)) {
     // In future if you change the format to 2.0,
     // you'd add a migration/transform here instead of throwing
     throw new Error(`Unsupported version: ${payload.__meta.version}`);
+  }
+}
+
+async function importSettings(settings, report, tenantId) {
+  const singletonModels = [
+    ["site", prisma.sitesettings],
+    ["tracking", prisma.TrackingSettings],
+    ["analytics", prisma.analyticsSettings],
+    ["aiCrawl", prisma.AICrawlSettings],
+    ["navbar", prisma.navbarConfig],
+    ["footer", prisma.footerConfig],
+    ["breadcrumbs", prisma.BreadcrumbSettings],
+  ];
+
+  for (const [key, model] of singletonModels) {
+    if (!settings[key]) continue;
+    try {
+      const data = { ...settings[key], tenantId };
+      delete data.homepagePageId;
+      delete data.postsPageId;
+      delete data.coursesPageId;
+      delete data.sitemapLastGeneratedAt;
+      delete data.cachedSitemapXml;
+      delete data.cachedSitemapExpiresAt;
+      await model.upsert({
+        where: { tenantId },
+        update: data,
+        create: data,
+      });
+      report.overwritten++;
+    } catch (err) {
+      report.errors.push({ section: key, error: err.message });
+    }
+  }
+
+  for (const setting of settings.footerSettings ?? []) {
+    try {
+      const existing = await prisma.footerSettings.findFirst({
+        where: { key: setting.key, tenantId },
+      });
+      const data = { key: setting.key, tenantId, value: setting.value };
+      if (existing) {
+        await prisma.footerSettings.update({
+          where: { id: existing.id },
+          data,
+        });
+        report.overwritten++;
+      } else {
+        await prisma.footerSettings.create({ data });
+        report.created++;
+      }
+    } catch (err) {
+      report.errors.push({ key: setting.key, error: err.message });
+    }
+  }
+}
+
+async function importTaxonomy(items, type, strategy, report, tenantId) {
+  const model = type === "category" ? prisma.category : prisma.tag;
+  const imported = new Map();
+
+  for (const item of items) {
+    try {
+      const existing = await model.findFirst({
+        where: { slug: item.slug, tenantId },
+      });
+      const data = { name: item.name, slug: item.slug, tenantId };
+      if (type === "category") {
+        data.description = item.description ?? null;
+        data.sitemapEnabled = item.sitemapEnabled;
+        data.sitemapPriority = item.sitemapPriority;
+        data.sitemapChangeFreq = item.sitemapChangeFreq;
+      } else {
+        data.sitemapEnabled = item.sitemapEnabled;
+        data.sitemapPriority = item.sitemapPriority;
+        data.sitemapChangeFreq = item.sitemapChangeFreq;
+      }
+
+      if (existing && strategy === "skip") {
+        imported.set(item.slug, existing.id);
+        report.skipped++;
+        continue;
+      }
+      if (existing && strategy === "overwrite") {
+        const updated = await model.update({
+          where: { id: existing.id },
+          data,
+        });
+        imported.set(item.slug, updated.id);
+        report.overwritten++;
+        continue;
+      }
+      if (existing) data.slug = await findFreeSlug(item.slug, type, tenantId);
+      const created = await model.create({ data });
+      imported.set(item.slug, created.id);
+      report.created++;
+    } catch (err) {
+      report.errors.push({ slug: item.slug, error: err.message });
+    }
+  }
+
+  if (type === "category") {
+    for (const item of items) {
+      if (!item.parentSlug || !imported.has(item.slug)) continue;
+      await model.update({
+        where: { id: imported.get(item.slug) },
+        data: { parentId: imported.get(item.parentSlug) ?? null },
+      });
+    }
+  }
+}
+
+async function importPosts(posts, strategy, report, tenantId) {
+  for (const post of posts) {
+    try {
+      const existing = await prisma.post.findFirst({
+        where: { slug: post.slug, tenantId },
+      });
+      if (existing && strategy === "skip") {
+        report.skipped++;
+        continue;
+      }
+
+      const categoryIds = await findTaxonomyIds(
+        "category",
+        post.categorySlugs,
+        tenantId,
+      );
+      const tagIds = await findTaxonomyIds("tag", post.tagSlugs, tenantId);
+      const data = {
+        title: post.title,
+        slug:
+          existing && strategy === "rename"
+            ? await findFreeSlug(post.slug, "post", tenantId)
+            : post.slug,
+        excerpt: post.excerpt ?? null,
+        content: post.content,
+        featuredImage: post.featuredImage ?? null,
+        status: post.status,
+        seoData: post.seoData ?? null,
+        publishedAt: post.publishedAt ? new Date(post.publishedAt) : null,
+        format: post.format ?? "standard",
+        sitemapEnabled: post.sitemapEnabled,
+        sitemapPriority: post.sitemapPriority,
+        sitemapChangeFreq: post.sitemapChangeFreq,
+        category: { connect: categoryIds.map((id) => ({ id })) },
+        tag: { connect: tagIds.map((id) => ({ id })) },
+      };
+
+      if (existing && strategy === "overwrite") {
+        await prisma.post.update({ where: { id: existing.id }, data });
+        report.overwritten++;
+      } else {
+        await prisma.post.create({
+          data: { id: randomUUID(), ...data, tenantId },
+        });
+        report.created++;
+      }
+    } catch (err) {
+      report.errors.push({ slug: post.slug, error: err.message });
+    }
+  }
+}
+
+async function findTaxonomyIds(type, slugs = [], tenantId) {
+  if (!slugs.length) return [];
+  const model = type === "category" ? prisma.category : prisma.tag;
+  const rows = await model.findMany({
+    where: { tenantId, slug: { in: slugs } },
+    select: { id: true },
+  });
+  return rows.map((row) => row.id);
+}
+
+async function importPlans(plans, strategy, report, tenantId) {
+  for (const plan of plans) {
+    try {
+      const existing = await prisma.plan.findFirst({
+        where: { slug: plan.slug, tenantId },
+      });
+      if (existing && strategy === "skip") {
+        report.skipped++;
+        continue;
+      }
+
+      const data = {
+        title: plan.title,
+        slug:
+          existing && strategy === "rename"
+            ? await findFreeSlug(plan.slug, "plan", tenantId)
+            : plan.slug,
+        tagline: plan.tagline ?? null,
+        description: plan.description ?? null,
+        price: plan.price,
+        billingCycle: plan.billingCycle,
+        billingPeriodDays: plan.billingPeriodDays ?? null,
+        trialDays: plan.trialDays ?? null,
+        isFeatured: plan.isFeatured,
+        isPublished: plan.isPublished,
+        sortOrder: plan.sortOrder ?? 0,
+      };
+      const features = (plan.features ?? []).map((feature, index) => ({
+        title: feature.title,
+        sortOrder: feature.sortOrder ?? index,
+      }));
+
+      if (existing && strategy === "overwrite") {
+        await prisma.planFeature.deleteMany({ where: { planId: existing.id } });
+        await prisma.plan.update({
+          where: { id: existing.id },
+          data: { ...data, features: { create: features } },
+        });
+        report.overwritten++;
+      } else {
+        await prisma.plan.create({
+          data: { ...data, tenantId, features: { create: features } },
+        });
+        report.created++;
+      }
+    } catch (err) {
+      report.errors.push({ slug: plan.slug, error: err.message });
+    }
+  }
+}
+
+async function importPlanSettings(settings, report, tenantId) {
+  try {
+    await prisma.planSettings.upsert({
+      where: { tenantId },
+      update: { defaultTrialDays: settings.defaultTrialDays },
+      create: { tenantId, defaultTrialDays: settings.defaultTrialDays },
+    });
+    report.overwritten++;
+  } catch (err) {
+    report.errors.push({ section: "planSettings", error: err.message });
+  }
+}
+
+async function importSubscribers(subscribers, strategy, report, tenantId) {
+  for (const subscriber of subscribers) {
+    try {
+      const user = await prisma.user.findFirst({
+        where: { email: subscriber.email, tenantId },
+      });
+      if (!user) {
+        report.errors.push({
+          email: subscriber.email,
+          error:
+            "Subscriber does not exist in target tenant; password setup is required",
+        });
+        continue;
+      }
+      if (strategy === "overwrite") {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { name: subscriber.name, role: subscriber.role },
+        });
+        report.overwritten++;
+      } else {
+        report.skipped++;
+      }
+
+      for (const subscription of subscriber.subscriptions ?? []) {
+        const plan = await prisma.plan.findFirst({
+          where: { slug: subscription.planSlug, tenantId },
+        });
+        if (!plan) continue;
+        await prisma.planSubscription.upsert({
+          where: { userId_planId: { userId: user.id, planId: plan.id } },
+          update: {
+            billingCycle: subscription.billingCycle,
+            status: subscription.status,
+            startsAt: new Date(subscription.startsAt),
+            currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+            trialEndsAt: subscription.trialEndsAt
+              ? new Date(subscription.trialEndsAt)
+              : null,
+            canceledAt: subscription.canceledAt
+              ? new Date(subscription.canceledAt)
+              : null,
+          },
+          create: {
+            userId: user.id,
+            planId: plan.id,
+            billingCycle: subscription.billingCycle,
+            status: subscription.status,
+            startsAt: new Date(subscription.startsAt),
+            currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+            trialEndsAt: subscription.trialEndsAt
+              ? new Date(subscription.trialEndsAt)
+              : null,
+            canceledAt: subscription.canceledAt
+              ? new Date(subscription.canceledAt)
+              : null,
+          },
+        });
+      }
+
+      for (const enrollment of subscriber.enrollments ?? []) {
+        const plan = await prisma.plan.findFirst({
+          where: { slug: enrollment.planSlug, tenantId },
+        });
+        if (!plan) continue;
+        await prisma.planEnrollment.upsert({
+          where: { userId_planId: { userId: user.id, planId: plan.id } },
+          update: { purchasedAt: new Date(enrollment.purchasedAt) },
+          create: {
+            userId: user.id,
+            planId: plan.id,
+            purchasedAt: new Date(enrollment.purchasedAt),
+          },
+        });
+      }
+    } catch (err) {
+      report.errors.push({ email: subscriber.email, error: err.message });
+    }
   }
 }
 
@@ -250,10 +724,19 @@ async function findFreeSlug(baseSlug, type, tenantId) {
   let candidate = `${baseSlug}-${counter}`;
 
   while (true) {
-    const exists =
+    const model =
       type === "page"
-        ? await prisma.page.findFirst({ where: { slug: candidate, tenantId } })
-        : null;
+        ? prisma.page
+        : type === "post"
+          ? prisma.post
+          : type === "plan"
+            ? prisma.plan
+            : type === "category"
+              ? prisma.category
+              : prisma.tag;
+    const exists = await model.findFirst({
+      where: { slug: candidate, tenantId },
+    });
 
     if (!exists) return candidate;
     counter++;
