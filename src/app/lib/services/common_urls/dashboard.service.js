@@ -100,32 +100,152 @@ export async function getSubscriberDashboard(userId) {
     : (record?.status ?? null);
 
   let trialDaysRemaining = null;
+
   if (
     type === "subscription" &&
     normalizedStatus === "TRIALING" &&
     record?.trialEndsAt
   ) {
     const end = new Date(record.trialEndsAt).getTime();
+
     trialDaysRemaining = Math.max(
       0,
       Math.floor((end - now) / (1000 * 60 * 60 * 24)),
     );
   }
 
+  const [
+    totalFiles,
+    totalShares,
+    viewedShares,
+    downloadedFiles,
+    recentFiles,
+    recentShares,
+  ] = await Promise.all([
+    prisma.uploadedFile.count({
+      where: {
+        uploadedBy: Number(userId),
+      },
+    }),
+
+    prisma.fileShareLink.count({
+      where: {
+        createdBy: Number(userId),
+      },
+    }),
+
+    prisma.fileShareLink.count({
+      where: {
+        createdBy: Number(userId),
+        viewedAt: {
+          not: null,
+        },
+      },
+    }),
+
+    prisma.fileShareFile.count({
+      where: {
+        shareLink: {
+          createdBy: Number(userId),
+        },
+        downloadedAt: {
+          not: null,
+        },
+      },
+    }),
+
+    prisma.uploadedFile.findMany({
+      where: {
+        uploadedBy: Number(userId),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 5,
+      select: {
+        id: true,
+        title: true,
+        originalName: true,
+        mimeType: true,
+        size: true,
+        createdAt: true,
+      },
+    }),
+
+    prisma.fileShareLink.findMany({
+      where: {
+        createdBy: Number(userId),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 5,
+      include: {
+        _count: {
+          select: {
+            files: true,
+          },
+        },
+      },
+    }),
+  ]);
+
   return {
-    accessType: type, // "subscription" | "enrollment" | null
-    plan: plan
-      ? {
-          id: plan.id,
-          title: plan.title,
-          price: plan.price,
-          billingCycle: record.billingCycle,
-        }
-      : null,
-    status: normalizedStatus, // TRIALING | ACTIVE | EXPIRED | CANCELED (enrollment has no status)
+    // ======================
+    // Subscription
+    // ======================
+
+    accessType: type,
+
+plan: plan
+  ? {
+      id: plan.id,
+      title: plan.title,
+      monthlyPrice: plan.monthlyPrice,
+      yearlyPrice: plan.yearlyPrice,
+      allowMonthly: plan.allowMonthly,
+      allowYearly: plan.allowYearly,
+      billingCycle: record?.billingCycle,
+    }
+  : null,
+    status: normalizedStatus,
+
     trialDaysRemaining,
+
     trialEndsAt: record?.trialEndsAt ?? null,
+
     currentPeriodEnd: record?.currentPeriodEnd ?? null,
+
     startsAt: record?.startsAt ?? record?.purchasedAt ?? null,
+
+    // ======================
+    // Dashboard Statistics
+    // ======================
+
+    stats: {
+      totalFiles,
+      totalShares,
+      viewedShares,
+      downloadedFiles,
+    },
+
+    // ======================
+    // Recent Files
+    // ======================
+
+    recentFiles,
+
+    // ======================
+    // Recent Shares
+    // ======================
+
+    recentShares: recentShares.map((share) => ({
+      id: share.id,
+      sharedWith: share.sharedWith,
+      createdAt: share.createdAt,
+      viewed: !!share.viewedAt,
+      zipDownloaded: !!share.zipDownloadedAt,
+      filesCount: share._count.files,
+    })),
   };
 }
