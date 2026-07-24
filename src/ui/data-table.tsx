@@ -6,6 +6,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ListFilter,
+  Columns3,
   X,
 } from "lucide-react";
 import { Input } from "@/src/ui/input";
@@ -38,6 +39,8 @@ export interface Column<T> {
   filterable?: boolean;
   className?: string;
   filterValue?: (row: T) => string;
+  /** Set to false to always show this column and hide it from the column picker. Defaults to true. */
+  hideable?: boolean;
 }
 
 export interface DataTableProps<T> {
@@ -54,6 +57,12 @@ export interface DataTableProps<T> {
   selectedRows?: T[];
   onSelectedRowsChange?: (rows: T[]) => void;
   getRowId?: (row: T) => string | number;
+  /** Enables the "Columns" picker so users can show/hide columns. Default false. */
+  enableColumnVisibility?: boolean;
+  /** Keys of columns hidden by default (only applies on first render). */
+  defaultHiddenColumns?: string[];
+  /** localStorage-style key to persist visibility choices across sessions via a callback. */
+  onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void;
 }
 
 // --- Active Filters Bar Component ---
@@ -280,6 +289,54 @@ function ColumnFilterDropdown<T>({
   );
 }
 
+// --- Column Toggle Chips Row Component ---
+// Always-visible row of pills, one per column. Click a pill to show/hide that column.
+function ColumnTogglePills<T>({
+  columns,
+  visibility,
+  onToggle,
+}: {
+  columns: Column<T>[];
+  visibility: Record<string, boolean>;
+  onToggle: (key: string) => void;
+}) {
+  // Only columns explicitly marked hideable: false are excluded from the pill row
+  const toggleableColumns = useMemo(
+    () => columns.filter((c) => c.hideable !== false),
+    [columns],
+  );
+
+  if (toggleableColumns.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted-foreground mr-1 flex items-center gap-1">
+        <Columns3 className="h-3.5 w-3.5" />
+        Columns:
+      </span>
+      {toggleableColumns.map((col) => {
+        const isVisible = visibility[col.key] !== false;
+        return (
+          <button
+            key={col.key}
+            type="button"
+            onClick={() => onToggle(col.key)}
+            aria-pressed={isVisible}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              isVisible
+                ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/15"
+                : "bg-muted/40 border-transparent text-muted-foreground hover:bg-muted/70",
+            )}
+          >
+            {col.header}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // --- Main DataTable Component ---
 export function DataTable<T extends { id?: string | number }>({
   data,
@@ -295,6 +352,9 @@ export function DataTable<T extends { id?: string | number }>({
   selectedRows: externalSelectedRows,
   onSelectedRowsChange,
   getRowId = (row) => (row.id ?? JSON.stringify(row)) as string | number,
+  enableColumnVisibility = false,
+  defaultHiddenColumns = [],
+  onColumnVisibilityChange,
 }: DataTableProps<T>) {
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -303,6 +363,48 @@ export function DataTable<T extends { id?: string | number }>({
   const [columnFilters, setColumnFilters] = useState<
     Record<string, Set<string>>
   >({});
+
+  // Column visibility state: key -> visible. Missing key defaults to visible.
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<string, boolean>
+  >(() => {
+    const initial: Record<string, boolean> = {};
+    defaultHiddenColumns.forEach((key) => {
+      initial[key] = false;
+    });
+    return initial;
+  });
+
+  const updateColumnVisibility = (
+    updater: (prev: Record<string, boolean>) => Record<string, boolean>,
+  ) => {
+    setColumnVisibility((prev) => {
+      const next = updater(prev);
+      onColumnVisibilityChange?.(next);
+      return next;
+    });
+  };
+
+  const toggleColumnVisibility = (key: string) => {
+    updateColumnVisibility((prev) => ({
+      ...prev,
+      [key]: prev[key] === false ? true : false,
+    }));
+  };
+
+  const showAllColumns = () => {
+    updateColumnVisibility(() => ({}));
+  };
+
+  const hideAllColumns = () => {
+    updateColumnVisibility(() => {
+      const next: Record<string, boolean> = {};
+      columns.forEach((c) => {
+        if (c.hideable !== false) next[c.key] = false;
+      });
+      return next;
+    });
+  };
 
   // Internal selection state if external not provided
   const [internalSelectedRows, setInternalSelectedRows] = useState<
@@ -463,12 +565,19 @@ export function DataTable<T extends { id?: string | number }>({
     ),
     className: "w-12 text-center",
     filterable: false,
+    hideable: false,
   };
+
+  // Columns filtered by visibility (selection column is always visible)
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => columnVisibility[c.key] !== false),
+    [columns, columnVisibility],
+  );
 
   // Combine columns with selection column at the beginning if enabled
   const displayColumns = enableRowSelection
-    ? [selectionColumn, ...columns]
-    : columns;
+    ? [selectionColumn, ...visibleColumns]
+    : visibleColumns;
 
   return (
     <div className="space-y-4">
@@ -486,11 +595,18 @@ export function DataTable<T extends { id?: string | number }>({
               />
             </div>
           )}
-          {toolbarActions && (
-            <div className="flex items-center gap-2">{toolbarActions}</div>
-          )}
+          <div className="flex items-center gap-2">{toolbarActions}</div>
         </div>
       </div>
+
+      {/* Column visibility pills - always visible, click to toggle a column */}
+      {enableColumnVisibility && (
+        <ColumnTogglePills
+          columns={columns}
+          visibility={columnVisibility}
+          onToggle={toggleColumnVisibility}
+        />
+      )}
 
       {/* Selection info bar */}
       {enableRowSelection && totalSelectedCount > 0 && (

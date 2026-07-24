@@ -30,14 +30,22 @@ export async function shareFiles(fileIds, { email, message, password }) {
   const tenantId = session.user.tenantId;
 
   // confirm every file exists AND belongs to this tenant
-  const files = await prisma.sharedFile.findMany({
-    where: { id: { in: uniqueFileIds }, tenantId },
+  const files = await prisma.uploadedFile.findMany({
+    where: {
+      id: {
+        in: uniqueFileIds,
+      },
+      tenantId,
+    },
   });
 
   if (files.length !== uniqueFileIds.length) {
     const foundIds = new Set(files.map((f) => f.id));
     const missing = uniqueFileIds.filter((id) => !foundIds.has(id));
-    throw new ApiError(404, `File(s) not found or not accessible: ${missing.join(", ")}`);
+    throw new ApiError(
+      404,
+      `File(s) not found or not accessible: ${missing.join(", ")}`,
+    );
   }
 
   if (password && password.length < 6) {
@@ -48,18 +56,18 @@ export async function shareFiles(fileIds, { email, message, password }) {
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
   const share = await prisma.$transaction(async (tx) => {
-    const createdShare = await tx.fileShare.create({
+    const createdShare = await tx.fileShareLink.create({
       data: {
         sharedWith: email,
         message: message ?? null,
         password: hashedPassword,
-        sharedBy: Number(session.user.id),
+        createdBy: Number(session.user.id),
       },
     });
 
-    await tx.fileShareItem.createMany({
+    await tx.fileShareFile.createMany({
       data: uniqueFileIds.map((fileId) => ({
-        shareId: createdShare.id,
+        shareLinkId: createdShare.id,
         fileId,
       })),
     });
@@ -83,10 +91,10 @@ export async function shareFiles(fileIds, { email, message, password }) {
 // ─── Public access (no auth — token/password gated) ─────────
 
 export async function verifySharePassword(token, password) {
-  const share = await prisma.fileShare.findUnique({
+  const share = await prisma.fileShareLink.findUnique({
     where: { token },
     include: {
-      items: {
+      files: {
         include: { file: true },
       },
     },
@@ -97,7 +105,7 @@ export async function verifySharePassword(token, password) {
   if (!valid) throw new ApiError(400, "Incorrect password");
 
   if (!share.viewedAt) {
-    await prisma.fileShare.update({
+    await prisma.fileShareLink.update({
       where: { id: share.id },
       data: { viewedAt: new Date() },
     });
@@ -106,7 +114,7 @@ export async function verifySharePassword(token, password) {
   return {
     sharedWith: share.sharedWith,
     message: share.message,
-    files: share.items.map((item) => ({
+    files: share.files.map((item) => ({
       itemId: item.id,
       fileId: item.file.id,
       fileUrl: item.file.url,
@@ -120,42 +128,47 @@ export async function verifySharePassword(token, password) {
 }
 
 export async function markFileDownloaded(token, fileId) {
-  const share = await prisma.fileShare.findUnique({ where: { token } });
+  const share = await prisma.fileShareLink.findUnique({ where: { token } });
   if (!share) throw new ApiError(404, "Invalid link");
 
-  const item = await prisma.fileShareItem.findUnique({
-    where: { shareId_fileId: { shareId: share.id, fileId: String(fileId) } },
+  const item = await prisma.fileShareFile.findUnique({
+    where: {
+      shareLinkId_fileId: { shareLinkId: share.id, fileId: String(fileId) },
+    },
   });
   if (!item) throw new ApiError(404, "File not part of this share");
 
-  await prisma.fileShareItem.update({
+  await prisma.fileShareFile.update({
     where: { id: item.id },
     data: { downloadedAt: new Date() },
   });
 }
 
 export async function markZipDownloaded(token) {
-  const share = await prisma.fileShare.findUnique({ where: { token } });
+  const share = await prisma.fileShareLink.findUnique({ where: { token } });
   if (!share) throw new ApiError(404, "Invalid link");
 
-  await prisma.fileShare.update({
+  await prisma.fileShareLink.update({
     where: { id: share.id },
     data: { zipDownloadedAt: new Date() },
   });
 }
 
 export async function getShareMeta(token) {
-  const share = await prisma.fileShare.findUnique({
+  const share = await prisma.fileShareLink.findUnique({
     where: { token },
     include: {
-      items: { include: { file: { select: { title: true, category: true } } } },
+      files: { include: { file: { select: { title: true, category: true } } } },
     },
   });
   if (!share) throw new ApiError(404, "Invalid link");
 
   return {
-    fileCount: share.items.length,
-    files: share.items.map((i) => ({ title: i.file.title, category: i.file.category })),
+    fileCount: share.files.length,
+    files: share.files.map((i) => ({
+      title: i.file.title,
+      category: i.file.category,
+    })),
   };
 }
 
@@ -166,16 +179,16 @@ export async function getFileShares(fileId) {
   const session = await requireActiveSubscription();
   const tenantId = session.user.tenantId;
 
-  const file = await prisma.sharedFile.findFirst({
+  const file = await prisma.uploadedFile.findFirst({
     where: { id: fileId, tenantId },
   });
   if (!file) throw new ApiError(404, "File not found");
 
-  const items = await prisma.fileShareItem.findMany({
+  const items = await prisma.fileShareFile.findMany({
     where: { fileId },
-    orderBy: { share: { createdAt: "desc" } },
+    orderBy: { shareLink: { createdAt: "desc" } },
     include: {
-      share: {
+      shareLink: {
         select: {
           id: true,
           sharedWith: true,
@@ -183,21 +196,21 @@ export async function getFileShares(fileId) {
           viewedAt: true,
           zipDownloadedAt: true,
           createdAt: true,
-          _count: { select: { items: true } },
+          _count: { select: { files: true } },
         },
       },
     },
   });
 
   return items.map((item) => ({
-    shareId: item.share.id,
-    sharedWith: item.share.sharedWith,
-    message: item.share.message,
-    viewedAt: item.share.viewedAt,
-    zipDownloadedAt: item.share.zipDownloadedAt,
+    shareId: item.shareLink.id,
+    sharedWith: item.shareLink.sharedWith,
+    message: item.shareLink.message,
+    viewedAt: item.shareLink.viewedAt,
+    zipDownloadedAt: item.shareLink.zipDownloadedAt,
     downloadedAt: item.downloadedAt,
-    createdAt: item.share.createdAt,
-    otherFilesCount: item.share._count.items - 1, // 0 = solo share
+    createdAt: item.shareLink.createdAt,
+    otherFilesCount: item.shareLink._count.files - 1, // 0 = solo share
   }));
 }
 
@@ -208,12 +221,12 @@ export async function getAllFilesAdmin(fileId) {
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  const file = await prisma.sharedFile.findFirst({
+  const file = await prisma.uploadedFile.findFirst({
     where: { id: fileId, tenantId },
   });
   if (!file) throw new ApiError(404, "File not found");
 
-  return prisma.sharedFile.findMany({
+  return prisma.uploadedFile.findMany({
     where: { tenantId },
     include: {
       uploader: {
@@ -233,7 +246,7 @@ export async function deleteFileAdmin(fileId) {
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  const file = await prisma.sharedFile.findFirst({
+  const file = await prisma.uploadedFile.findFirst({
     where: { id: fileId, tenantId },
   });
   if (!file) throw new ApiError(404, "File not found");
@@ -248,7 +261,7 @@ export async function deleteFileAdmin(fileId) {
     }
   }
 
-  await prisma.sharedFile.delete({ where: { id: fileId } });
+  await prisma.uploadedFile.delete({ where: { id: fileId } });
 
   return ApiResponse(200, null, "File deleted successfully");
 }

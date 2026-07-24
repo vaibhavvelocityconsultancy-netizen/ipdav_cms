@@ -727,7 +727,10 @@ export async function getSubscriberUsers() {
         include: { plan: { select: { title: true, billingCycle: true } } },
       },
       _count: {
-        select: { fileShares: true }, // shares THEY sent (sharedBy relation)
+        select: { 
+          uploadedFiles: true, // files THEY uploaded
+          fileShares: true
+         }, // links THEY created
       },
     },
     orderBy: { createdAt: "desc" },
@@ -743,6 +746,7 @@ export async function getSubscriberUsers() {
       role: u.role,
       createdAt: u.createdAt,
       sharedFilesCount: u._count.fileShares,
+      uploadedFilesCount: u._count.uploadedFiles,
       plan: sub
         ? {
             title: sub.plan.title,
@@ -770,6 +774,12 @@ export const getUserDetails = async (userId) => {
       email: true,
       role: true,
       createdAt: true,
+      _count: {
+        select: {
+          uploadedFiles: true, // Uploaded files count
+          fileShares: true, // Shared links count
+        },
+      },
     },
   });
 
@@ -790,15 +800,15 @@ export const getUserDetails = async (userId) => {
     },
   });
 
-  const shares = await prisma.fileShare.findMany({
+  const shares = await prisma.fileShareLink.findMany({
     where: {
-      sharedBy: id,
+      createdBy: id,
     },
     orderBy: {
       createdAt: "desc",
     },
     include: {
-      items: {
+      files: {
         include: {
           file: {
             select: {
@@ -811,7 +821,7 @@ export const getUserDetails = async (userId) => {
   });
 
   // Uploaded files
-  const uploadedFiles = await prisma.sharedFile.findMany({
+  const uploadedFiles = await prisma.uploadedFile.findMany({
     where: {
       uploadedBy: id,
     },
@@ -852,8 +862,8 @@ export const getUserDetails = async (userId) => {
       createdAt: share.createdAt,
       viewedAt: share.viewedAt,
       zipDownloadedAt: share.zipDownloadedAt,
-      fileCount: share.items.length,
-      fileTitles: share.items.map((i) => i.file.title),
+      fileCount: share.files.length,
+      fileTitles: share.files.map((i) => i.file.title),
     })),
   };
 };

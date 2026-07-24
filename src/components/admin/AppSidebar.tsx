@@ -146,10 +146,10 @@ const adminNavItems: NavItem[] = [
     ],
   },
   {
-    id: "file-manager",
-    label: "File Manager",
+    id: "files-manager",
+    label: "User Management",
     icon: Share2,
-    description: "Subscriber-shared files",
+    description: "Subscriber-info & uploaded files",
     modulePermission: "subscriber_upload_files_info",
     href: "/admin/files",
   },

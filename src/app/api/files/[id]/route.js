@@ -7,9 +7,9 @@ import { getFileShares } from "@/src/app/lib/file_sharing/file-sharing.service";
 
 export const DELETE = asyncHandler(async (req, { params }) => {
   const { user } = await requireAuth();
-  const fileId = Number(params.id);
+  const fileId = String(params.id);
 
-  const existing = await prisma.sharedFile.findFirst({
+  const existing = await prisma.uploadedFile.findFirst({
     where: { id: fileId, tenantId: Number(user.tenantId) },
   });
 
@@ -17,11 +17,9 @@ export const DELETE = asyncHandler(async (req, { params }) => {
     throw new ApiError(404, "File not found");
   }
 
-  await prisma.sharedFile.delete({ where: { id: fileId } });
+  await prisma.uploadedFile.delete({ where: { id: fileId } });
 
-  return Response.json(
-    new ApiResponse(200, null, "File deleted successfully"),
-  );
+  return Response.json(new ApiResponse(200, null, "File deleted successfully"));
 });
 
 export const GET = asyncHandler(async (req, { params }) => {
@@ -29,5 +27,7 @@ export const GET = asyncHandler(async (req, { params }) => {
   if (!id) throw new ApiError(400, "File ID is required");
 
   const shares = await getFileShares(id);
-  return Response.json(new ApiResponse(200, shares, "Shares fetched successfully"));
+  return Response.json(
+    new ApiResponse(200, shares, "Shares fetched successfully"),
+  );
 });

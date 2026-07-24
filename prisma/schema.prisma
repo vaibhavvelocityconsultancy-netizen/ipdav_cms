@@ -118,7 +118,7 @@ model tenant {
   shippingZones      ShippingZone[]
   taxClasses         TaxClass[]
   ecommerceSettings  EcommerceSettings?
-  sharedFiles        SharedFile[]
+  uploadedFiles         UploadedFile[]
   plans              Plan[]
   planSettings       PlanSettings?
 }
@@ -249,8 +249,8 @@ model user {
   enrollments       CourseEnrollment[]
   customerAddresses CustomerAddress[]
   orders            Order[]
-  sharedFiles       SharedFile[]
-  fileShares        FileShare[]
+uploadedFiles UploadedFile[]
+fileShares    FileShareLink[]
   planSubscriptions PlanSubscription[]
   planEnrollments   PlanEnrollment[]
 }
@@ -1547,59 +1547,68 @@ model EcommerceSettings {
 
 // File Sharing System
 
-model SharedFile {
-  id           String   @id @default(cuid())
+model UploadedFile {
+  id           String  @id @default(cuid())
   title        String
-  description  String?  @db.Text
+  description  String? @db.Text
   category     String
   fileName     String
   originalName String
   url          String
   mimeType     String
   size         Int
-  uploadedBy   Int
-  tenantId     Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  tenant         tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  uploader       user            @relation(fields: [uploadedBy], references: [id])
-  shares         FileShare[]
-  fileShareItems FileShareItem[]
+  uploadedBy Int
+  tenantId   Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader user   @relation(fields: [uploadedBy], references: [id])
+
+  shareFiles FileShareFile[]
 
   @@index([tenantId])
+  @@index([uploadedBy])
   @@index([category])
 }
 
-model FileShare {
-  id              String    @id @default(cuid())
-  sharedWith      String
-  message         String?   @db.Text
-  password        String
-  sharedBy        Int
-  token           String    @unique @default(cuid())
+model FileShareLink {
+  id String @id @default(cuid())
+
+  sharedWith String
+  message    String? @db.Text
+  password   String
+
+  createdBy Int
+  token     String @unique @default(cuid())
+
   viewedAt        DateTime?
   zipDownloadedAt DateTime?
-  createdAt       DateTime  @default(now())
 
-  sharer       user            @relation(fields: [sharedBy], references: [id])
-  items        FileShareItem[]
-  sharedFile   SharedFile?     @relation(fields: [sharedFileId], references: [id])
-  sharedFileId String?
+  createdAt DateTime @default(now())
+
+  creator user @relation(fields: [createdBy], references: [id])
+
+  files FileShareFile[]
 
   @@index([token])
+  @@index([createdBy])
 }
 
-model FileShareItem {
-  id           String    @id @default(cuid())
-  shareId      String
-  fileId       String
+model FileShareFile {
+  id String @id @default(cuid())
+
+  shareLinkId String
+  fileId      String
+
   downloadedAt DateTime?
 
-  share FileShare  @relation(fields: [shareId], references: [id], onDelete: Cascade)
-  file  SharedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  shareLink FileShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  file      UploadedFile  @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
-  @@unique([shareId, fileId])
-  @@index([shareId])
+  @@unique([shareLinkId, fileId])
+  @@index([shareLinkId])
   @@index([fileId])
 }

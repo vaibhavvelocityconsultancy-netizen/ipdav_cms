@@ -69,7 +69,8 @@ export function renderBreadcrumbHtml(
   const schemaScript = settings.schemaEnabled ? buildBreadcrumbSchema(crumbs) : "";
   const hoverStyle = `<style>.breadcrumb-link:hover{color:${escapeHtml(settings.linkHoverColor)} !important}</style>`;
 
-  return `${hoverStyle}<nav class="breadcrumb${cssClass} mb-6 pb-4" aria-label="breadcrumb"><ol class="flex items-center flex-wrap text-sm">${listItems}</ol></nav>${schemaScript}`;
+  return `${hoverStyle}<nav class="breadcrumb${cssClass} mb-6 pb-4" aria-label="breadcrumb">
+  <ol class="breadcrumb-list flex items-center flex-wrap text-sm">${listItems}</ol></nav>${schemaScript}`;
 }
 
 function buildBreadcrumbSchema(crumbs: BreadcrumbItem[]): string {

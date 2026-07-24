@@ -90,9 +90,14 @@ async function ensureSubscriberCanUpload(userId) {
 export const GET = asyncHandler(async () => {
   const { user } = await requireAuth();
 
-  const files = await prisma.sharedFile.findMany({
-    where: { tenantId: Number(user.tenantId) },
-    orderBy: { createdAt: "desc" },
+  const files = await prisma.uploadedFile.findMany({
+    where: {
+      tenantId: Number(user.tenantId),
+      uploadedBy: Number(user.id),
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 
   return Response.json(
@@ -146,7 +151,7 @@ export const POST = asyncHandler(async (req) => {
       .end(buffer);
   });
 
-  const created = await prisma.sharedFile.create({
+  const created = await prisma.uploadedFile.create({
     data: {
       title,
       description,

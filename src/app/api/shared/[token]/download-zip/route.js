@@ -10,16 +10,16 @@ export async function GET(request, { params }) {
     return new Response("Token is required", { status: 400 });
   }
 
-  const share = await prisma.fileShare.findUnique({
+  const share = await prisma.fileShareLink.findUnique({
     where: { token: String(token) },
-    include: { items: { include: { file: true } } },
+    include: { files: { include: { file: true } } },
   });
 
   if (!share) {
     return new Response("Invalid link", { status: 404 });
   }
 
-  if (!share.items || share.items.length === 0) {
+  if (!share.files || share.files.length === 0) {
     return new Response("No files in this share", { status: 404 });
   }
 
@@ -36,7 +36,7 @@ export async function GET(request, { params }) {
   // straight into the zip — nothing is buffered fully in memory at once.
   (async () => {
     try {
-      for (const item of share.items) {
+      for (const item of share.files) {
         const fileRes = await fetch(item.file.url);
         if (!fileRes.ok || !fileRes.body) continue;
 

@@ -50,6 +50,7 @@ export default function SiteNavbar({ settings, headerMenu }: any) {
     return roots;
   };
 
+  
   const getMenuItems = (menu: any): any[] =>
     menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
 
@@ -150,7 +151,20 @@ export default function SiteNavbar({ settings, headerMenu }: any) {
     });
 
   const menuItems = headerMenu ? buildTree(getMenuItems(headerMenu)) : [];
-
+    // Only add Pricing if there are already other nav items
+const finalMenuItems =
+  menuItems.length > 0
+    ? [
+        ...menuItems,
+        {
+          id: "pricing-static",
+          label: "Pricing",
+          type: "custom",
+          url: "/pricing",
+          children: [],
+        },
+      ]
+    : menuItems;
   return (
     <header id="site-navbar" className="m-0 p-0">
       {/* ROW 1 — white bar: logo / search / login-register */}
@@ -232,7 +246,7 @@ export default function SiteNavbar({ settings, headerMenu }: any) {
       <nav className="hidden lg:block w-full">
         <div className="max-w-7xl mx-auto bg-orange-500">
           <ul className="flex items-center gap-2 list-none m-0 p-0 px-6">
-            {renderMenuBarItems(menuItems)}
+            {renderMenuBarItems(finalMenuItems)}
           </ul>
         </div>
       </nav>
@@ -272,7 +286,7 @@ export default function SiteNavbar({ settings, headerMenu }: any) {
           </form>
           <nav className="flex flex-col">
             <ul className="flex flex-col list-none m-0 p-0">
-              {renderMobileItems(menuItems)}
+              {renderMobileItems(finalMenuItems)}
             </ul>
           </nav>
           <div className="flex items-center gap-4 p-4 border-t border-black/5">

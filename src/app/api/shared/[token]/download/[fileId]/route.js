@@ -11,23 +11,23 @@ export const GET = asyncHandler(async (req, { params }) => {
   if (!token) throw new ApiError(400, "Token is required");
   if (!fileId) throw new ApiError(400, "File ID is required");
 
-  const share = await prisma.fileShare.findUnique({
+  const share = await prisma.fileShareLink.findUnique({
     where: { token },
     include: {
-      items: {
+      files: {
         where: { fileId },
         include: { file: true },
       },
     },
   });
 
-  if (!share || !share.items?.length) {
+  if (!share || !share.files?.length) {
     throw new ApiError(404, "Invalid link or file not part of this share");
   }
 
   await markFileDownloaded(token, fileId);
 
-  const file = share.items[0].file;
+  const file = share.files[0].file;
   const res = await fetch(file.url);
   const blob = await res.arrayBuffer();
 

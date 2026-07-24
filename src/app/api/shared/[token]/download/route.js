@@ -7,12 +7,12 @@ export const GET = asyncHandler(async (req, { params }) => {
   const { token } = await params;
   if (!token) throw new ApiError(400, "Token is required");
 
-  const share = await prisma.fileShare.findUnique({
+  const share = await prisma.fileShareLink.findUnique({
     where: { token },
-    include: { items: { include: { file: true } } },
+    include: { files: { include: { file: true } } },
   });
 
-  const item = share?.items?.[0];
+  const item = share?.files?.[0];
   if (!item) throw new ApiError(404, "Invalid link or no files in this share");
 
   await markFileDownloaded(token, item.fileId);

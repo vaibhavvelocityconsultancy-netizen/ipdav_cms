@@ -21,7 +21,7 @@ interface SubscriberRow {
     currentPeriodEnd: string | null;
     trialEndsAt: string | null;
   } | null;
-  sharedFilesCount: number;
+  uploadedFilesCount: number;
 }
 
 function statusVariant(status: string | null) {
@@ -162,9 +162,9 @@ export default function AdminUsersPage() {
       filterable: false,
     },
     {
-      key: "sharedFilesCount",
-      header: "Files Shared",
-      cell: (row) => <span>{row.sharedFilesCount}</span>,
+      key: "uploadedFilesCount",
+      header: "Files Uploaded",
+      cell: (row) => <span>{row.uploadedFilesCount}</span>,
       filterable: false,
     },
     {
@@ -204,6 +204,7 @@ export default function AdminUsersPage() {
           searchPlaceholder="Search by name or email..."
           searchKeys={["name"]}
           emptyMessage="No subscribers yet."
+          enableColumnVisibility={true}
         />
       )}
 
