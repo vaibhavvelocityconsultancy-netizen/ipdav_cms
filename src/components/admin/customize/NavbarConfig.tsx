@@ -7,6 +7,13 @@ import { Button } from "@/src/ui/button";
 import SiteNavbar from "@/src/components/site/siteNavbar";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { apiMutations } from "@/src/lib/apimutation";
+import { cn } from "@/src/lib/utils";
+import { Label } from "@/src/ui/label";
+import { Switch } from "@/src/ui/switch";
+import { Input } from "@/src/ui/input";
+import { Slider } from "@/src/ui/slider";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/ui/card";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 const DEFAULT_CONFIG = {
     bgColor: "#0B0F1A",
@@ -36,7 +43,6 @@ const DEFAULT_FOOTER_CONFIG = {
   borderColor: "#ffffff0d",
   customCss: "",
 };
-
 
 export default function NavbarConfigEditor() {
     const queryClient = useQueryClient();
@@ -70,6 +76,7 @@ export default function NavbarConfigEditor() {
     const previewSettings = settingsData?.data ?? { siteName: "Your Site", logo: "" };
 
     const [draft, setDraft] = useState<any>(null);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     const config = useMemo(() => {
         if (draft) return draft;
@@ -85,6 +92,8 @@ export default function NavbarConfigEditor() {
         onSuccess: (res) => {
             queryClient.setQueryData(["navbar-config"], res);
             setDraft(null);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
         },
     });
 
@@ -93,68 +102,135 @@ export default function NavbarConfigEditor() {
         onSuccess: (res) => {
             queryClient.setQueryData(["navbar-config"], res);
             setDraft(null);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
         },
     });
 
     if (isLoading || menusLoading) {
-        return <div className="p-6 text-gray-400">Loading navbar settings…</div>;
+        return (
+            <div className="flex items-center justify-center p-12">
+                <div className="text-muted-foreground animate-pulse">Loading navbar settings…</div>
+            </div>
+        );
     }
 
-
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto">
             {/* ── LEFT: Controls ── */}
-            <div className="space-y-6">
-                <Section title="Colors">
-                    <ColorField label="Background" value={config.bgColor} onChange={(v) => update({ bgColor: v })} />
-                    <RangeField label="Background Opacity" value={config.bgOpacity} onChange={(v) => update({ bgOpacity: v })} />
-                    <ColorField label="Link Color" value={config.linkColor} onChange={(v) => update({ linkColor: v })} />
-                    <ColorField label="Link Hover Color" value={config.linkHoverColor} onChange={(v) => update({ linkHoverColor: v })} />
-                    <ColorField label="Accent (CTA buttons)" value={config.accentColor} onChange={(v) => update({ accentColor: v })} />
-                    <ColorField label="Dropdown Background" value={config.dropdownBg} onChange={(v) => update({ dropdownBg: v })} />
-                </Section>
+            <div className="flex-1 space-y-6">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-semibold tracking-tight">Navbar Configuration</h2>
+                    <div className="flex items-center gap-2">
+                        {saveSuccess && (
+                            <span className="flex items-center gap-1 text-sm text-success">
+                                <CheckCircle2 className="h-4 w-4" />
+                                Saved successfully
+                            </span>
+                        )}
+                    </div>
+                </div>
 
-                <Section title="Behavior">
-                    <ToggleField label="Sticky Header" value={config.sticky} onChange={(v) => update({ sticky: v })} />
-                    <ToggleField label="Background Blur" value={config.blur} onChange={(v) => update({ blur: v })} />
-                </Section>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Colors</CardTitle>
+                        <CardDescription>Customize the appearance of your navigation bar</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-4">
+                            <ColorField label="Background" value={config.bgColor} onChange={(v) => update({ bgColor: v })} />
+                            <RangeField label="Background Opacity" value={config.bgOpacity} onChange={(v) => update({ bgOpacity: v })} />
+                            <ColorField label="Link Color" value={config.linkColor} onChange={(v) => update({ linkColor: v })} />
+                            <ColorField label="Link Hover Color" value={config.linkHoverColor} onChange={(v) => update({ linkHoverColor: v })} />
+                            <ColorField label="Accent (CTA buttons)" value={config.accentColor} onChange={(v) => update({ accentColor: v })} />
+                            <ColorField label="Dropdown Background" value={config.dropdownBg} onChange={(v) => update({ dropdownBg: v })} />
+                        </div>
+                    </CardContent>
+                </Card>
 
-                <Section title="Buttons">
-                    <ToggleWithLabel
-                        label="Login Button"
-                        checked={config.showLogin}
-                        onCheckedChange={(v: boolean) => update({ showLogin: v })}
-                        text={config.loginLabel}
-                        onTextChange={(v: string) => update({ loginLabel: v })}
-                    />
-                    <ToggleWithLabel
-                        label="Signup Button"
-                        checked={config.showSignup}
-                        onCheckedChange={(v: boolean) => update({ showSignup: v })}
-                        text={config.signupLabel}
-                        onTextChange={(v: string) => update({ signupLabel: v })}
-                    />
-                    <ToggleWithLabel
-                        label="Pricing Button"
-                        checked={config.showPricing}
-                        onCheckedChange={(v: boolean) => update({ showPricing: v })}
-                        text={config.pricingLabel}
-                        onTextChange={(v: string) => update({ pricingLabel: v })}
-                    />
-                </Section>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Behavior</CardTitle>
+                        <CardDescription>Control how the navbar behaves on your site</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="sticky" className="text-sm text-muted-foreground">Sticky Header</Label>
+                            <Switch
+                                id="sticky"
+                                checked={config.sticky}
+                                onCheckedChange={(v) => update({ sticky: v })}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="blur" className="text-sm text-muted-foreground">Background Blur</Label>
+                            <Switch
+                                id="blur"
+                                checked={config.blur}
+                                onCheckedChange={(v) => update({ blur: v })}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
 
-                <Section title="Advanced CSS" subtitle="Applies only within the navbar (#site-navbar). Use with care.">
-                    <textarea
-                        className="w-full h-40 font-mono text-sm rounded-md border border-gray-300 p-3 bg-gray-950 text-gray-100"
-                        placeholder={`.your-class {\n  /* your CSS here */\n}`}
-                        value={config.customCss}
-                        onChange={(e) => update({ customCss: e.target.value })}
-                        spellCheck={false}
-                    />
-                </Section>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Navigation Buttons</CardTitle>
+                        <CardDescription>Configure which buttons appear in the navbar</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <ToggleWithLabel
+                            label="Login Button"
+                            checked={config.showLogin}
+                            onCheckedChange={(v: boolean) => update({ showLogin: v })}
+                            text={config.loginLabel}
+                            onTextChange={(v: string) => update({ loginLabel: v })}
+                        />
+                        <ToggleWithLabel
+                            label="Signup Button"
+                            checked={config.showSignup}
+                            onCheckedChange={(v: boolean) => update({ showSignup: v })}
+                            text={config.signupLabel}
+                            onTextChange={(v: string) => update({ signupLabel: v })}
+                        />
+                        <ToggleWithLabel
+                            label="Pricing Button"
+                            checked={config.showPricing}
+                            onCheckedChange={(v: boolean) => update({ showPricing: v })}
+                            text={config.pricingLabel}
+                            onTextChange={(v: string) => update({ pricingLabel: v })}
+                        />
+                    </CardContent>
+                </Card>
 
-                <div className="flex items-center gap-3 pt-2">
-                    <Button onClick={() => save(config)} disabled={isSaving}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Advanced CSS</CardTitle>
+                        <CardDescription>Apply custom styles to the navbar</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <Label className="text-sm text-muted-foreground">Custom CSS</Label>
+                            <textarea
+                                className="w-full h-40 font-mono text-sm rounded-md border border-input bg-background text-foreground p-3 resize-y focus:ring-2 focus:ring-ring focus:outline-none"
+                                placeholder={`.your-class {\n  /* your CSS here */\n}`}
+                                value={config.customCss}
+                                onChange={(e) => update({ customCss: e.target.value })}
+                                spellCheck={false}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Applies only within the navbar (#site-navbar). Use with care.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <Button 
+                        onClick={() => save(config)} 
+                        disabled={isSaving}
+                        className="min-w-[120px]"
+                    >
                         {isSaving ? "Saving…" : "Save Changes"}
                     </Button>
                     <Button
@@ -167,18 +243,31 @@ export default function NavbarConfigEditor() {
                         {isResetting ? "Resetting…" : "Reset to Default"}
                     </Button>
                     {draft && (
-                        <span className="text-xs text-amber-500">Unsaved changes — preview only</span>
+                        <span className="flex items-center gap-1 text-xs text-amber-500">
+                            <AlertCircle className="h-3 w-3" />
+                            Unsaved changes — preview only
+                        </span>
                     )}
                 </div>
             </div>
 
             {/* ── RIGHT: Live Preview ── */}
-            <div className="rounded-xl border border-gray-800 overflow-hidden sticky top-6 h-fit">
-                <div className="bg-gray-900 text-xs text-gray-400 px-3 py-2 border-b border-gray-800">
-                    Live Preview
-                </div>
-                <div className="relative">
-                    <SiteNavbar settings={previewSettings} headerMenu={headerMenu} config={config} />
+            <div className="lg:w-[400px] xl:w-[500px]">
+                <div className="sticky top-6">
+                    <Card>
+                        <CardHeader className="border-b">
+                            <CardTitle className="text-base">Live Preview</CardTitle>
+                            <CardDescription>See changes in real-time</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="bg-background relative rounded-b-lg overflow-hidden border-t">
+                                <SiteNavbar settings={previewSettings} headerMenu={headerMenu} config={config} />
+                                <div className="h-32 flex items-center justify-center text-muted-foreground text-sm border-t border-border/50">
+                                    Page content preview
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>
@@ -187,34 +276,27 @@ export default function NavbarConfigEditor() {
 
 // ── small field primitives ──
 
-function Section({ title, subtitle, children }: any) {
-    return (
-        <div className="rounded-lg border border-gray-800 p-4 space-y-4">
-            <div>
-                <h3 className="text-sm font-semibold text-gray-200">{title}</h3>
-                {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
-            </div>
-            {children}
-        </div>
-    );
-}
-
 function ColorField({ label, value, onChange }: any) {
     return (
-        <div className="flex items-center justify-between gap-3">
-            <label className="text-sm text-gray-400">{label}</label>
-            <div className="flex items-center gap-2">
-                <input
-                    type="color"
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    className="h-8 w-8 rounded border border-gray-700 bg-transparent cursor-pointer"
-                />
-                <input
+        <div className="space-y-1.5">
+            <Label className="text-sm text-muted-foreground">{label}</Label>
+            <div className="flex items-center gap-3">
+                <div 
+                    className="h-10 w-10 rounded-md border border-input overflow-hidden"
+                    style={{ backgroundColor: value }}
+                >
+                    <input
+                        type="color"
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                        className="h-full w-full opacity-0 cursor-pointer"
+                    />
+                </div>
+                <Input
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-24 text-xs font-mono rounded border border-gray-700 bg-gray-900 text-gray-200 px-2 py-1"
+                    className="flex-1 font-mono text-sm"
                 />
             </div>
         </div>
@@ -223,32 +305,17 @@ function ColorField({ label, value, onChange }: any) {
 
 function RangeField({ label, value, onChange }: any) {
     return (
-        <div className="space-y-1">
+        <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <label className="text-sm text-gray-400">{label}</label>
-                <span className="text-xs text-gray-500">{value}%</span>
+                <Label className="text-sm text-muted-foreground">{label}</Label>
+                <span className="text-sm font-mono text-muted-foreground">{value}%</span>
             </div>
-            <input
-                type="range"
+            <Slider
                 min={0}
                 max={100}
-                value={value}
-                onChange={(e) => onChange(Number(e.target.value))}
+                value={[value]}
+                onValueChange={([v]) => onChange(v)}
                 className="w-full"
-            />
-        </div>
-    );
-}
-
-function ToggleField({ label, value, onChange }: any) {
-    return (
-        <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-400">{label}</label>
-            <input
-                type="checkbox"
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                className="h-4 w-4"
             />
         </div>
     );
@@ -256,22 +323,21 @@ function ToggleField({ label, value, onChange }: any) {
 
 function ToggleWithLabel({ label, checked, onCheckedChange, text, onTextChange }: any) {
     return (
-        <div className="space-y-1">
+        <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <label className="text-sm text-gray-400">{label}</label>
-                <input
-                    type="checkbox"
+                <Label className="text-sm text-muted-foreground">{label}</Label>
+                <Switch
                     checked={checked}
-                    onChange={(e) => onCheckedChange(e.target.checked)}
-                    className="h-4 w-4"
+                    onCheckedChange={onCheckedChange}
                 />
             </div>
             {checked && (
-                <input
+                <Input
                     type="text"
                     value={text}
                     onChange={(e) => onTextChange(e.target.value)}
-                    className="w-full text-sm rounded border border-gray-700 bg-gray-900 text-gray-200 px-2 py-1"
+                    className="w-full text-sm"
+                    placeholder="Enter button label"
                 />
             )}
         </div>

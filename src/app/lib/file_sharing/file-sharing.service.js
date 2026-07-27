@@ -185,8 +185,17 @@ export async function getFileShares(fileId) {
   if (!file) throw new ApiError(404, "File not found");
 
   const items = await prisma.fileShareFile.findMany({
-    where: { fileId },
-    orderBy: { shareLink: { createdAt: "desc" } },
+    where: {
+      fileId,
+      shareLink: {
+        createdBy: session.user.id,
+      },
+    },
+    orderBy: {
+      shareLink: {
+        createdAt: "desc",
+      },
+    },
     include: {
       shareLink: {
         select: {
@@ -196,12 +205,15 @@ export async function getFileShares(fileId) {
           viewedAt: true,
           zipDownloadedAt: true,
           createdAt: true,
-          _count: { select: { files: true } },
+          _count: {
+            select: {
+              files: true,
+            },
+          },
         },
       },
     },
   });
-
   return items.map((item) => ({
     shareId: item.shareLink.id,
     sharedWith: item.shareLink.sharedWith,

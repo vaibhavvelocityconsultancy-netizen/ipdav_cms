@@ -143,6 +143,13 @@ const adminNavItems: NavItem[] = [
         description: "View all media",
         href: "/admin/media",
       },
+      // {
+      //   id: "navbar-config",
+      //   label: "Navbar Config",
+      //   icon: FileText,
+      //   description: "configure navbar",
+      //   href: "/admin/customize/navbar-config",
+      // },
     ],
   },
   {

@@ -237,8 +237,8 @@ const FileIcon = ({ fileName }: { fileName?: string }) => {
   if (!fileName) {
     return <File className="w-5 h-5 text-gray-500" />;
   }
-  
-  const ext = fileName.split('.').pop()?.toLowerCase();
+
+  const ext = fileName.split(".").pop()?.toLowerCase();
   const iconMap: { [key: string]: any } = {
     pdf: FileText,
     xlsx: FileSpreadsheet,
@@ -255,7 +255,7 @@ const FileIcon = ({ fileName }: { fileName?: string }) => {
     html: FileCode,
     css: FileCode,
   };
-  const Icon = iconMap[ext || ''] || File;
+  const Icon = iconMap[ext || ""] || File;
   return <Icon className="w-5 h-5 text-gray-500" />;
 };
 
@@ -297,7 +297,7 @@ export default function DashboardPage() {
 
   // Helper function to safely get file name
   const getFileName = (file: RecentFile) => {
-    return file.name || file.fileName || "Untitled";
+    return file.originalName || file.fileName || "Untitled";
   };
 
   // Helper function to safely get file size
@@ -318,7 +318,7 @@ export default function DashboardPage() {
 
   // Helper function to safely get share email
   const getShareEmail = (share: RecentShare) => {
-    return share.email || share.recipientEmail || "Unknown";
+    return share.sharedWith || share.recipientEmail || "Unknown";
   };
 
   // Helper function to safely get share date
@@ -452,7 +452,6 @@ export default function DashboardPage() {
     return "Contact us";
   };
 
-
   // Safely get recent files
   const recentFiles = subscription.recentFiles || [];
   const recentShares = subscription.recentShares || [];
@@ -470,7 +469,11 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex gap-3 mt-4 sm:mt-0">
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+              <button
+                onClick={() => router.push("/subscription/file-sharing")}
+
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              >
                 <Upload className="w-4 h-4" />
                 Upload Files
               </button>
@@ -493,7 +496,9 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {subscription?.plan?.title} Plan
                     </h3>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subscription.status)}`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subscription.status)}`}
+                    >
                       {subscription.status}
                     </span>
                   </div>
@@ -508,7 +513,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-6">
                 {subscription.status !== "EXPIRED" && (
                   <CountdownTimer
@@ -517,7 +522,9 @@ export default function DashboardPage() {
                   />
                 )}
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
-                  {subscription.status === "TRIALING" ? "Upgrade Now" : "Manage Subscription"}
+                  {subscription.status === "TRIALING"
+                    ? "Upgrade Now"
+                    : "Manage Subscription"}
                 </button>
               </div>
             </div>
@@ -525,71 +532,86 @@ export default function DashboardPage() {
 
           {/* Section 2: Quick Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <StatCard 
-              icon={Folder} 
-              title="Files Uploaded" 
-              value={subscription.stats?.totalFiles || 0} 
+            <StatCard
+              icon={Folder}
+              title="Files Uploaded"
+              value={subscription.stats?.totalFiles || 0}
             />
-            <StatCard 
-              icon={Link2} 
-              title="Share Links" 
-              value={subscription.stats?.totalShares || 0} 
+            <StatCard
+              icon={Link2}
+              title="Share Links"
+              value={subscription.stats?.totalShares || 0}
             />
-            <StatCard 
-              icon={Download} 
-              title="Downloads" 
-              value={subscription.stats?.downloadedFiles || 0} 
+            <StatCard
+              icon={Download}
+              title="Downloads"
+              value={subscription.stats?.downloadedFiles || 0}
             />
-            <StatCard 
-              icon={Eye} 
-              title="Views" 
-              value={subscription.stats?.viewedShares || 0} 
+            <StatCard
+              icon={Eye}
+              title="Views"
+              value={subscription.stats?.viewedShares || 0}
             />
           </div>
-
 
           {/* Section 4: Recent Files */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Recent Files</h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              {/* <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                 View All <ChevronRight className="w-4 h-4" />
-              </button>
+              </button> */}
             </div>
             {recentFiles.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">File</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Size</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Uploaded</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Status</th>
-                      <th className="text-right text-xs font-medium text-gray-500 pb-3">Actions</th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        File
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Size
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Uploaded
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Status
+                      </th>
+                      {/* <th className="text-right text-xs font-medium text-gray-500 pb-3">Actions</th> */}
                     </tr>
                   </thead>
                   <tbody>
                     {recentFiles.map((file) => (
-                      <tr key={file.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={file.id}
+                        className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                      >
                         <td className="py-3">
                           <div className="flex items-center gap-2">
                             <FileIcon fileName={getFileName(file)} />
-                            <span className="text-sm text-gray-900">{getFileName(file)}</span>
+                            <span className="text-sm text-gray-900">
+                              {getFileName(file)}
+                            </span>
                           </div>
                         </td>
-                        <td className="text-sm text-gray-600">{getFileSize(file)}</td>
-                        <td className="text-sm text-gray-600">{getUploadDate(file)}</td>
+                        <td className="text-sm text-gray-600">
+                          {getFileSize(file)}
+                        </td>
+                        <td className="text-sm text-gray-600">
+                          {getUploadDate(file)}
+                        </td>
                         <td>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            getFileStatus(file) === "Shared" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              getFileStatus(file) === "Shared"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
                             {getFileStatus(file)}
                           </span>
-                        </td>
-                        <td className="text-right">
-                          <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                            <MoreVertical className="w-4 h-4 text-gray-400" />
-                          </button>
                         </td>
                       </tr>
                     ))}
@@ -609,49 +631,78 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Recent Shares</h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                View All <ChevronRight className="w-4 h-4" />
-              </button>
+              
             </div>
             {recentShares.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Recipient</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Files</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Viewed</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Downloaded</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Created</th>
-                      <th className="text-left text-xs font-medium text-gray-500 pb-3">Status</th>
-                      <th className="text-right text-xs font-medium text-gray-500 pb-3">Actions</th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Recipient
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Files
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Viewed
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Downloaded
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Created
+                      </th>
+                      <th className="text-left text-xs font-medium text-gray-500 pb-3">
+                        Status
+                      </th>
+                      <th className="text-right text-xs font-medium text-gray-500 pb-3">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {recentShares.map((share) => (
-                      <tr key={share.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={share.id}
+                        className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                      >
                         <td className="py-3">
                           <div className="flex items-center gap-2">
                             <Mail className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">{getShareEmail(share)}</span>
+                            <span className="text-sm text-gray-900">
+                              {getShareEmail(share)}
+                            </span>
                           </div>
                         </td>
-                        <td className="text-sm text-gray-600">{share.files || 0}</td>
+                        <td className="text-sm text-gray-600">
+                          {share.filesCount || 0}
+                        </td>
                         <td>
-                          <span className={`text-sm ${share.viewed ? 'text-green-600' : 'text-gray-400'}`}>
-                            {share.viewed ? 'Yes' : 'No'}
+                          <span
+                            className={`text-sm ${share.viewed ? "text-green-600" : "text-gray-400"}`}
+                          >
+                            {share.viewed ? "Yes" : "No"}
                           </span>
                         </td>
                         <td>
-                          <span className={`text-sm ${share.downloaded ? 'text-green-600' : 'text-gray-400'}`}>
-                            {share.downloaded ? 'Yes' : 'No'}
+                          <span
+                            className={`text-sm ${share.downloaded ? "text-green-600" : "text-gray-400"}`}
+                          >
+                            {share.downloaded ? "Yes" : "No"}
                           </span>
                         </td>
-                        <td className="text-sm text-gray-600">{getShareDate(share)}</td>
+                        <td className="text-sm text-gray-600">
+                          {getShareDate(share)}
+                        </td>
                         <td>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            getShareStatus(share) === "Active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              getShareStatus(share) === "Active"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {getShareStatus(share)}
                           </span>
                         </td>
@@ -669,14 +720,18 @@ export default function DashboardPage() {
               <div className="text-center py-8 text-gray-500">
                 <Share2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>No shares yet</p>
-                <p className="text-sm">Share files with others to get started</p>
+                <p className="text-sm">
+                  Share files with others to get started
+                </p>
               </div>
             )}
           </div>
 
           {/* Section 6: Recent Activity */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
-            <h3 className="font-semibold text-gray-900 mb-4">Recent Activity</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">
+              Recent Activity
+            </h3>
             {recentFiles.length > 0 ? (
               <div className="space-y-4">
                 {recentFiles.slice(0, 5).map((file, index) => (
@@ -686,7 +741,8 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm text-gray-900">
-                        Uploaded <span className="font-medium">{getFileName(file)}</span>
+                        Uploaded{" "}
+                        <span className="font-medium">{getFileName(file)}</span>
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {getUploadDate(file)}
@@ -699,41 +755,13 @@ export default function DashboardPage() {
               <div className="text-center py-8 text-gray-500">
                 <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>No recent activity</p>
-                <p className="text-sm">Activity will appear here once you start using the platform</p>
+                <p className="text-sm">
+                  Activity will appear here once you start using the platform
+                </p>
               </div>
             )}
           </div>
 
-          {/* Section 7: Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { icon: Upload, label: "Upload Files", color: "blue" },
-              { icon: Share2, label: "Share Files", color: "green" },
-              { icon: Folder, label: "Manage Files", color: "purple" },
-              { icon: FolderPlus, label: "Create Folder", color: "orange" },
-              { icon: CreditCard, label: "Billing", color: "red" },
-              { icon: Settings, label: "Account Settings", color: "gray" },
-            ].map((action) => {
-              const Icon = action.icon;
-              const colorMap: { [key: string]: string } = {
-                blue: "bg-blue-50 text-blue-600 hover:bg-blue-100",
-                green: "bg-green-50 text-green-600 hover:bg-green-100",
-                purple: "bg-purple-50 text-purple-600 hover:bg-purple-100",
-                orange: "bg-orange-50 text-orange-600 hover:bg-orange-100",
-                red: "bg-red-50 text-red-600 hover:bg-red-100",
-                gray: "bg-gray-50 text-gray-600 hover:bg-gray-100",
-              };
-              return (
-                <button
-                  key={action.label}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:shadow-md transition-all ${colorMap[action.color]}`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-medium text-center">{action.label}</span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 

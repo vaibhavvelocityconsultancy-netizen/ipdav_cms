@@ -62,36 +62,12 @@ function generateTitleFromFilename(filename) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-async function ensureSubscriberCanUpload(userId) {
-  const now = new Date();
-
-  const hasLifetimeAccess = await prisma.courseEnrollment.findFirst({
-    where: { userId: Number(userId) },
-  });
-
-  if (hasLifetimeAccess) return true;
-
-  const subscription = await prisma.subscription.findFirst({
-    where: {
-      userId: Number(userId),
-      OR: [{ status: "ACTIVE" }, { status: "TRIALING" }],
-      currentPeriodEnd: { gt: now },
-    },
-    orderBy: { currentPeriodEnd: "desc" },
-  });
-
-  if (!subscription) {
-    throw new ApiError(403, "Your plan does not include file uploads.");
-  }
-
-  return subscription;
-}
-
 export const GET = asyncHandler(async () => {
   const { user } = await requireAuth();
 
   const files = await prisma.uploadedFile.findMany({
     where: {
+      
       tenantId: Number(user.tenantId),
       uploadedBy: Number(user.id),
     },

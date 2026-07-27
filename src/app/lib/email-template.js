@@ -55,7 +55,7 @@ const EMAIL_TEMPLATES = {
     {
       recipientType: "CUSTOMER",
       emailToKey: "sharedWith",
-      subject: "A file was shared with you: {{title}}",
+      subject: "A file has been shared with you: {{title}}",
       Component: FileShared,
     },
   ],
