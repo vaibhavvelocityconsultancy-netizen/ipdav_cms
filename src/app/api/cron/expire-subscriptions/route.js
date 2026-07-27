@@ -9,7 +9,7 @@ import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
  * Triggered: Daily at 3 AM UTC (or your preferred time)
  *
  * What it does:
- *   1. TRIALING → EXPIRED (if trialEndsAt <= now)
+ *   1. TRIAL → EXPIRED (if trialEndsAt <= now)
  *   2. ACTIVE → EXPIRED (if currentPeriodEnd <= now)
  *
  * Security: Protected by CRON_SECRET header

@@ -7,12 +7,12 @@
  *
  * Display on dashboard showing:
  * - Current plan name
- * - Subscription status (Trialing/Active)
+ * - Subscription status (TRIAL/Active)
  * - Live countdown timer
  * - Time until expiry
  *
  * Shows different UI based on subscription status:
- * - TRIALING: "Free Trial" + countdown to trial end
+ * - TRIAL: "Free Trial" + countdown to trial end
  * - ACTIVE: "Active" + countdown to renewal
  * - CANCELED: "Canceled" + info about access until period end
  * - EXPIRED: "Subscription Expired" + upgrade button
@@ -63,8 +63,8 @@ export function SubscriptionCard({
       return () => clearInterval(interval);
     }
 
-    // Determine which date to count down to for ACTIVE/TRIALING
-    const targetDate = subscription.status === "TRIALING" && subscription.trialEndsAt
+    // Determine which date to count down to for ACTIVE/TRIAL
+    const targetDate = subscription.status === "TRIAL" && subscription.trialEndsAt
       ? new Date(subscription.trialEndsAt)
       : new Date(subscription.currentPeriodEnd);
 
@@ -210,22 +210,22 @@ export function SubscriptionCard({
         </span>
       </div>
 
-      {/* Countdown Section for ACTIVE/TRIALING */}
+      {/* Countdown Section for ACTIVE/TRIAL */}
       {countdown && !countdown.expired && subscription.status !== "CANCELED" && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-blue-600" />
             <span className="text-sm font-medium text-gray-700">
-              {subscription.status === "TRIALING" ? "Trial Ends In:" : "Renews In:"}
+              {subscription.status === "TRIAL" ? "Trial Ends In:" : "Renews In:"}
             </span>
           </div>
           <div className="text-2xl font-bold text-gray-900 mb-2">
             {countdown?.shortFormat}
           </div>
           <p className="text-xs text-gray-600">
-            {subscription.status === "TRIALING" ? "Trial Ends:" : "Renews:"}{" "}
+            {subscription.status === "TRIAL" ? "Trial Ends:" : "Renews:"}{" "}
             {formatSubscriptionDate(
-              subscription.status === "TRIALING" && subscription.trialEndsAt
+              subscription.status === "TRIAL" && subscription.trialEndsAt
                 ? new Date(subscription.trialEndsAt)
                 : new Date(subscription.currentPeriodEnd)
             )}
@@ -239,7 +239,7 @@ export function SubscriptionCard({
           <span className="text-gray-600">Started:</span>
           <span className="font-medium text-gray-900">{formatSubscriptionDate(new Date(subscription.startsAt))}</span>
         </div>
-        {subscription.status === "TRIALING" && subscription.trialEndsAt && (
+        {subscription.status === "TRIAL" && subscription.trialEndsAt && (
           <div className="flex justify-between">
             <span className="text-gray-600">Trial Ends:</span>
             <span className="font-medium text-blue-600">{formatSubscriptionDate(new Date(subscription.trialEndsAt))}</span>
@@ -247,7 +247,7 @@ export function SubscriptionCard({
         )}
         <div className="flex justify-between">
           <span className="text-gray-600">
-            {subscription.status === "TRIALING" ? "Full Period Ends:" : "Next Renewal:"}
+            {subscription.status === "TRIAL" ? "Full Period Ends:" : "Next Renewal:"}
           </span>
           <span className="font-medium text-gray-900">{formatSubscriptionDate(new Date(subscription.currentPeriodEnd))}</span>
         </div>
@@ -269,7 +269,7 @@ export function SubscriptionCard({
             Manage Subscription
           </button>
         )}
-        {subscription.status === "TRIALING" && (
+        {subscription.status === "TRIAL" && (
           <button
             onClick={handleManageClick} // ✅ Updated to use the handler
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"

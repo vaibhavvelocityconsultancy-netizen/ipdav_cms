@@ -36,7 +36,7 @@ export default function FilesPage() {
     if (!access) return false;
     const now = new Date();
     const trialValid =
-      access.status === "TRIALING" &&
+      access.status === "TRIAL" &&
       access.trialEndsAt &&
       new Date(access.trialEndsAt) > now;
     return access.status === "ACTIVE" || trialValid;

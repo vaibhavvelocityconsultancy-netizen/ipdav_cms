@@ -282,7 +282,7 @@ export default function DashboardPage() {
       "trialExpiredPopupShown",
     );
 
-    if (subscription.status === "TRIALING" && !alreadyShownTrial) {
+    if (subscription.status === "TRIAL" && !alreadyShownTrial) {
       setShowPopup(true);
       sessionStorage.setItem("trialPopupShown", "true");
     } else if (subscription.status === "EXPIRED" && !alreadyShownExpired) {
@@ -387,7 +387,7 @@ export default function DashboardPage() {
     switch (status) {
       case "ACTIVE":
         return "bg-green-100 text-green-800";
-      case "TRIALING":
+      case "TRIAL":
         return "bg-blue-100 text-blue-800";
       case "EXPIRED":
         return "bg-red-100 text-red-800";
@@ -400,7 +400,7 @@ export default function DashboardPage() {
     switch (status) {
       case "ACTIVE":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case "TRIALING":
+      case "TRIAL":
         return <Clock className="w-5 h-5 text-blue-600" />;
       case "EXPIRED":
         return <XCircle className="w-5 h-5 text-red-600" />;
@@ -411,7 +411,7 @@ export default function DashboardPage() {
 
   const getTimerDate = (status: string) => {
     switch (status) {
-      case "TRIALING":
+      case "TRIAL":
         return subscription.trialEndsAt || subscription.currentPeriodEnd;
       case "ACTIVE":
         return subscription.currentPeriodEnd;
@@ -422,7 +422,7 @@ export default function DashboardPage() {
 
   const getTimerLabel = (status: string) => {
     switch (status) {
-      case "TRIALING":
+      case "TRIAL":
         return "Trial ends in";
       case "ACTIVE":
         return "Renews in";
@@ -522,7 +522,7 @@ export default function DashboardPage() {
                   />
                 )}
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
-                  {subscription.status === "TRIALING"
+                  {subscription.status === "TRIAL"
                     ? "Upgrade Now"
                     : "Manage Subscription"}
                 </button>

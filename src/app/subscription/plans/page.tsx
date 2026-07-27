@@ -201,7 +201,7 @@ const PlanCard = ({
 }) => {
   const isFeatured = plan.isFeatured;
   const isActive = isCurrentPlan && currentPlanStatus === "ACTIVE";
-  const isTrialing = isCurrentPlan && currentPlanStatus === "TRIALING";
+  const isTrialing = isCurrentPlan && currentPlanStatus === "TRIAL";
   const isExpired = isCurrentPlan && currentPlanStatus === "EXPIRED";
   const isCancelled = isCurrentPlan && currentPlanStatus === "CANCELLED";
 
@@ -679,7 +679,7 @@ export default function PlansPage() {
                 Current:{" "}
                 {currentPlan.status === "ACTIVE"
                   ? "Active"
-                  : currentPlan.status === "TRIALING"
+                  : currentPlan.status === "TRIAL"
                     ? "Trial"
                     : currentPlan.status === "EXPIRED"
                       ? "Expired"
@@ -689,13 +689,13 @@ export default function PlansPage() {
               {currentPlan.daysRemaining !== null &&
                 currentPlan.daysRemaining > 0 &&
                 (currentPlan.status === "ACTIVE" ||
-                  currentPlan.status === "TRIALING") && (
+                  currentPlan.status === "TRIAL") && (
                   <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
                     {currentPlan.daysRemaining} day
                     {currentPlan.daysRemaining > 1 ? "s" : ""} left
                   </span>
                 )}
-              {currentPlan.status === "TRIALING" && (
+              {currentPlan.status === "TRIAL" && (
                 <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
                   Trial Mode
                 </span>
@@ -751,7 +751,7 @@ export default function PlansPage() {
                       className={`
                         text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg flex items-center gap-1
                         ${currentStatus === "ACTIVE" ? "bg-gradient-to-r from-green-500 to-green-600" : ""}
-                        ${currentStatus === "TRIALING" ? "bg-gradient-to-r from-blue-500 to-blue-600" : ""}
+                        ${currentStatus === "TRIAL" ? "bg-gradient-to-r from-blue-500 to-blue-600" : ""}
                         ${currentStatus === "EXPIRED" || currentStatus === "CANCELLED" ? "bg-gradient-to-r from-orange-500 to-orange-600" : ""}
                       `}
                     >
@@ -760,7 +760,7 @@ export default function PlansPage() {
                           <Check className="w-3 h-3" /> CURRENT PLAN
                         </>
                       )}
-                      {currentStatus === "TRIALING" && (
+                      {currentStatus === "TRIAL" && (
                         <>
                           <Clock className="w-3 h-3" /> TRIAL PLAN
                         </>

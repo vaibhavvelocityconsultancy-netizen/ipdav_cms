@@ -96,7 +96,7 @@ export function formatSubscriptionDate(date: Date): string {
  */
 export function getSubscriptionStatusDisplay(status: string) {
   const statusMap = {
-    TRIALING: {
+    TRIAL: {
       label: "Free Trial",
       color: "text-blue-600",
       bgColor: "bg-blue-50",

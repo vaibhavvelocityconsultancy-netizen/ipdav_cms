@@ -40,7 +40,7 @@ export function TrialStatus() {
     );
   }
 
-  if (record.status === "TRIALING") {
+  if (record.status === "TRIAL") {
     const daysLeft = getDaysRemaining(record.trialEndsAt);
     return (
       <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">

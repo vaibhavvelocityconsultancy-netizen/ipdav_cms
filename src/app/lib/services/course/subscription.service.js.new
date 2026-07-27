@@ -265,7 +265,7 @@ export async function getPlansWithCurrentSubscription(userId) {
           trialEndsAt: subscription.trialEndsAt,
           currentPeriodEnd: subscription.currentPeriodEnd,
           daysRemaining:
-            subscription.status === "TRIALING" && subscription.trialEndsAt
+            subscription.status === "TRIAL" && subscription.trialEndsAt
               ? Math.max(
                   0,
                   Math.ceil(
@@ -356,7 +356,7 @@ export async function startTrial(userId, planId) {
       userId: Number(userId),
       planId: Number(planId),
       billingCycle: "MONTHLY",
-      status: "TRIALING",
+      status: "TRIAL",
       startsAt: now,
       trialEndsAt,
       currentPeriodEnd: trialEndsAt,

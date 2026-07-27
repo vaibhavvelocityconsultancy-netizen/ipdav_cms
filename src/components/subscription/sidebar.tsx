@@ -37,7 +37,7 @@ export function SubscriberSidebar({
   // Check if user has active subscription or valid trial period
   const now = new Date();
   const trialValid =
-    access?.status === "TRIALING" &&
+    access?.status === "TRIAL" &&
     access?.trialEndsAt &&
     new Date(access.trialEndsAt) > now;
 

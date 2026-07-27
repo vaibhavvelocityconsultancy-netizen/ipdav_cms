@@ -91,7 +91,7 @@ export async function getSubscriberDashboard(userId) {
 
   const isTrialExpired =
     type === "subscription" &&
-    record?.status === "TRIALING" &&
+    record?.status === "TRIAL" &&
     record?.trialEndsAt &&
     new Date(record.trialEndsAt).getTime() <= now;
 
@@ -103,7 +103,7 @@ export async function getSubscriberDashboard(userId) {
 
   if (
     type === "subscription" &&
-    normalizedStatus === "TRIALING" &&
+    normalizedStatus === "TRIAL" &&
     record?.trialEndsAt
   ) {
     const end = new Date(record.trialEndsAt).getTime();

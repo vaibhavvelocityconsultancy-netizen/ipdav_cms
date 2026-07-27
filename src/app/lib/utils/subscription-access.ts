@@ -47,7 +47,7 @@ export async function requireActiveSubscription() {
   const hasAccess =
     validSubscription &&
     (validSubscription.status === "ACTIVE" ||
-      (validSubscription.status === "TRIALING" &&
+      (validSubscription.status === "TRIAL" &&
         validSubscription.trialEndsAt &&
         validSubscription.trialEndsAt > now));
 

@@ -8,7 +8,7 @@ import { ApiError } from "@/src/app/lib/utils/ApiError";
  * Ensures a subscription's status is up-to-date by expiring it if needed.
  *
  * Rules:
- * - TRIALING: Expires if trialEndsAt <= now
+ * - TRIAL: Expires if trialEndsAt <= now
  * - ACTIVE: Expires if currentPeriodEnd <= now
  * - Other: Left unchanged
  *
@@ -22,7 +22,7 @@ export async function ensureSubscriptionExpired(subscription) {
   let shouldExpire = false;
   let reason = null;
 
-  if (subscription.status === "TRIALING") {
+  if (subscription.status === "TRIAL") {
     if (subscription.trialEndsAt && subscription.trialEndsAt <= now) {
       shouldExpire = true;
       reason = "Trial period ended";
@@ -331,7 +331,7 @@ export async function getPlansWithCurrentSubscription(userId) {
           trialEndsAt: validSubscription.trialEndsAt,
           currentPeriodEnd: validSubscription.currentPeriodEnd,
           daysRemaining:
-            validSubscription.status === "TRIALING" &&
+            validSubscription.status === "TRIAL" &&
             validSubscription.trialEndsAt
               ? Math.max(
                   0,
@@ -416,7 +416,7 @@ export async function createSubscription(
   const currentPeriodEnd = computePeriodEnd(plan, billingCycle);
 
   if (existing) {
-    if (existing.status === "TRIALING") {
+    if (existing.status === "TRIAL") {
       return prisma.planSubscription.update({
         where: { id: existing.id },
         data: {
@@ -482,7 +482,7 @@ export async function startTrial(userId, planId) {
     userId: Number(userId),
     planId: Number(planId),
     billingCycle: "MONTHLY",
-    status: "TRIALING",
+    status: "TRIAL",
     startsAt: now.toISOString(),
     trialEndsAt: trialEndsAt.toISOString(),
     currentPeriodEnd: trialEndsAt.toISOString(),
@@ -493,7 +493,7 @@ export async function startTrial(userId, planId) {
       userId: Number(userId),
       planId: Number(planId),
       billingCycle: "MONTHLY",
-      status: "TRIALING",
+      status: "TRIAL",
       startsAt: now,
       trialEndsAt,
       currentPeriodEnd: trialEndsAt,
@@ -538,7 +538,7 @@ export async function startDefaultTrial(userId, tenantId) {
       userId: Number(userId),
       planId: defaultPlan.id,
       billingCycle: "MONTHLY",
-      status: "TRIALING",
+      status: "TRIAL",
       startsAt: now,
       trialEndsAt,
       currentPeriodEnd: trialEndsAt,
@@ -668,11 +668,11 @@ export async function expireSubscriptions(userId = null) {
   // ✅ Build filter: if userId provided, only expire that user's subscriptions
   const filterCriteria = userId ? { userId: Number(userId) } : {};
 
-  // ✅ Find all TRIALING subscriptions that should expire
+  // ✅ Find all TRIAL subscriptions that should expire
   const expiredTrials = await prisma.planSubscription.findMany({
     where: {
       ...filterCriteria,
-      status: "TRIALING",
+      status: "TRIAL",
       trialEndsAt: { lte: now },
     },
   });
@@ -768,7 +768,7 @@ export async function getSubscriberUsers() {
       plan: sub
         ? {
             title: sub.plan.title,
-            status: sub.status, // "TRIALING" | "ACTIVE" | "EXPIRED" | "CANCELED"
+            status: sub.status, // "TRIAL" | "ACTIVE" | "EXPIRED" | "CANCELED"
             billingCycle: sub.billingCycle,
             startsAt: sub.startsAt,
             canceledAt: sub.canceledAt,

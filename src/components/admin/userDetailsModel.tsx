@@ -35,7 +35,7 @@ function statusVariant(status: string) {
   switch (status) {
     case "ACTIVE":
       return "default";
-    case "TRIALING":
+    case "TRIAL":
       return "secondary";
     case "EXPIRED":
     case "CANCELED":

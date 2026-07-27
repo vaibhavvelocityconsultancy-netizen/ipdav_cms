@@ -212,10 +212,10 @@ export default function MySubscriptionPage() {
     );
   }
 
-  // Only consider a plan as "current" if subscription is ACTIVE or TRIALING
+  // Only consider a plan as "current" if subscription is ACTIVE or TRIAL
   const isSubscriptionActive =
     subscription &&
-    (subscription.status === "ACTIVE" || subscription.status === "TRIALING");
+    (subscription.status === "ACTIVE" || subscription.status === "TRIAL");
 
   const currentPlanId = isSubscriptionActive ? subscription?.plan?.id : null;
 

@@ -14,7 +14,7 @@ interface SubscriberRow {
   createdAt: string;
   plan: {
     title: string;
-    status: "TRIALING" | "ACTIVE" | "EXPIRED" | "CANCELED" | null;
+    status: "TRIAL" | "ACTIVE" | "EXPIRED" | "CANCELED" | null;
     billingCycle: string | null;
     startsAt: string | null;
     canceledAt: string | null;
@@ -28,7 +28,7 @@ function statusVariant(status: string | null) {
   switch (status) {
     case "ACTIVE":
       return "default";
-    case "TRIALING":
+    case "TRIAL":
       return "secondary";
     case "EXPIRED":
     case "CANCELED":

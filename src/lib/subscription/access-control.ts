@@ -5,7 +5,7 @@
  *
  * RULES:
  * 1. No Subscription → BLOCK
- * 2. TRIALING + canWatchVideos = true → ALLOW
+ * 2. TRIAL + canWatchVideos = true → ALLOW
  * 3. ACTIVE + canWatchVideos = true → ALLOW
  * 4. EXPIRED → BLOCK
  * 5. CANCELED → BLOCK
@@ -97,7 +97,7 @@ export async function canAccessVideoContent(
           },
         };
 
-      case "TRIALING":
+      case "TRIAL":
         // Trial valid only if trialEndsAt hasn't passed
         if (!subscription.trialEndsAt || subscription.trialEndsAt <= now) {
           return {
@@ -198,7 +198,7 @@ export async function canAccessFeature(
 
     // Check subscription is active
     let isActive = false;
-    if (subscription.status === "TRIALING" && subscription.trialEndsAt) {
+    if (subscription.status === "TRIAL" && subscription.trialEndsAt) {
       isActive = subscription.trialEndsAt > now;
     } else if (subscription.status === "ACTIVE") {
       isActive = subscription.currentPeriodEnd > now;
