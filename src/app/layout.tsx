@@ -6,7 +6,7 @@ import "../../styles/globals.css";
 import QueryProvider from "../provider/QueryProvider";
 import { fetchers } from "@/src/lib/fetchers";
 
-export const revalidate = 3600;
+export const revalidate = 0;
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
