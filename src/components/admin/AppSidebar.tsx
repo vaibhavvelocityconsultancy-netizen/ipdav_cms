@@ -210,37 +210,38 @@ const adminNavItems: NavItem[] = [
     href: "/admin/plan-management",
   },
 
-  {
-    id: "user-management",
-    label: "Users Management",
-    icon: User,
-    description: "Access control",
-    children: [
-      {
-        id: "permissions",
-        label: "Permissions",
-        icon: Settings,
-        description: "Roles & permissions",
-        modulePermission: "settings_manage",
-        href: "/admin/permissions",
-      },
-      {
-        id: "customers",
-        label: "Customers",
-        icon: Users,
-        description: "Manage customers",
-        modulePermission: "customers_view",
-        href: "/admin/customers",
-      },
-      {
-        id: "profile",
-        label: "Profile",
-        icon: User,
-        description: "Your account",
-        href: "/admin/profile",
-      },
-    ],
-  },
+  // {
+  //   id: "user-management",
+  //   label: "Users Management",
+  //   icon: User,
+  //   description: "Access control",
+  //   children: [
+  //     {
+  //       id: "permissions",
+  //       label: "Permissions",
+  //       icon: Settings,
+  //       description: "Roles & permissions",
+  //       modulePermission: "settings_manage",
+  //       href: "/admin/permissions",
+  //     },
+  //     {
+  //       id: "customers",
+  //       label: "Customers",
+  //       icon: Users,
+  //       description: "Manage customers",
+  //       modulePermission: "customers_view",
+  //       href: "/admin/customers",
+  //     },
+  //     {
+  //       id: "profile",
+  //       label: "Profile",
+  //       icon: User,
+  //       description: "Your account",
+  //       href: "/admin/profile",
+  //     },
+  //   ],
+  // },
+
   {
     id: "settings",
     label: "Settings",
