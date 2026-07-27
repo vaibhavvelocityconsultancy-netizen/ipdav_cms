@@ -32,6 +32,7 @@ function getCategory(name: string): string {
     global: "Settings",
     courses: "Courses",
     course: "Courses",
+    plans: "Plans",
   };
   return map[prefix] ?? "Other";
 }

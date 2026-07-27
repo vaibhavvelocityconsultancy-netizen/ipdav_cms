@@ -69,6 +69,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   courses_edit: ["SUPER_ADMIN", "ADMIN"],
   course_content_manage: ["SUPER_ADMIN", "ADMIN"],
 
+
+  // plans
+  plans_update: ["SUPER_ADMIN", "ADMIN"],
+
   // E-commerce
   ecommerce_manage: ["SUPER_ADMIN", "ADMIN"],
   orders_view: ["SUPER_ADMIN", "ADMIN"],

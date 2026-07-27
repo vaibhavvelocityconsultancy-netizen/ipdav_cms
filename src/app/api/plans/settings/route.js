@@ -1,6 +1,7 @@
 import { getPlanSettings, updatePlanSettings } from "@/src/app/lib/services/course/subscription.service";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
+import { requirePermission } from "@/src/app/lib/withPermission";
 
 export const GET = asyncHandler(async () => {
   const { session } = await requirePermission("plans_update");
