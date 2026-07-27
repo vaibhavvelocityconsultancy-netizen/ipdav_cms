@@ -24,9 +24,9 @@ export async function generateMetadata(): Promise<Metadata> {
       (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : undefined) ||
-      "https://next-crm-momemtums.vercel.app/";
+      "https://ipdav-cms.vercel.app/";
     const faviconUrl = settings?.favicon
-      ? `${siteUrl}${settings.favicon}?v=${settings.updatedAt}`
+      ? `${settings.favicon}?v=${settings.updatedAt}`
       : undefined;
     return {
       title: settings?.siteTagline
@@ -52,9 +52,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={spaceMono.variable}>
         <QueryProvider>
-          
-            {children}
-            <AppToaster />
+          {children}
+          <AppToaster />
         </QueryProvider>
       </body>
     </html>
