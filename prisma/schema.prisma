@@ -444,7 +444,7 @@ model Subscription {
   userId           Int
   courseId         Int
   billingCycle     BillingCycle       @default(MONTHLY)
-  status           SubscriptionStatus @default(TRIALING)
+  status           SubscriptionStatus @default(TRIAL)
   startsAt         DateTime
   currentPeriodEnd DateTime
   canceledAt       DateTime?
@@ -515,7 +515,7 @@ model PlanSubscription {
   userId           Int
   planId           Int
   billingCycle     BillingCycle       @default(MONTHLY)
-  status           SubscriptionStatus @default(TRIALING)
+  status           SubscriptionStatus @default(TRIAL)
   startsAt         DateTime
   currentPeriodEnd DateTime
   trialEndsAt      DateTime?
