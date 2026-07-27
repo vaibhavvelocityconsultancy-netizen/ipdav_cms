@@ -41,8 +41,8 @@ function statusVariant(status: string | null) {
 function formatDate(date: string | null) {
   if (!date) return "—";
   const d = new Date(date);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = String(d.getFullYear()).slice(-2);
   return `${day}/${month}/${year}`;
 }
@@ -183,7 +183,11 @@ export default function AdminUsersPage() {
       filterable: false,
       cell: (row) => (
         <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={() => setSelectedUserId(row.id)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedUserId(row.id)}
+          >
             View Details
           </Button>
         </div>
@@ -205,11 +209,15 @@ export default function AdminUsersPage() {
           searchKeys={["name"]}
           emptyMessage="No subscribers yet."
           enableColumnVisibility={true}
+          persistKey="users-table"
         />
       )}
 
       {selectedUserId !== null && (
-        <UserDetailsModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+        <UserDetailsModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
       )}
     </div>
   );

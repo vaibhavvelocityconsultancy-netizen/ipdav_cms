@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ChevronLeft,
@@ -57,11 +57,13 @@ export interface DataTableProps<T> {
   selectedRows?: T[];
   onSelectedRowsChange?: (rows: T[]) => void;
   getRowId?: (row: T) => string | number;
-  /** Enables the "Columns" picker so users can show/hide columns. Default false. */
+  /** Enables the "Columns" dropdown so users can show/hide columns. Default false. */
   enableColumnVisibility?: boolean;
-  /** Keys of columns hidden by default (only applies on first render). */
+  /** Keys of columns hidden by default (only applies when no saved state exists). */
   defaultHiddenColumns?: string[];
-  /** localStorage-style key to persist visibility choices across sessions via a callback. */
+  /** Unique key used to persist column visibility in localStorage. If omitted, visibility resets on remount. */
+  persistKey?: string;
+  /** Optional callback fired whenever column visibility changes. */
   onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void;
 }
 
@@ -289,18 +291,20 @@ function ColumnFilterDropdown<T>({
   );
 }
 
-// --- Column Toggle Chips Row Component ---
-// Always-visible row of pills, one per column. Click a pill to show/hide that column.
-function ColumnTogglePills<T>({
+// --- Column Visibility Dropdown Component ---
+function ColumnVisibilityDropdown<T>({
   columns,
   visibility,
   onToggle,
+  onShowAll,
+  onHideAll,
 }: {
   columns: Column<T>[];
   visibility: Record<string, boolean>;
   onToggle: (key: string) => void;
+  onShowAll: () => void;
+  onHideAll: () => void;
 }) {
-  // Only columns explicitly marked hideable: false are excluded from the pill row
   const toggleableColumns = useMemo(
     () => columns.filter((c) => c.hideable !== false),
     [columns],
@@ -308,32 +312,64 @@ function ColumnTogglePills<T>({
 
   if (toggleableColumns.length === 0) return null;
 
+  const visibleCount = toggleableColumns.filter(
+    (c) => visibility[c.key] !== false,
+  ).length;
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs text-muted-foreground mr-1 flex items-center gap-1">
-        <Columns3 className="h-3.5 w-3.5" />
-        Columns:
-      </span>
-      {toggleableColumns.map((col) => {
-        const isVisible = visibility[col.key] !== false;
-        return (
-          <button
-            key={col.key}
-            type="button"
-            onClick={() => onToggle(col.key)}
-            aria-pressed={isVisible}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-              isVisible
-                ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/15"
-                : "bg-muted/40 border-transparent text-muted-foreground hover:bg-muted/70",
-            )}
-          >
-            {col.header}
-          </button>
-        );
-      })}
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 gap-2 text-sm">
+          <Columns3 className="h-3.5 w-3.5" />
+          Columns
+          <Badge variant="secondary" className="ml-1 px-1.5 text-xs">
+            {visibleCount}/{toggleableColumns.length}
+          </Badge>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-56 p-0 bg-popover border shadow-lg rounded-md overflow-hidden z-50"
+        align="start"
+        sideOffset={5}
+      >
+        <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+          <span className="text-xs font-medium text-muted-foreground">
+            Toggle columns
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={onShowAll}
+              className="text-xs text-primary hover:underline"
+            >
+              Show all
+            </button>
+            <button
+              onClick={onHideAll}
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              Hide all
+            </button>
+          </div>
+        </div>
+        <div className="max-h-72 overflow-y-auto bg-popover">
+          <div className="py-1 bg-popover">
+            {toggleableColumns.map((col) => {
+              const isVisible = visibility[col.key] !== false;
+              return (
+                <div
+                  key={col.key}
+                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors text-sm"
+                  onClick={() => onToggle(col.key)}
+                >
+                  <Checkbox checked={isVisible} className="h-4 w-4" />
+                  <span className="truncate flex-1">{col.header}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -354,6 +390,7 @@ export function DataTable<T extends { id?: string | number }>({
   getRowId = (row) => (row.id ?? JSON.stringify(row)) as string | number,
   enableColumnVisibility = false,
   defaultHiddenColumns = [],
+  persistKey,
   onColumnVisibilityChange,
 }: DataTableProps<T>) {
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
@@ -364,10 +401,21 @@ export function DataTable<T extends { id?: string | number }>({
     Record<string, Set<string>>
   >({});
 
+  const storageKey = persistKey ? `datatable-columns:${persistKey}` : null;
+
   // Column visibility state: key -> visible. Missing key defaults to visible.
+  // Loads from localStorage on first render if persistKey is provided.
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >(() => {
+    if (storageKey) {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) return JSON.parse(saved);
+      } catch {
+        // ignore parse/storage errors, fall back to default below
+      }
+    }
     const initial: Record<string, boolean> = {};
     defaultHiddenColumns.forEach((key) => {
       initial[key] = false;
@@ -380,6 +428,13 @@ export function DataTable<T extends { id?: string | number }>({
   ) => {
     setColumnVisibility((prev) => {
       const next = updater(prev);
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {
+          // storage full or unavailable, skip silently
+        }
+      }
       onColumnVisibilityChange?.(next);
       return next;
     });
@@ -507,12 +562,10 @@ export function DataTable<T extends { id?: string | number }>({
     const newSelection = new Set(selectedRowIds);
 
     if (allPageSelected) {
-      // Deselect all rows on current page
       paginatedData.forEach((row) => {
         newSelection.delete(getRowId(row));
       });
     } else {
-      // Select all rows on current page
       paginatedData.forEach((row) => {
         newSelection.add(getRowId(row));
       });
@@ -525,10 +578,8 @@ export function DataTable<T extends { id?: string | number }>({
       selectedRowIds.has(getRowId(row)),
     );
     if (allRowsSelected) {
-      // Deselect all filtered rows
       setSelectedRowIds(new Set());
     } else {
-      // Select all filtered rows
       const newSelection = new Set(selectedRowIds);
       filteredData.forEach((row) => {
         newSelection.add(getRowId(row));
@@ -595,18 +646,20 @@ export function DataTable<T extends { id?: string | number }>({
               />
             </div>
           )}
-          <div className="flex items-center gap-2">{toolbarActions}</div>
+          <div className="flex items-center gap-2">
+            {enableColumnVisibility && (
+              <ColumnVisibilityDropdown
+                columns={columns}
+                visibility={columnVisibility}
+                onToggle={toggleColumnVisibility}
+                onShowAll={showAllColumns}
+                onHideAll={hideAllColumns}
+              />
+            )}
+            {toolbarActions}
+          </div>
         </div>
       </div>
-
-      {/* Column visibility pills - always visible, click to toggle a column */}
-      {enableColumnVisibility && (
-        <ColumnTogglePills
-          columns={columns}
-          visibility={columnVisibility}
-          onToggle={toggleColumnVisibility}
-        />
-      )}
 
       {/* Selection info bar */}
       {enableRowSelection && totalSelectedCount > 0 && (
@@ -839,7 +892,6 @@ export function DataTable<T extends { id?: string | number }>({
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          {/* Page indicator */}
           <div className="min-w-[80px] text-center text-sm font-medium">
             Page {currentPage} of {totalPages || 1}
           </div>

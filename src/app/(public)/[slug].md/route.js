@@ -1,4 +1,4 @@
-import { GET as getMarkdown } from "../api/public/llms/[slug]/route";
+import { GET as getMarkdown } from "../../api/public/llms/[slug]/route";
 
 export const dynamic = "force-dynamic";
 

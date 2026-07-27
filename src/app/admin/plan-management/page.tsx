@@ -11,6 +11,7 @@ import {
   ChevronDown,
   GripVertical,
 } from "lucide-react";
+import { toast } from "@/src/hooks/use-toast";
 
 interface Feature {
   id: string;
@@ -107,6 +108,11 @@ export default function PlanManagementPage() {
       newFeatures[index],
     ];
     setFeatures(newFeatures);
+    toast({
+      title: "Feature Moved",
+      description: `Moved feature "${newFeatures[index].title}" up.`,
+      variant: "success",
+    });
   }
 
   function moveFeatureDown(index: number) {
@@ -117,6 +123,11 @@ export default function PlanManagementPage() {
       newFeatures[index],
     ];
     setFeatures(newFeatures);
+    toast({
+      title: "Feature Moved",
+      description: `Moved feature "${newFeatures[index].title}" down.`,
+      variant: "success",
+    });
   }
 
   function movePlanUp(index: number) {
@@ -128,6 +139,11 @@ export default function PlanManagementPage() {
     ];
     setPlans(newPlans);
     updateSortOrders(newPlans);
+    toast({
+      title: "Plan Moved",
+      description: `Moved plan "${newPlans[index].title}" up.`,
+      variant: "success",
+    })
   }
 
   function movePlanDown(index: number) {
@@ -139,6 +155,11 @@ export default function PlanManagementPage() {
     ];
     setPlans(newPlans);
     updateSortOrders(newPlans);
+    toast({
+      title: "Plan Moved",
+      description: `Moved plan "${newPlans[index].title}" down.`,
+      variant: "success",
+    })
   }
 
   async function updateSortOrders(updatedPlans: Plan[]) {
@@ -152,6 +173,11 @@ export default function PlanManagementPage() {
         });
       }
       await loadPlans();
+      toast({
+          title: "Success",
+          description: "Plans reordered successfully.",
+          variant: "success",
+      });
     } catch (err) {
       console.error("Failed to update sort orders:", err);
       setError("Failed to reorder plans. Please try again.");
@@ -164,6 +190,7 @@ export default function PlanManagementPage() {
     setDraft(emptyDraft);
     setFeatures([]);
     setEditingId(null);
+
   }
 
   async function handleSave() {
@@ -204,10 +231,23 @@ export default function PlanManagementPage() {
         throw new Error(data.message || "Failed to save plan");
       }
 
+      toast({
+        title: "Success",
+        description: editingId
+          ? "Plan updated successfully."
+          : "Plan created successfully.",
+        variant: "success",
+      });
       await loadPlans();
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+      console.error("Failed to save plan:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        variant: "destructive",
+      })
     } finally {
       setSaving(false);
     }
@@ -228,6 +268,9 @@ export default function PlanManagementPage() {
     });
     setFeatures(plan.features);
     setEditingId(plan.id);
+    
+    
+
   }
 
   async function handleDelete(id: string) {
@@ -238,6 +281,11 @@ export default function PlanManagementPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Failed to delete plan");
       }
+      toast({
+        title: "Deleted",
+        description: "Plans Deleted Successfully",
+        variant: "success",
+      })
       await loadPlans();
       if (editingId === id) resetForm();
     } catch (err) {

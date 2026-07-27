@@ -740,7 +740,9 @@ export async function getSubscriberUsers() {
       planSubscriptions: {
         orderBy: { createdAt: "desc" },
         take: 1,
-        include: { plan: { select: { title: true, billingCycle: true } } },
+        
+        include: { plan: { select: { title: true} } },
+
       },
       _count: {
         select: { 
@@ -767,7 +769,7 @@ export async function getSubscriberUsers() {
         ? {
             title: sub.plan.title,
             status: sub.status, // "TRIALING" | "ACTIVE" | "EXPIRED" | "CANCELED"
-            billingCycle: sub.plan.billingCycle,
+            billingCycle: sub.billingCycle,
             startsAt: sub.startsAt,
             canceledAt: sub.canceledAt,
             currentPeriodEnd: sub.currentPeriodEnd,
@@ -810,7 +812,7 @@ export const getUserDetails = async (userId) => {
       plan: {
         select: {
           title: true,
-          billingCycle: true,
+          // billingCycle: true,
         },
       },
     },
@@ -863,7 +865,7 @@ export const getUserDetails = async (userId) => {
       ? {
           title: subscription.plan.title,
           status: subscription.status,
-          billingCycle: subscription.plan.billingCycle,
+          billingCycle: subscription.billingCycle,
           startsAt: subscription.startsAt,
           currentPeriodEnd: subscription.currentPeriodEnd,
           trialEndsAt: subscription.trialEndsAt,
