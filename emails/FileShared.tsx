@@ -28,10 +28,10 @@ export default function FileShared({
 }: FileSharedProps) {
   return (
     <Html>
-      <Head />
-      <Preview>A file has been shared with you.</Preview>
-
       <Tailwind>
+        <Head />
+        <Preview>A file has been shared with you.</Preview>
+
         <Body className="bg-slate-100 py-10 font-sans">
           <Container className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white p-10 shadow-sm">
             <Section>

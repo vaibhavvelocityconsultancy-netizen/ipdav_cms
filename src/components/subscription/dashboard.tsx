@@ -440,13 +440,13 @@ export default function DashboardPage() {
   };
 
   const getBillingLabel = (plan: Plan) => {
-    if (plan.allowMonthly && plan.allowYearly) {
+    if (plan?.allowMonthly && plan.allowYearly) {
       return `${formatPrice(plan.monthlyPrice)}/mo or ${formatPrice(plan.yearlyPrice)}/yr`;
     }
-    if (plan.allowMonthly) {
+    if (plan?.allowMonthly) {
       return `${formatPrice(plan.monthlyPrice)}/mo`;
     }
-    if (plan.allowYearly) {
+    if (plan?.allowYearly) {
       return `${formatPrice(plan.yearlyPrice)}/yr`;
     }
     return "Contact us";
