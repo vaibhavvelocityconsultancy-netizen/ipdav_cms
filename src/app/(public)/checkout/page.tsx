@@ -17,7 +17,6 @@ function CheckoutContent() {
   const [loadingOrder, setLoadingOrder] = useState(true);
   const [error, setError] = useState("");
   const hasStarted = useRef(false);
-  const [capturing, setCapturing] = useState(false);
 
   const planId = searchParams.get("plan");
   const billingCycle = searchParams.get("billingCycle") || "MONTHLY";
@@ -107,31 +106,31 @@ function CheckoutContent() {
     );
   }
 
-  return (
-    <>
-      {capturePaymentMutation.isPending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
-            <p className="mt-3 text-sm text-gray-600">
-              Activating your subscription...
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-sm text-muted-foreground">Complete your payment</p>
-        <div className="w-full max-w-xs">
-          <PayPalButtons
-            style={{ layout: "vertical" }}
-            createOrder={() => Promise.resolve(orderId)}
-            onApprove={() => capturePaymentMutation.mutateAsync(orderId!)}
-            onError={() => setError("Payment failed. Please try again.")}
-          />
-        </div>
+  // Capturing payment: swap the PayPal buttons out entirely so
+  // nothing from the payment gateway stays visible underneath.
+  if (capturePaymentMutation.isPending) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-white">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <p className="text-sm text-gray-600">
+          Activating your subscription...
+        </p>
       </div>
-    </>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <p className="text-sm text-muted-foreground">Complete your payment</p>
+      <div className="w-full max-w-xs">
+        <PayPalButtons
+          style={{ layout: "vertical" }}
+          createOrder={() => Promise.resolve(orderId)}
+          onApprove={() => capturePaymentMutation.mutateAsync(orderId!)}
+          onError={() => setError("Payment failed. Please try again.")}
+        />
+      </div>
+    </div>
   );
 }
 
