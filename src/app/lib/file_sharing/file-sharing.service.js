@@ -79,6 +79,9 @@ export async function shareFiles(fileIds, { email, message, password }) {
     sharedWith: email,
     fileCount: files.length,
     fileTitles: files.map((f) => f.title),
+    // send the first file's title and category so single-file shares show correctly
+    title: files[0]?.title ?? null,
+    category: files[0]?.category ?? null,
     message: message ?? "",
     link: `${process.env.NEXT_PUBLIC_SITE_URL}/shared/${share.token}`,
     password: plainPassword,
