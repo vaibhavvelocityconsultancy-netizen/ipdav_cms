@@ -1,5 +1,6 @@
-import { prisma } from "@/prisma";
+// import { prisma } from "@/prisma";
 import { verifyPaypalWebhookSignature } from "@/src/app/lib/paypal.helper";
+import { prisma } from "@/src/app/lib/prisma";
 // import { verifyPaypalWebhookSignature } from "@/services/paypal.helpers";
 
 function addCycle(date, billingCycle) {
