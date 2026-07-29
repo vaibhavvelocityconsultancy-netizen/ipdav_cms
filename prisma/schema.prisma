@@ -26,12 +26,13 @@ enum PaymentStatus {
 
 enum SubscriptionStatus {
   TRIAL
-  PENDING    // ⬅ new: created on PayPal, waiting for user approval
+  PENDING // ⬅ new: created on PayPal, waiting for user approval
   ACTIVE
-  PAST_DUE   // ⬅ new: renewal payment failed, grace period
+  PAST_DUE // ⬅ new: renewal payment failed, grace period
   EXPIRED
   CANCELED
 }
+
 enum rolepermission_role {
   SUPER_ADMIN
   ADMIN
@@ -434,6 +435,16 @@ model Payment {
   @@index([planId])
   @@index([status])
   @@index([createdAt])
+}
+
+model PaypalWebhookEvent {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  eventType String
+  status    String
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

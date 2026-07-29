@@ -176,6 +176,16 @@ export async function verifyPaypalWebhookSignature(headers, rawBody) {
       webhook_event: JSON.parse(rawBody),
     },
   });
+  console.log("PayPal verification response:", result);
+
+  console.log({
+  webhookId: process.env.PAYPAL_WEBHOOK_ID,
+  authAlgo: headers.get("paypal-auth-algo"),
+  certUrl: headers.get("paypal-cert-url"),
+  transmissionId: headers.get("paypal-transmission-id"),
+  transmissionSig: headers.get("paypal-transmission-sig"),
+  transmissionTime: headers.get("paypal-transmission-time"),
+});
 
   return result.verification_status === "SUCCESS";
 }

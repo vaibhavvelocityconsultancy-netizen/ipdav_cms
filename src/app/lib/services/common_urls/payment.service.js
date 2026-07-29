@@ -122,6 +122,23 @@ export async function createSubscriptionCheckout({
     );
   }
 
+  // Basic validation: PayPal plan IDs are expected to be strings like "P-...".
+  // If we have a clearly-invalid value (e.g. a numeric DB id), return a
+  // controlled 503 so the frontend can show a friendly message instead of
+  // surfacing a raw PayPal 404 error.
+  if (typeof paypalPlanId !== "string" || !/^P-/.test(paypalPlanId)) {
+    console.error(
+      "Invalid PayPal plan id for plan",
+      plan.id,
+      "payPalPlanId:",
+      paypalPlanId,
+    );
+    throw new ApiError(
+      503,
+      "This plan is not configured correctly for PayPal checkout. Please retry PayPal setup from the plan settings.",
+    );
+  }
+
   const subscription = await createPaypalSubscription({
     paypalPlanId,
     customId: `${userId}:${plan.id}:${billingCycle}`,
