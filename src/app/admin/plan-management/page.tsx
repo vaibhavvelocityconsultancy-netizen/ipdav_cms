@@ -143,7 +143,7 @@ export default function PlanManagementPage() {
       title: "Plan Moved",
       description: `Moved plan "${newPlans[index].title}" up.`,
       variant: "success",
-    })
+    });
   }
 
   function movePlanDown(index: number) {
@@ -159,7 +159,7 @@ export default function PlanManagementPage() {
       title: "Plan Moved",
       description: `Moved plan "${newPlans[index].title}" down.`,
       variant: "success",
-    })
+    });
   }
 
   async function updateSortOrders(updatedPlans: Plan[]) {
@@ -174,9 +174,9 @@ export default function PlanManagementPage() {
       }
       await loadPlans();
       toast({
-          title: "Success",
-          description: "Plans reordered successfully.",
-          variant: "success",
+        title: "Success",
+        description: "Plans reordered succesfully.",
+        variant: "success",
       });
     } catch (err) {
       console.error("Failed to update sort orders:", err);
@@ -190,7 +190,6 @@ export default function PlanManagementPage() {
     setDraft(emptyDraft);
     setFeatures([]);
     setEditingId(null);
-
   }
 
   async function handleSave() {
@@ -207,7 +206,8 @@ export default function PlanManagementPage() {
         .replace(/[^a-z0-9]+/g, "-"),
       description: draft.description,
       sortOrder: Number(draft.sortOrder) || plans.length + 1,
-      monthlyPrice: draft.monthlyPrice === "" ? null : Number(draft.monthlyPrice),
+      monthlyPrice:
+        draft.monthlyPrice === "" ? null : Number(draft.monthlyPrice),
       yearlyPrice: draft.yearlyPrice === "" ? null : Number(draft.yearlyPrice),
       allowMonthly: draft.allowMonthly,
       allowYearly: draft.allowYearly,
@@ -226,18 +226,31 @@ export default function PlanManagementPage() {
         },
       );
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Failed to save plan");
       }
 
-      toast({
-        title: "Success",
-        description: editingId
-          ? "Plan updated successfully."
-          : "Plan created successfully.",
-        variant: "success",
-      });
+      // ✅ Check if PayPal setup failed (only relevant on create, not edit)
+      const paypalWarning = data.data?.paypalWarning;
+
+      if (paypalWarning) {
+        toast({
+          title: "Plan saved with a warning",
+          description: paypalWarning,
+          variant: "warning", // fallback to "default" if your toast has no "warning" variant
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: editingId
+            ? "Plan updated successfully."
+            : "Plan created successfully.",
+          variant: "success",
+        });
+      }
+
       await loadPlans();
       resetForm();
     } catch (err) {
@@ -245,9 +258,10 @@ export default function PlanManagementPage() {
       console.error("Failed to save plan:", err);
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Something went wrong",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
         variant: "destructive",
-      })
+      });
     } finally {
       setSaving(false);
     }
@@ -268,9 +282,6 @@ export default function PlanManagementPage() {
     });
     setFeatures(plan.features);
     setEditingId(plan.id);
-    
-    
-
   }
 
   async function handleDelete(id: string) {
@@ -285,7 +296,7 @@ export default function PlanManagementPage() {
         title: "Deleted",
         description: "Plans Deleted Successfully",
         variant: "success",
-      })
+      });
       await loadPlans();
       if (editingId === id) resetForm();
     } catch (err) {
@@ -651,7 +662,9 @@ export default function PlanManagementPage() {
                   !draft.allowYearly &&
                   !draft.monthlyPrice &&
                   !draft.yearlyPrice && (
-                    <span className="text-sm text-gray-400">No pricing set</span>
+                    <span className="text-sm text-gray-400">
+                      No pricing set
+                    </span>
                   )}
               </div>
 

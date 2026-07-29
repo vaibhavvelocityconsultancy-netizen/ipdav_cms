@@ -13,39 +13,13 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: currentUser, loading: userLoading } = useCurrentUser();
-  const [orderId, setOrderId] = useState(null);
-  const [loadingOrder, setLoadingOrder] = useState(true);
+  const [loadingPlan, setLoadingPlan] = useState(true);
   const [error, setError] = useState("");
   const hasStarted = useRef(false);
+  const [activating, setActivating] = useState(false);
 
   const planId = searchParams.get("plan");
   const billingCycle = searchParams.get("billingCycle") || "MONTHLY";
-
-  const capturePaymentMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const res = await fetch("/api/payment/capture-payment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ orderId }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Payment capture failed");
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      router.replace("/subscription");
-    },
-    onError: (error: Error) => {
-      setError(error.message);
-    },
-  });
 
   useEffect(() => {
     if (userLoading || currentUser) return;
@@ -53,35 +27,40 @@ function CheckoutContent() {
     router.replace(`/register?redirect=${encodeURIComponent(checkoutUrl)}`);
   }, [billingCycle, currentUser, planId, router, userLoading]);
 
+  // Just confirms plan/user are ready — actual PayPal subscription
+  // is created lazily inside createSubscription() below, per PayPal's flow.
   useEffect(() => {
     if (userLoading || !currentUser || !planId || hasStarted.current) return;
     hasStarted.current = true;
+    setLoadingPlan(false);
+  }, [currentUser, planId, userLoading]);
 
-    async function createOrder() {
-      try {
-        const res = await fetch("/api/payment/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ planId: Number(planId), billingCycle }),
-        });
-        const data = await res.json();
+  async function handleCreateSubscription() {
+    const res = await fetch("/api/subscription/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId: Number(planId), billingCycle }),
+    });
 
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || "Failed to start checkout");
-        }
+    const data = await res.json();
 
-        setOrderId(data.data.orderId);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      } finally {
-        setLoadingOrder(false);
-      }
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to start checkout");
     }
 
-    createOrder();
-  }, [currentUser, planId, billingCycle, userLoading]);
+    // PayPal's SDK needs the raw subscription ID here, not the approval URL
+    return data.data.subscriptionId;
+  }
 
-  if (userLoading || loadingOrder) {
+  function handleApprove(dataFromPaypal: { subscriptionID?: string }) {
+    setActivating(true);
+    // No capture call needed — PayPal activates the subscription itself.
+    // Your webhook (BILLING.SUBSCRIPTION.ACTIVATED) flips status to ACTIVE
+    // in the background within a few seconds.
+    router.replace("/subscription");
+  }
+
+  if (userLoading || loadingPlan) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -106,31 +85,31 @@ function CheckoutContent() {
     );
   }
 
-  // Capturing payment: swap the PayPal buttons out entirely so
-  // nothing from the payment gateway stays visible underneath.
-  if (capturePaymentMutation.isPending) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="text-sm text-gray-600">
-          Activating your subscription...
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-sm text-muted-foreground">Complete your payment</p>
-      <div className="w-full max-w-xs">
-        <PayPalButtons
-          style={{ layout: "vertical" }}
-          createOrder={() => Promise.resolve(orderId)}
-          onApprove={() => capturePaymentMutation.mutateAsync(orderId!)}
-          onError={() => setError("Payment failed. Please try again.")}
-        />
+    <>
+      {activating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
+            <p className="mt-3 text-sm text-gray-600">
+              Activating your subscription...
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-sm text-muted-foreground">Complete your payment</p>
+        <div className="w-full max-w-xs">
+          <PayPalButtons
+            style={{ layout: "vertical" }}
+            createSubscription={handleCreateSubscription}
+            onApprove={handleApprove}
+            onError={() => setError("Payment failed. Please try again.")}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -140,7 +119,8 @@ export default function CheckoutPage() {
       <PayPalScriptProvider
         options={{
           clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-          currency: "USD",
+          vault: true,          // ⚠️ REQUIRED for subscriptions
+          intent: "subscription", // ⚠️ REQUIRED — switches SDK mode
         }}
       >
         <Suspense

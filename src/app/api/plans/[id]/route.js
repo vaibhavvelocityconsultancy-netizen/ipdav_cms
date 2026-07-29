@@ -37,17 +37,23 @@ export const PATCH = asyncHandler(async (req, context) => {
 
   const { id, ...planData } = body;
 
-  const plan = await updatePlan(
+  const { plan, paypalWarning } = await updatePlan(
     planId,
     session.user.tenantId,
-    planData
+    planData,
   );
 
   return Response.json(
-    new ApiResponse(200, plan, "Plan updated successfully")
+    new ApiResponse(
+      200,
+      { ...plan, paypalWarning },
+      "Plan updated successfully",
+    ),
   );
 });
-export const DELETE = asyncHandler(async (req,context) => {
+
+
+export const DELETE = asyncHandler(async (req, context) => {
   const { session } = await requirePermission("plans_delete");
   const params = await context.params;
   const body = await req.json().catch(() => ({}));

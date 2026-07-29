@@ -2,6 +2,15 @@ import paypal from "@paypal/checkout-server-sdk";
 import { prisma } from "../../prisma";
 import { ApiError } from "../../utils/ApiError";
 import { sendTriggerEmails } from "../../email";
+import {
+  createPaypalSubscription,
+  cancelPaypalSubscription,
+} from "../../paypal.helper";
+import { buildSubscriptionCheckoutResponse } from "./paypalCheckoutResponse";
+// import {
+//   createPaypalSubscription,
+//   cancelPaypalSubscription,
+// } from "./paypal.helpers.js";
 
 const TRIGGER_BY_TYPE = {
   PLAN: "ORDER_PLACED",
@@ -87,6 +96,87 @@ export async function createPayment({
   };
 }
 
+export async function createSubscriptionCheckout({
+  userId,
+  plan,
+  billingCycle,
+  returnUrl,
+  cancelUrl,
+}) {
+  if (!["MONTHLY", "YEARLY"].includes(billingCycle)) {
+    throw new ApiError(
+      400,
+      "Subscription checkout only supports MONTHLY or YEARLY",
+    );
+  }
+
+  const paypalPlanId =
+    billingCycle === "YEARLY"
+      ? plan.paypalYearlyPlanId
+      : plan.paypalMonthlyPlanId;
+
+  if (!paypalPlanId) {
+    throw new ApiError(
+      503,
+      "This plan is temporarily unavailable for purchase. Please try again shortly.",
+    );
+  }
+
+  const subscription = await createPaypalSubscription({
+    paypalPlanId,
+    customId: `${userId}:${plan.id}:${billingCycle}`,
+    returnUrl,
+    cancelUrl,
+  });
+
+  await prisma.planSubscription.upsert({
+    where: { userId_planId: { userId: Number(userId), planId: plan.id } },
+    update: {
+      status: "PENDING",
+      billingCycle,
+      paypalSubscriptionId: subscription.id,
+      canceledAt: null,
+    },
+    create: {
+      userId: Number(userId),
+      planId: plan.id,
+      billingCycle,
+      status: "PENDING",
+      startsAt: new Date(),
+      currentPeriodEnd: new Date(),
+      paypalSubscriptionId: subscription.id,
+    },
+  });
+
+  return buildSubscriptionCheckoutResponse(subscription);
+}
+
+export async function cancelUserSubscription(userId, planId) {
+  const subscription = await prisma.planSubscription.findUnique({
+    where: {
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
+    },
+  });
+
+  if (!subscription) {
+    throw new ApiError(404, "No subscription found for this user and plan");
+  }
+
+  if (subscription.status === "CANCELED") {
+    throw new ApiError(400, "Subscription is already canceled");
+  }
+
+  if (subscription.paypalSubscriptionId) {
+    await cancelPaypalSubscription(subscription.paypalSubscriptionId);
+  }
+
+  return prisma.planSubscription.update({
+    where: { id: subscription.id },
+    data: { status: "CANCELED", canceledAt: new Date() },
+    include: { plan: true },
+  });
+}
+
 export async function updatePaymentStatus(paypalOrderId, status) {
   return prisma.payment.updateMany({
     where: { paypalOrderId },
@@ -119,10 +209,7 @@ export async function capturePayment(orderId) {
 
     console.error("PayPal Capture Error:", err);
 
-    throw new ApiError(
-      400,
-      err?.message || "PayPal payment failed"
-    );
+    throw new ApiError(400, err?.message || "PayPal payment failed");
   }
 }
 

@@ -1,3 +1,4 @@
+import { createPaypalPlansFor } from "../../paypal.helper";
 import { prisma } from "../../prisma";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 
@@ -27,12 +28,18 @@ export async function ensureSubscriptionExpired(subscription) {
       shouldExpire = true;
       reason = "Trial period ended";
     }
-  } else if (subscription.status === "ACTIVE") {
-    if (subscription.currentPeriodEnd && subscription.currentPeriodEnd <= now) {
+  } else if (subscription.status === "PAST_DUE") {
+    // Grace period — give PayPal's own retries (3x) a chance to succeed
+    // before we hard-expire. Webhook flips back to ACTIVE if retry succeeds.
+    const graceMs = 5 * 24 * 60 * 60 * 1000; // 5 days
+    if (subscription.currentPeriodEnd &&
+        now.getTime() - subscription.currentPeriodEnd.getTime() > graceMs) {
       shouldExpire = true;
-      reason = "Billing period ended";
+      reason = "Payment failed and grace period ended";
     }
   }
+  // Note: no ACTIVE branch — webhook (PAYMENT.SALE.COMPLETED) is now
+  // the source of truth for extending currentPeriodEnd on renewal.
 
   if (shouldExpire) {
     console.log(
@@ -47,7 +54,6 @@ export async function ensureSubscriptionExpired(subscription) {
 
   return subscription;
 }
-
 // ─────────────────────────────────────────────────────────────
 // PLAN CRUD (admin management)
 // ─────────────────────────────────────────────────────────────
@@ -141,7 +147,8 @@ export async function createPlan(tenantId, input) {
   const baseSlug = input.slug || input.title || "plan";
   const slug = await resolveUniqueSlug(tenantId, baseSlug);
 
-  return prisma.plan.create({
+  // 1. Create the plan in DB first — this must always succeed independently of PayPal
+  const plan = await prisma.plan.create({
     data: {
       ...planData,
       slug,
@@ -155,7 +162,32 @@ export async function createPlan(tenantId, input) {
     },
     include: { features: true },
   });
+
+  // 2. Try PayPal setup — wrapped so failure NEVER breaks plan creation
+  let paypalWarning = null;
+
+  try {
+    const paypalIds = await createPaypalPlansFor(plan);
+
+    if (Object.keys(paypalIds).length > 0) {
+      const updatedPlan = await prisma.plan.update({
+        where: { id: plan.id },
+        data: paypalIds,
+        include: { features: true },
+      });
+      return { plan: updatedPlan, paypalWarning: null };
+    }
+  } catch (err) {
+    console.error(`PayPal setup failed for plan "${plan.title}" (ID: ${plan.id}):`, err.message);
+    paypalWarning =
+      "Plan created, but PayPal setup failed. You can retry it from the plan settings.";
+  }
+
+  // 3. Plan is returned either way — paypalMonthlyPlanId/paypalYearlyPlanId stay null on failure
+  return { plan, paypalWarning };
 }
+
+
 
 export async function updatePlan(id, tenantId, input) {
   const numericId = Number(id);
@@ -190,7 +222,8 @@ export async function updatePlan(id, tenantId, input) {
     where: { planId: numericId, id: { notIn: incomingFeatureIds } },
   });
 
-  return prisma.plan.update({
+  // 1. Update the plan as normal
+  const updatedPlan = await prisma.plan.update({
     where: { id: numericId },
     data: {
       ...planData,
@@ -208,8 +241,60 @@ export async function updatePlan(id, tenantId, input) {
     },
     include: { features: true },
   });
-}
 
+  // 2. Detect price changes — PayPal plans are immutable, so a changed
+  //    price needs a brand NEW PayPal Plan ID, not an edit
+  const monthlyPriceChanged =
+    planData.monthlyPrice !== undefined &&
+    Number(planData.monthlyPrice) !== Number(existingPlan.monthlyPrice);
+
+  const yearlyPriceChanged =
+    planData.yearlyPrice !== undefined &&
+    Number(planData.yearlyPrice) !== Number(existingPlan.yearlyPrice);
+
+  // 3. Figure out what PayPal setup is needed:
+  //    - missing entirely (backfill case), OR
+  //    - price changed (needs a fresh PayPal plan)
+  const needsMonthly =
+    updatedPlan.allowMonthly &&
+    updatedPlan.monthlyPrice &&
+    (!updatedPlan.paypalMonthlyPlanId || monthlyPriceChanged);
+
+  const needsYearly =
+    updatedPlan.allowYearly &&
+    updatedPlan.yearlyPrice &&
+    (!updatedPlan.paypalYearlyPlanId || yearlyPriceChanged);
+
+  if (!needsMonthly && !needsYearly) {
+    return { plan: updatedPlan, paypalWarning: null };
+  }
+
+  // 4. Try PayPal setup — same "never block the save" behavior as createPlan
+  let paypalWarning = null;
+
+  try {
+    const paypalIds = await createPaypalPlansFor({
+      ...updatedPlan,
+      allowMonthly: needsMonthly,
+      allowYearly: needsYearly,
+    });
+
+    if (Object.keys(paypalIds).length > 0) {
+      const finalPlan = await prisma.plan.update({
+        where: { id: numericId },
+        data: paypalIds,
+        include: { features: true },
+      });
+      return { plan: finalPlan, paypalWarning: null };
+    }
+  } catch (err) {
+    console.error(`PayPal setup failed for plan "${updatedPlan.title}" (ID: ${updatedPlan.id}):`, err.message);
+    paypalWarning =
+      "Plan updated, but PayPal setup failed. Try saving again to retry.";
+  }
+
+  return { plan: updatedPlan, paypalWarning };
+}
 export async function deletePlan(id, tenantId) {
   const numericId = Number(id);
   if (!Number.isInteger(numericId) || numericId <= 0) {
@@ -219,6 +304,39 @@ export async function deletePlan(id, tenantId) {
   return prisma.plan.delete({
     where: { id: numericId, tenantId },
   });
+}
+
+export async function retryPaypalSetup(id, tenantId) {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    throw new ApiError(400, "Valid plan ID is required");
+  }
+
+  const plan = await prisma.plan.findUnique({
+    where: { id: numericId, tenantId },
+  });
+  if (!plan) throw new ApiError(404, "Plan not found");
+
+  const needsMonthly = plan.allowMonthly && plan.monthlyPrice && !plan.paypalMonthlyPlanId;
+  const needsYearly = plan.allowYearly && plan.yearlyPrice && !plan.paypalYearlyPlanId;
+
+  if (!needsMonthly && !needsYearly) {
+    return { plan, message: "PayPal is already set up for this plan." };
+  }
+
+  const paypalIds = await createPaypalPlansFor({
+    ...plan,
+    allowMonthly: needsMonthly,
+    allowYearly: needsYearly,
+  });
+
+  const updatedPlan = await prisma.plan.update({
+    where: { id: numericId },
+    data: paypalIds,
+    include: { features: true },
+  });
+
+  return { plan: updatedPlan, message: "PayPal setup completed successfully." };
 }
 
 export async function togglePlanPublished(id, tenantId) {

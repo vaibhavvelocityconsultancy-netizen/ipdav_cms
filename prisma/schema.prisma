@@ -26,11 +26,12 @@ enum PaymentStatus {
 
 enum SubscriptionStatus {
   TRIAL
+  PENDING    // ⬅ new: created on PayPal, waiting for user approval
   ACTIVE
+  PAST_DUE   // ⬅ new: renewal payment failed, grace period
   EXPIRED
   CANCELED
 }
-
 enum rolepermission_role {
   SUPER_ADMIN
   ADMIN
@@ -471,15 +472,17 @@ model Plan {
   monthlyPrice Decimal? @db.Decimal(10, 2)
   yearlyPrice  Decimal? @db.Decimal(10, 2)
 
-  allowMonthly      Boolean  @default(true)
-  allowYearly       Boolean  @default(true)
-  billingPeriodDays Int?
-  trialDays         Int? // null = use global default; 0 = no trial for this plan
-  isFeatured        Boolean  @default(false)
-  isPublished       Boolean  @default(true)
-  sortOrder         Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  allowMonthly        Boolean  @default(true)
+  allowYearly         Boolean  @default(true)
+  billingPeriodDays   Int?
+  trialDays           Int? // null = use global default; 0 = no trial for this plan
+  isFeatured          Boolean  @default(false)
+  isPublished         Boolean  @default(true)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  paypalMonthlyPlanId String?
+  paypalYearlyPlanId  String?
 
   tenant        tenant             @relation(fields: [tenantId], references: [id])
   features      PlanFeature[]
@@ -511,17 +514,19 @@ model PlanFeature {
 }
 
 model PlanSubscription {
-  id               Int                @id @default(autoincrement())
-  userId           Int
-  planId           Int
-  billingCycle     BillingCycle       @default(MONTHLY)
-  status           SubscriptionStatus @default(TRIAL)
-  startsAt         DateTime
-  currentPeriodEnd DateTime
-  trialEndsAt      DateTime?
-  canceledAt       DateTime?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                   Int                @id @default(autoincrement())
+  userId               Int
+  planId               Int
+  billingCycle         BillingCycle       @default(MONTHLY)
+  status               SubscriptionStatus @default(TRIAL)
+  startsAt             DateTime
+  currentPeriodEnd     DateTime
+  trialEndsAt          DateTime?
+  canceledAt           DateTime?
+  paypalSubscriptionId String?            @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user user @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
