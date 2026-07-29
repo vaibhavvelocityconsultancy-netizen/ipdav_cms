@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SubscriberSidebar } from "@/src/components/subscription/sidebar";
+import SiteNavbar from "@/src/components/subscription/dashboard-navbar";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 import { useQueries } from "@tanstack/react-query";
-import SiteNavbar from "@/src/components/subscription/dashboard-navbar";
+import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { useSubscription } from "@/src/hooks/use-subscription";
 
 /**
@@ -14,8 +16,13 @@ import { useSubscription } from "@/src/hooks/use-subscription";
  * ═════════════════════════════════════════════════════════════════════
  *
  * Single parent layout for all /subscription/* routes.
- * Fetches subscription data once and passes it to sidebar and children.
- * This ensures a single source of truth for access/subscription state.
+ * - Runs auth + role check ONCE for every child page
+ * - Fetches subscription data ONCE (cached) and passes to sidebar
+ * - Renders navbar + sidebar + padded main content area
+ *
+ * Any page.tsx under app/subscription/** automatically gets wrapped
+ * by this layout. Pages should NOT repeat auth checks, sidebar, or
+ * navbar — just return their own content.
  */
 
 export default function SubscriptionLayout({
@@ -23,8 +30,33 @@ export default function SubscriptionLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // ── Auth + role check (runs once for all child pages) ──
+  const { user, isLoading, isFetching } = useCurrentUser();
+  const isAuthCheckPending = isLoading || isFetching;
+
+  useEffect(() => {
+    if (isAuthCheckPending) return;
+
+    if (!user) {
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+
+    if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
+      router.replace("/admin");
+      return;
+    }
+
+    if (user.role !== "SUBSCRIBER") {
+      router.replace("/login");
+    }
+  }, [user, isAuthCheckPending, router]);
 
   // ── Fetch subscription data once (cached by React Query) ──
   const { access, isLoading: subscriptionLoading } = useSubscription();
@@ -69,17 +101,19 @@ export default function SubscriptionLayout({
     [allMenus],
   );
 
+  // ── Block render until auth check resolves ──
+  if (isAuthCheckPending || !user) return null;
+
   return (
     <div className="min-h-screen bg-background">
       <SiteNavbar
         settings={settings}
-        onToggleSidebar={() => setIsSidebarCollapsed((value) => !value)}
+        onToggleSidebar={() => setIsMobileOpen((value) => !value)}
       />
 
       <div className="flex h-[calc(100vh-64px)]">
         <SubscriberSidebar
           access={access}
-
           isMobileOpen={isMobileOpen}
           setIsMobileOpen={setIsMobileOpen}
           isCollapsed={isSidebarCollapsed}
