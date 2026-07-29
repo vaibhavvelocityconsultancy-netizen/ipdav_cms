@@ -29,6 +29,7 @@ enum SubscriptionStatus {
   ACTIVE
   EXPIRED
   CANCELED
+  PENDING
 }
 
 enum rolepermission_role {
