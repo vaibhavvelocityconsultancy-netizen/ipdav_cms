@@ -124,6 +124,7 @@ model EmailTemplate {
   variables     Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
 
   logs EmailLog[]
 
