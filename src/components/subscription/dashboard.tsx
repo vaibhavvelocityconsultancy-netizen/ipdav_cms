@@ -469,20 +469,6 @@ export default function DashboardPage() {
                 Monitor your files, shares and account activity.
               </p>
             </div>
-            <div className="flex gap-3 mt-4 sm:mt-0">
-              <button
-                onClick={() => router.push("/subscription/file-sharing")}
-
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Upload className="w-4 h-4" />
-                Upload Files
-              </button>
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
-                <Share2 className="w-4 h-4" />
-                Share Files
-              </button>
-            </div>
           </div>
           {/* Section 1: Subscription Overview */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
