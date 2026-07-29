@@ -2,7 +2,7 @@ import {
   deletePlan,
   getPlanById,
   updatePlan,
-} from "@/src/app/lib/services/course/subscription.service";
+} from "@/src/app/lib/services/subscription/subscription.service";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
@@ -37,17 +37,11 @@ export const PATCH = asyncHandler(async (req, context) => {
 
   const { id, ...planData } = body;
 
-  const plan = await updatePlan(
-    planId,
-    session.user.tenantId,
-    planData
-  );
+  const plan = await updatePlan(planId, session.user.tenantId, planData);
 
-  return Response.json(
-    new ApiResponse(200, plan, "Plan updated successfully")
-  );
+  return Response.json(new ApiResponse(200, plan, "Plan updated successfully"));
 });
-export const DELETE = asyncHandler(async (req,context) => {
+export const DELETE = asyncHandler(async (req, context) => {
   const { session } = await requirePermission("plans_delete");
   const params = await context.params;
   const body = await req.json().catch(() => ({}));

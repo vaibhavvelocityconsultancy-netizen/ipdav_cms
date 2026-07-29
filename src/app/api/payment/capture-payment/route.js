@@ -1,5 +1,11 @@
-import { capturePayment, getPayment } from "@/src/app/lib/services/common_urls/payment.service";
-import { createEnrollment, createSubscription } from "@/src/app/lib/services/course/subscription.service";
+import {
+  capturePayment,
+  getPayment,
+} from "@/src/app/lib/services/common_urls/payment.service";
+import {
+  createEnrollment,
+  createSubscription,
+} from "@/src/app/lib/services/subscription/subscription.service";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
@@ -15,9 +21,14 @@ export const POST = asyncHandler(async (req) => {
   const payment = await getPayment(orderId);
   if (!payment) throw new ApiError(404, "Payment not found");
 
-  const access = payment.billingCycle === "LIFETIME"
-    ? await createEnrollment(payment.userId, payment.planId)
-    : await createSubscription(payment.userId, payment.planId, payment.billingCycle);
+  const access =
+    payment.billingCycle === "LIFETIME"
+      ? await createEnrollment(payment.userId, payment.planId)
+      : await createSubscription(
+          payment.userId,
+          payment.planId,
+          payment.billingCycle,
+        );
 
   return Response.json(
     new ApiResponse(200, access, "Payment captured successfully"),

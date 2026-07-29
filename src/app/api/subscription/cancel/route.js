@@ -1,4 +1,4 @@
-import { cancelSubscription } from "@/src/app/lib/services/course/subscription.service";
+import { cancelSubscription } from "@/src/app/lib/services/subscription/subscription.service";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";

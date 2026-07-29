@@ -7,7 +7,7 @@ import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createToken } from "@/src/app/lib/jwt"; // ← adjust path to wherever your jwt helpers live
-import { startTrial } from "@/src/app/lib/services/course/subscription.service";
+import { startTrial } from "@/src/app/lib/services/subscription/subscription.service";
 // import { startTrial } from "@/src/app/lib/services/common_urls/payment.service";
 
 export const POST = asyncHandler(async (req) => {

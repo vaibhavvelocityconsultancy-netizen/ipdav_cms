@@ -1,4 +1,4 @@
-import { expireSubscriptions } from "@/src/app/lib/services/course/subscription.service";
+import { expireSubscriptions } from "@/src/app/lib/services/subscription/subscription.service";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 
 /**
