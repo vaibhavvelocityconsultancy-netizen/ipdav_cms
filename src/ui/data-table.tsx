@@ -31,6 +31,13 @@ import { Checkbox } from "@/src/ui/checkbox";
 import { ScrollArea } from "@/src/ui/scroll-area";
 import { cn } from "@/src/lib/utils";
 import { Badge } from "@/src/ui/badge";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "./empty";
 
 export interface Column<T> {
   key: string;
@@ -799,14 +806,18 @@ export function DataTable<T extends { id?: string | number }>({
             <TableBody>
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={displayColumns.length}
-                    className="h-32 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <Search className="h-8 w-8 opacity-50" />
-                      <p className="text-sm">{emptyMessage}</p>
-                    </div>
+                  <TableCell colSpan={displayColumns.length} className="p-0">
+                    <Empty className="border-0 rounded-none py-12">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <Search />
+                        </EmptyMedia>
+
+                        <EmptyTitle>No Results</EmptyTitle>
+
+                        <EmptyDescription>{emptyMessage}</EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   </TableCell>
                 </TableRow>
               ) : (

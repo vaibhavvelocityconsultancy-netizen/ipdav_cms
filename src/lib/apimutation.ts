@@ -157,4 +157,15 @@ export const apiMutations = {
     mutationRequest(`/api/admin/orders/${orderId}`, "DELETE"),
   deleteEnrollment: (enrollmentId: string) =>
     mutationRequest(`/api/admin/enrollments/${enrollmentId}`, "DELETE"),
+
+
+  // file categories
+  createFileCategory: (data: any) =>
+    mutationRequest("/api/file-category", "POST", data),
+  updateFileCategory: (id: string, data: any) =>
+    mutationRequest(`/api/file-category/${id}`, "PUT", data),
+  deleteFileCategory: (id: string) =>
+    mutationRequest(`/api/file-category/${id}`, "DELETE"),
+updateFile: (id: string, data: any) =>
+  mutationRequest(`/api/files/${id}`, "PUT", data),
 };

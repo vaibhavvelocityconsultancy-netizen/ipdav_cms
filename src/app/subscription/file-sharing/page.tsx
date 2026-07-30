@@ -2,36 +2,26 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import FileCard from "@/src/components/subscription/file-sharing/FileCard";
-import UploadModal from "@/src/components/subscription/file-sharing/UploadModal";
 import ShareModal from "@/src/components/subscription/file-sharing/ShareModal";
 import { TrialExpiryPopup } from "@/src/components/subscription/TrialExpiryPopup";
 import { useSubscription } from "@/src/hooks/use-subscription";
+import { fetchers } from "@/src/lib/fetchers";
 
-/**
- * ═════════════════════════════════════════════════════════════════════
- * FILE SHARING PAGE
- * ═════════════════════════════════════════════════════════════════════
- *
- * Displays user's shared files.
- * Uses useSubscription hook to get access data (single source of truth).
- * No local fetching of subscription data.
- *
- * Selection mode: user toggles "Select" on, taps file cards to select
- * multiple, then shares them all in one FileShare via ShareModal.
- */
+const ALL_TAB = "__all__";
+const UNCATEGORIZED_TAB = "__uncategorized__";
 
 export default function FilesPage() {
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState(ALL_TAB); // ← NEW
   const queryClient = useQueryClient();
 
-  // ── Get subscription from hook (cached, single source of truth) ──
   const { access, isLoading: subscriptionLoading } = useSubscription();
 
-  // ── Derive access state from subscription ──
   const hasAccess = useMemo(() => {
     if (!access) return false;
     const now = new Date();
@@ -42,7 +32,6 @@ export default function FilesPage() {
     return access.status === "ACTIVE" || trialValid;
   }, [access]);
 
-  // ── Fetch files only if user has access ──
   const { data: files, isLoading: filesLoading } = useQuery({
     queryKey: ["shared-files"],
     enabled: !subscriptionLoading && !!hasAccess,
@@ -53,22 +42,61 @@ export default function FilesPage() {
     },
   });
 
-  const isLoading = subscriptionLoading || filesLoading;
-  const allSelected =
-    !!files && files.length > 0 && selectedIds.length === files.length;
+  // ── Categories for the tab bar ── (NEW)
+  const { data: categories } = useQuery({
+    queryKey: ["fileCategoriesPublic"],
+    enabled: !subscriptionLoading && !!hasAccess,
+    queryFn: () => fetchers.fileCategoriesPublic().then((res) => res.data),
+  });
 
-  // ── Selection helpers ──
+  const isLoading = subscriptionLoading || filesLoading;
+
+  // ── Only show tabs for categories that actually have files ── (NEW)
+  const tabs = useMemo(() => {
+    if (!files) return [];
+    const counts = new Map<string, number>();
+    let uncategorizedCount = 0;
+
+    for (const f of files) {
+      if (f.categoryId) {
+        counts.set(f.categoryId, (counts.get(f.categoryId) ?? 0) + 1);
+      } else {
+        uncategorizedCount++;
+      }
+    }
+
+    const categoryTabs = (categories ?? [])
+      .filter((c: any) => counts.has(c.id))
+      .map((c: any) => ({ id: c.id, label: c.name, count: counts.get(c.id)! }));
+
+    return [
+      { id: ALL_TAB, label: "All", count: files.length },
+      ...categoryTabs,
+      ...(uncategorizedCount > 0
+        ? [{ id: UNCATEGORIZED_TAB, label: "Uncategorized", count: uncategorizedCount }]
+        : []),
+    ];
+  }, [files, categories]);
+
+  // ── Filtered file list based on active tab ── (NEW)
+  const visibleFiles = useMemo(() => {
+    if (!files) return [];
+    if (activeTab === ALL_TAB) return files;
+    if (activeTab === UNCATEGORIZED_TAB) return files.filter((f: any) => !f.categoryId);
+    return files.filter((f: any) => f.categoryId === activeTab);
+  }, [files, activeTab]);
+
+  const allSelected =
+    visibleFiles.length > 0 && selectedIds.length === visibleFiles.length;
+
   function toggleSelect(fileId: string) {
     setSelectedIds((prev) =>
-      prev.includes(fileId)
-        ? prev.filter((id) => id !== fileId)
-        : [...prev, fileId]
+      prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]
     );
   }
 
   function toggleSelectAll() {
-    if (!files) return;
-    setSelectedIds(allSelected ? [] : files.map((f: any) => f.id));
+    setSelectedIds(allSelected ? [] : visibleFiles.map((f: any) => f.id));
   }
 
   function exitSelectMode() {
@@ -76,19 +104,15 @@ export default function FilesPage() {
     setSelectedIds([]);
   }
 
-  // ── Show expiry popup if no access ──
   if (!subscriptionLoading && !hasAccess) {
     return <TrialExpiryPopup show={true} onDismiss={() => {}} />;
   }
 
   return (
     <div className="p-6 pb-24">
-      {/* ── Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Shared Files
-          </h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Shared Files</h1>
           <p className="text-sm text-slate-500">
             Upload and manage files shared with your workspace.
           </p>
@@ -122,7 +146,7 @@ export default function FilesPage() {
           )}
 
           <button
-            onClick={() => setUploadOpen(true)}
+            onClick={() => router.push("/subscription/files/upload")}
             className="inline-flex items-center gap-1.5 justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
           >
             <PlusIcon />
@@ -131,8 +155,30 @@ export default function FilesPage() {
         </div>
       </div>
 
-      {/* ── Hint banner: tells users the multi-select-to-share feature exists ── */}
-      {!selectMode && !isLoading && files && files.length > 0 && (
+      {/* ── Category tabs ── (NEW) */}
+      {!isLoading && tabs.length > 1 && (
+        <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setSelectedIds([]); // clear selection when switching tabs
+              }}
+              className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab.label}
+              <span className="ml-1.5 text-xs text-slate-400">{tab.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!selectMode && !isLoading && visibleFiles.length > 0 && (
         <div className="mb-6 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-4 py-2.5 text-sm text-blue-700">
           <InfoIcon />
           <span>
@@ -144,28 +190,32 @@ export default function FilesPage() {
 
       {isLoading ? (
         <p className="text-sm text-slate-500">Loading...</p>
-      ) : files?.length === 0 ? (
+      ) : visibleFiles.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
             <FileIcon />
           </div>
           <p className="text-sm font-medium text-slate-700">
-            No files uploaded yet
+            {activeTab === ALL_TAB ? "No files uploaded yet" : "No files in this category"}
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            Upload a file to start sharing it with your workspace.
+            {activeTab === ALL_TAB
+              ? "Upload a file to start sharing it with your workspace."
+              : "Try a different category or upload a new file here."}
           </p>
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="mt-4 inline-flex items-center gap-1.5 justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            <PlusIcon />
-            Upload your first file
-          </button>
+          {activeTab === ALL_TAB && (
+            <button
+              onClick={() => router.push("/subscription/files/upload")}
+              className="mt-4 inline-flex items-center gap-1.5 justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              <PlusIcon />
+              Upload your first file
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {files?.map((file: any) => (
+          {visibleFiles.map((file: any) => (
             <FileCard
               key={file.id}
               file={file}
@@ -175,16 +225,6 @@ export default function FilesPage() {
             />
           ))}
         </div>
-      )}
-
-      {uploadOpen && (
-        <UploadModal
-          onClose={() => setUploadOpen(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["shared-files"] });
-            setUploadOpen(false);
-          }}
-        />
       )}
 
       {shareOpen && (
@@ -198,16 +238,13 @@ export default function FilesPage() {
         />
       )}
 
-      {/* ── Floating action bar — shows during select mode ── */}
       {selectMode && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
           <div className="flex items-center gap-4 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-lg">
             <span className="text-sm font-medium">
               {selectedIds.length === 0
                 ? "Tap files to select"
-                : `${selectedIds.length} file${
-                    selectedIds.length > 1 ? "s" : ""
-                  } selected`}
+                : `${selectedIds.length} file${selectedIds.length > 1 ? "s" : ""} selected`}
             </span>
             {selectedIds.length > 0 && (
               <button
@@ -231,7 +268,6 @@ export default function FilesPage() {
   );
 }
 
-// ── Small inline icons (no extra dependency needed) ──
 function CheckSquareIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

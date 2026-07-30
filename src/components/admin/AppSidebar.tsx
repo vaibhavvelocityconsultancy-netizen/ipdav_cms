@@ -250,6 +250,14 @@ const adminNavItems: NavItem[] = [
     modulePermission: "subscriber_upload_files_info",
     href: "/admin/files",
   },
+  {
+    id: "files-category-manager",
+    label: "File Categories",
+    icon: FolderOpen,
+    description: "Manage file categories",
+    modulePermission: "subscriber_upload_files_info",
+    href: "/admin/files-category",
+  },
 
   {
     id: "settings",

@@ -111,6 +111,7 @@ model tenant {
   uploadedFiles      UploadedFile[]
   plans              Plan[]
   planSettings       PlanSettings?
+  fileCategories     FileCategory[]
 }
 
 model EmailTemplate {
@@ -124,7 +125,6 @@ model EmailTemplate {
   variables     Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  
 
   logs EmailLog[]
 
@@ -975,12 +975,37 @@ model InternalLinkRule {
 }
 
 // File Sharing System
+model FileCategory {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String
+  description String? @db.Text
+  parentId    String?
+  tenantId    Int
+
+  tenant   tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   FileCategory?  @relation("FileCategoryHierarchy", fields: [parentId], references: [id])
+  children FileCategory[] @relation("FileCategoryHierarchy")
+
+  files UploadedFile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+}
 
 model UploadedFile {
-  id           String  @id @default(cuid())
-  title        String
-  description  String? @db.Text
-  category     String
+  id          String  @id @default(cuid())
+  title       String
+  shortDesc   String? @db.Text // short description shown on file card
+  description String? @db.Text // long description
+  isShareable Boolean @default(true)
+
+  tags String? @db.Text // ← NEW — comma-separated, e.g. "invoice,2026,urgent"
+
   fileName     String
   originalName String
   url          String
@@ -989,6 +1014,9 @@ model UploadedFile {
 
   uploadedBy Int
   tenantId   Int
+
+  categoryId String?
+  category   FileCategory? @relation(fields: [categoryId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1000,7 +1028,7 @@ model UploadedFile {
 
   @@index([tenantId])
   @@index([uploadedBy])
-  @@index([category])
+  @@index([categoryId])
 }
 
 model FileShareLink {
