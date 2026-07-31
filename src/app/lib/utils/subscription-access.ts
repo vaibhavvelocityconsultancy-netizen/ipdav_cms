@@ -36,7 +36,7 @@ export async function requireActiveSubscription() {
   // ✅ Import and use the helper function to auto-expire if needed
   // This ensures we always check the latest subscription status
   const { ensureSubscriptionExpired } =
-    await import("../services/course/subscription.service");
+    await import("../services/subscription/subscription.service");
   const validSubscription = subscription
     ? await ensureSubscriptionExpired(subscription)
     : null;

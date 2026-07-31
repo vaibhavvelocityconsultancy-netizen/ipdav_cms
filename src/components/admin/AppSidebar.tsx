@@ -47,7 +47,6 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ThemeToggle } from "@/src/components/theme-toggle";
 import { useModuleFlags } from "@/src/lib/ecom/useModuleFlags";
 import {
   Sidebar as UISidebar,
@@ -130,6 +129,14 @@ const adminNavItems: NavItem[] = [
     ],
   },
   {
+    id: "pages",
+    label: "Pages",
+    icon: Globe,
+    description: "Manage content",
+    modulePermission: "pages_view",
+    href: "/admin/pages",
+  },
+  {
     id: "media",
     label: "Media Library",
     icon: FileText,
@@ -153,21 +160,14 @@ const adminNavItems: NavItem[] = [
     ],
   },
   {
-    id: "files-manager",
-    label: "User Management",
-    icon: Share2,
-    description: "Subscriber-info & uploaded files",
-    modulePermission: "subscriber_upload_files_info",
-    href: "/admin/files",
+    id: "menus",
+    label: "Menus",
+    icon: Menu,
+    description: "Navigation structure",
+    modulePermission: "menus_manage",
+    href: "/admin/menus",
   },
-  {
-    id: "pages",
-    label: "Pages",
-    icon: Globe,
-    description: "Manage content",
-    modulePermission: "pages_view",
-    href: "/admin/pages",
-  },
+
   {
     id: "forms",
     label: "Forms",
@@ -176,14 +176,7 @@ const adminNavItems: NavItem[] = [
     // modulePermission: "forms_access",
     href: "/admin/forms",
   },
-  {
-    id: "menus",
-    label: "Menus",
-    icon: Menu,
-    description: "Navigation structure",
-    modulePermission: "menus_manage",
-    href: "/admin/menus",
-  },
+
   {
     id: "customize",
     label: "Customize",
@@ -248,6 +241,23 @@ const adminNavItems: NavItem[] = [
   //     },
   //   ],
   // },
+
+  {
+    id: "files-manager",
+    label: "User Management",
+    icon: Share2,
+    description: "Subscriber-info & uploaded files",
+    modulePermission: "subscriber_upload_files_info",
+    href: "/admin/files",
+  },
+  {
+    id: "files-category-manager",
+    label: "File Categories",
+    icon: FolderOpen,
+    description: "Manage file categories",
+    modulePermission: "subscriber_upload_files_info",
+    href: "/admin/files-category",
+  },
 
   {
     id: "settings",
@@ -651,8 +661,6 @@ export function Sidebar({ userRole }: SidebarProps) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
-        <ThemeToggle collapsed={collapsed} />
 
         <div className="group relative flex items-center gap-3 rounded-xl p-2 transition-all duration-200 hover:bg-sidebar-accent/30 group-data-[collapsible=icon]:justify-center">
           <div className="relative shrink-0">

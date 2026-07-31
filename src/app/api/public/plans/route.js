@@ -1,4 +1,4 @@
-import { getPublicPlans } from "@/src/app/lib/services/course/subscription.service";
+import { getPublicPlans } from "@/src/app/lib/services/subscription/subscription.service";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 
@@ -6,9 +6,9 @@ export const GET = asyncHandler(async (req) => {
   const { searchParams } = new URL(req.url);
   const tenantId = searchParams.get("tenantId");
 
-  const plans = await getPublicPlans(
-    tenantId ? Number(tenantId) : undefined,
-  );
+  const plans = await getPublicPlans(tenantId ? Number(tenantId) : undefined);
 
-  return Response.json(new ApiResponse(200, plans, "Plans fetched successfully"));
+  return Response.json(
+    new ApiResponse(200, plans, "Plans fetched successfully"),
+  );
 });

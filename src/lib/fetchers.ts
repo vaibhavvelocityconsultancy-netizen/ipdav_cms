@@ -158,4 +158,10 @@ export const fetchers = {
   },
   customerDetail: (userId: string | number) =>
     fetcher(`/api/customers/${userId}`),
+
+  // fiie categories
+  fileCategoriesPublic: () => fetcher("/api/public/file-category"),
+  fileCategories: () => fetcher("/api/file-category"),
+  fileCategory: (id: string) => fetcher(`/api/file-category/${id}`),
+fileById: (id: string) => fetcher(`/api/files/${id}`),
 };

@@ -67,9 +67,12 @@ export const GET = asyncHandler(async () => {
 
   const files = await prisma.uploadedFile.findMany({
     where: {
-      
       tenantId: Number(user.tenantId),
       uploadedBy: Number(user.id),
+    },
+    include: {
+      uploader: { select: { id: true, name: true, email: true } },
+      category: { select: { id: true, name: true, slug: true } },
     },
     orderBy: {
       createdAt: "desc",
@@ -99,8 +102,27 @@ export const POST = asyncHandler(async (req) => {
   const title =
     (formData.get("title")?.toString().trim() || "").trim() ||
     generateTitleFromFilename(file.name);
-  const category = formData.get("category")?.toString().trim() || "Other";
+
+  // 🔧 FIXED — read categoryId, not category
+  const categoryId = formData.get("categoryId")?.toString().trim() || null;
+
+  const shortDesc = formData.get("shortDesc")?.toString().trim() || null;
   const description = formData.get("description")?.toString().trim() || null;
+  const tags = formData.get("tags")?.toString().trim() || null;
+
+  // FormData sends everything as strings — "true"/"false" need explicit parsing
+  const isShareableRaw = formData.get("isShareable")?.toString();
+  const isShareable = isShareableRaw === undefined ? true : isShareableRaw === "true";
+
+  // 🔧 NEW — validate categoryId belongs to this tenant, same check we use elsewhere
+  if (categoryId) {
+    const category = await prisma.fileCategory.findUnique({
+      where: { id: categoryId, tenantId: Number(user.tenantId) },
+    });
+    if (!category) {
+      throw new ApiError(400, "Category not found for this tenant");
+    }
+  }
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
@@ -130,8 +152,11 @@ export const POST = asyncHandler(async (req) => {
   const created = await prisma.uploadedFile.create({
     data: {
       title,
+      shortDesc,
       description,
-      category,
+      isShareable,
+      tags,
+      categoryId, // 🔧 FIXED — was `category`, now matches the schema field
       fileName: uploadResult.public_id,
       originalName: file.name,
       url: uploadResult.secure_url,
@@ -139,6 +164,9 @@ export const POST = asyncHandler(async (req) => {
       size: file.size,
       uploadedBy: Number(user.id),
       tenantId: Number(user.tenantId),
+    },
+    include: {
+      category: { select: { id: true, name: true, slug: true } },
     },
   });
 

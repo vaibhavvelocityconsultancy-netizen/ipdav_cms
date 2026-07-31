@@ -2,7 +2,7 @@ import { asyncHandler } from "../../lib/utils/asyncHandler";
 import { ApiResponse } from "../../lib/utils/ApiResponse";
 import { ApiError } from "../../lib/utils/ApiError";
 import { requirePermission } from "../../lib/withPermission";
-import { getSubscriberUsers } from "../../lib/services/course/subscription.service";
+import { getSubscriberUsers } from "../../lib/services/subscription/subscription.service";
 
 export const GET = asyncHandler(async (req) => {
   await requirePermission("subscriber_upload_files_info");

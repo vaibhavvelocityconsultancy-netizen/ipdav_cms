@@ -1,6 +1,6 @@
 import { prisma } from "../../prisma.js";
 import { requirePermission } from "../../withPermission.js";
-import { getUserCurrentAccess } from "../course/subscription.service.js";
+import { getUserCurrentAccess } from "../subscription/subscription.service.js";
 
 // ──────────────────────────────────────────────
 // DASHBOARD DATA
@@ -197,17 +197,17 @@ export async function getSubscriberDashboard(userId) {
 
     accessType: type,
 
-plan: plan
-  ? {
-      id: plan.id,
-      title: plan.title,
-      monthlyPrice: plan.monthlyPrice,
-      yearlyPrice: plan.yearlyPrice,
-      allowMonthly: plan.allowMonthly,
-      allowYearly: plan.allowYearly,
-      billingCycle: record?.billingCycle,
-    }
-  : null,
+    plan: plan
+      ? {
+          id: plan.id,
+          title: plan.title,
+          monthlyPrice: plan.monthlyPrice,
+          yearlyPrice: plan.yearlyPrice,
+          allowMonthly: plan.allowMonthly,
+          allowYearly: plan.allowYearly,
+          billingCycle: record?.billingCycle,
+        }
+      : null,
     status: normalizedStatus,
 
     trialDaysRemaining,

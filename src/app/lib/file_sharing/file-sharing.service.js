@@ -8,6 +8,31 @@ import { ApiError } from "../utils/ApiError";
 import cloudinary from "@/src/lib/cloudinary";
 import { requireActiveSubscription } from "../utils/subscription-access";
 
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/svg+xml",
+  "image/gif",
+
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  "application/zip",
+
+  "video/mp4",
+  "video/webm",
+
+  "audio/mpeg",
+  "audio/wav",
+];
+
 function generateSharePassword() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -17,6 +42,23 @@ function generateSharePassword() {
   return `SHR-${code}`;
 }
 
+function getResourceType(mimeType) {
+  if (mimeType.startsWith("video/") || mimeType.startsWith("audio/")) {
+    return "video";
+  }
+
+  if (
+    mimeType === "application/pdf" ||
+    mimeType === "application/msword" ||
+    mimeType.includes("officedocument") ||
+    mimeType === "application/zip" ||
+    mimeType === "text/plain"
+  ) {
+    return "raw";
+  }
+
+  return "image";
+}
 // ─── Create (multi-file) ────────────────────────────────────
 
 export async function shareFiles(fileIds, { email, message, password }) {
@@ -29,13 +71,17 @@ export async function shareFiles(fileIds, { email, message, password }) {
   const session = await requireActiveSubscription();
   const tenantId = session.user.tenantId;
 
-  // confirm every file exists AND belongs to this tenant
   const files = await prisma.uploadedFile.findMany({
     where: {
-      id: {
-        in: uniqueFileIds,
-      },
+      id: { in: uniqueFileIds },
       tenantId,
+    },
+    include: {
+      category: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
 
@@ -45,6 +91,15 @@ export async function shareFiles(fileIds, { email, message, password }) {
     throw new ApiError(
       404,
       `File(s) not found or not accessible: ${missing.join(", ")}`,
+    );
+  }
+
+  // 🔧 NEW — block sharing files marked non-shareable
+  const nonShareable = files.filter((f) => !f.isShareable);
+  if (nonShareable.length > 0) {
+    throw new ApiError(
+      400,
+      `These files are not shareable: ${nonShareable.map((f) => f.title).join(", ")}`,
     );
   }
 
@@ -75,18 +130,28 @@ export async function shareFiles(fileIds, { email, message, password }) {
     return createdShare;
   });
 
+  const uniqueCategories = [
+    ...new Set(files.map((f) => f.category?.name ?? "Uncategorized")),
+  ];
+
+  const emailCategory = uniqueCategories.join(", ");
+
   await sendTriggerEmails("FILE_SHARED", {
     sharedWith: email,
     fileCount: files.length,
     fileTitles: files.map((f) => f.title),
-    // send the first file's title and category so single-file shares show correctly
     title: files[0]?.title ?? null,
-    category: files[0]?.category ?? null,
+    category: emailCategory,
     message: message ?? "",
     link: `${process.env.NEXT_PUBLIC_SITE_URL}/shared/${share.token}`,
     password: plainPassword,
     senderName: session.user.name,
   });
+
+  // console.log("EMAIL DATA:", {
+  //   category: emailCategory,
+  //   fileTitles: files.map((f) => f.title),
+  // });
 
   return { share };
 }
@@ -96,11 +161,7 @@ export async function shareFiles(fileIds, { email, message, password }) {
 export async function verifySharePassword(token, password) {
   const share = await prisma.fileShareLink.findUnique({
     where: { token },
-    include: {
-      files: {
-        include: { file: true },
-      },
-    },
+    include: { files: { include: { file: true } } },
   });
   if (!share) throw new ApiError(404, "Invalid link");
 
@@ -161,7 +222,13 @@ export async function getShareMeta(token) {
   const share = await prisma.fileShareLink.findUnique({
     where: { token },
     include: {
-      files: { include: { file: { select: { title: true, category: true } } } },
+      files: {
+        include: {
+          file: {
+            select: { title: true, category: { select: { name: true } } },
+          },
+        },
+      },
     },
   });
   if (!share) throw new ApiError(404, "Invalid link");
@@ -170,13 +237,12 @@ export async function getShareMeta(token) {
     fileCount: share.files.length,
     files: share.files.map((i) => ({
       title: i.file.title,
-      category: i.file.category,
+      category: i.file.category?.name ?? null,
     })),
   };
 }
 
 // ─── Shares list per file (admin/subscriber view) ───────────
-// Bundle-aware: shows "+N more files" when a share included others
 
 export async function getFileShares(fileId) {
   const session = await requireActiveSubscription();
@@ -190,15 +256,9 @@ export async function getFileShares(fileId) {
   const items = await prisma.fileShareFile.findMany({
     where: {
       fileId,
-      shareLink: {
-        createdBy: session.user.id,
-      },
+      shareLink: { createdBy: session.user.id },
     },
-    orderBy: {
-      shareLink: {
-        createdAt: "desc",
-      },
-    },
+    orderBy: { shareLink: { createdAt: "desc" } },
     include: {
       shareLink: {
         select: {
@@ -208,15 +268,12 @@ export async function getFileShares(fileId) {
           viewedAt: true,
           zipDownloadedAt: true,
           createdAt: true,
-          _count: {
-            select: {
-              files: true,
-            },
-          },
+          _count: { select: { files: true } },
         },
       },
     },
   });
+
   return items.map((item) => ({
     shareId: item.shareLink.id,
     sharedWith: item.shareLink.sharedWith,
@@ -225,46 +282,160 @@ export async function getFileShares(fileId) {
     zipDownloadedAt: item.shareLink.zipDownloadedAt,
     downloadedAt: item.downloadedAt,
     createdAt: item.shareLink.createdAt,
-    otherFilesCount: item.shareLink._count.files - 1, // 0 = solo share
+    otherFilesCount: item.shareLink._count.files - 1,
   }));
 }
 
-// ─── Admin CRUD (unchanged) ──────────────────────────────────
+// ─── Admin CRUD ──────────────────────────────────────────────
 
-export async function getAllFilesAdmin(fileId) {
+export async function getAllFilesAdmin() {
   await requirePermission("subscriber_upload_files_info");
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  const file = await prisma.uploadedFile.findFirst({
-    where: { id: fileId, tenantId },
-  });
-  if (!file) throw new ApiError(404, "File not found");
-
   return prisma.uploadedFile.findMany({
     where: { tenantId },
     include: {
-      uploader: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
+      uploader: { select: { id: true, name: true, email: true } },
+      category: { select: { id: true, name: true, slug: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function deleteFileAdmin(fileId) {
-  await requirePermission("subscriber_upload_files_info");
+// file.service.js
+export async function getFileByIdAdmin(fileId) {
+  // await requirePermission("subscriber_upload_files_info");
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
   const file = await prisma.uploadedFile.findFirst({
     where: { id: fileId, tenantId },
+    include: {
+      uploader: { select: { id: true, name: true, email: true } },
+      category: { select: { id: true, name: true, slug: true } },
+      // tags: { select: { id: true, name: true } }, // ← ADD THIS
+    },
   });
   if (!file) throw new ApiError(404, "File not found");
+
+  return file;
+}
+
+// 🔧 NEW — edit file metadata (title, descriptions, category, shareability)
+// Does NOT replace the uploaded file itself — that's a separate re-upload action
+export async function updateFileAdmin(fileId, data, uploadedFile) {
+  // await requirePermission("subscriber_upload_files_info");
+  const session = await requireAuth();
+  const tenantId = session.user.tenantId;
+
+  const existing = await prisma.uploadedFile.findFirst({
+    where: { id: fileId, tenantId },
+  });
+  if (!existing) throw new ApiError(404, "File not found");
+
+  if (data.title !== undefined && !data.title.trim()) {
+    throw new ApiError(400, "Title cannot be empty");
+  }
+
+  if (data.categoryId) {
+    const category = await prisma.fileCategory.findUnique({
+      where: { id: data.categoryId, tenantId },
+    });
+    if (!category)
+      throw new ApiError(400, "Category not found for this tenant");
+  }
+
+  // Replace uploaded file if a new one is selected
+  if (uploadedFile && typeof uploadedFile !== "string") {
+    if (!ALLOWED_TYPES.includes(uploadedFile.type)) {
+      throw new ApiError(400, `Unsupported file type: ${uploadedFile.type}`);
+    }
+
+    const bytes = await uploadedFile.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            folder: `subscriber-files/tenant-${tenantId}`,
+            resource_type: getResourceType(uploadedFile.type),
+            access_mode: "public",
+            use_filename: true,
+            unique_filename: true,
+            filename_override: uploadedFile.name,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          },
+        )
+        .end(buffer);
+    });
+
+    // Delete old file after successful upload
+    if (existing.fileName) {
+      try {
+        await cloudinary.uploader.destroy(existing.fileName, {
+          resource_type: getResourceType(existing.mimeType),
+        });
+      } catch (error) {
+        console.error("Cloudinary delete error:", error);
+      }
+    }
+
+    // Add the new file details into the update payload
+    data.fileName = uploadResult.public_id;
+    data.originalName = uploadedFile.name;
+    data.url = uploadResult.secure_url;
+    data.mimeType = uploadedFile.type;
+    data.size = uploadedFile.size;
+  }
+
+  return prisma.uploadedFile.update({
+    where: { id: fileId, tenantId },
+    data: {
+      ...(data.title !== undefined && { title: data.title.trim() }),
+      ...(data.shortDesc !== undefined && {
+        shortDesc: data.shortDesc?.trim() || null,
+      }),
+      ...(data.description !== undefined && {
+        description: data.description?.trim() || null,
+      }),
+      ...(data.isShareable !== undefined && {
+        isShareable: !!data.isShareable,
+      }),
+      ...(data.categoryId !== undefined && {
+        categoryId: data.categoryId || null,
+      }),
+      ...(data.tags !== undefined && { tags: data.tags?.trim() || null }),
+
+      ...(data.fileName && { fileName: data.fileName }),
+      ...(data.originalName && { originalName: data.originalName }),
+      ...(data.url && { url: data.url }),
+      ...(data.mimeType && { mimeType: data.mimeType }),
+      ...(data.size && { size: data.size }),
+    },
+
+    include: { category: true },
+  });
+}
+
+export async function deleteFileAdmin(fileId) {
+  const session = await requireAuth();
+  const tenantId = session.user.tenantId;
+
+  const file = await prisma.uploadedFile.findFirst({
+    where: {
+      id: fileId,
+      tenantId,
+    },
+  });
+
+  if (!file) {
+    throw new ApiError(404, "File not found");
+  }
 
   if (file.fileName) {
     try {
@@ -272,11 +443,16 @@ export async function deleteFileAdmin(fileId) {
         resource_type: getResourceType(file.mimeType),
       });
     } catch (error) {
+      console.error("Cloudinary delete error:", error); // ← check server logs for the REAL reason now
       throw new ApiError(500, "Failed to delete file from Cloudinary");
     }
   }
 
-  await prisma.uploadedFile.delete({ where: { id: fileId } });
+  await prisma.uploadedFile.delete({
+    where: {
+      id: fileId,
+    },
+  });
 
-  return ApiResponse(200, null, "File deleted successfully");
+  return new ApiResponse(200, null, "File deleted successfully");
 }

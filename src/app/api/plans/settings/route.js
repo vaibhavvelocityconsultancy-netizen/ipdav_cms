@@ -1,4 +1,7 @@
-import { getPlanSettings, updatePlanSettings } from "@/src/app/lib/services/course/subscription.service";
+import {
+  getPlanSettings,
+  updatePlanSettings,
+} from "@/src/app/lib/services/subscription/subscription.service";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 import { requirePermission } from "@/src/app/lib/withPermission";

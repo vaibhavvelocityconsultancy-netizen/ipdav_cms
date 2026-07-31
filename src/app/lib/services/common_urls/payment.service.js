@@ -213,6 +213,7 @@ export async function capturePayment(orderId) {
   try {
     const { result: capture } = await client.execute(request);
 
+    // ✅ Check PayPal's own status value here
     if (capture.status !== "COMPLETED") {
       await updatePaymentStatus(orderId, "FAILED");
       throw new ApiError(400, "Payment not completed");
@@ -235,7 +236,6 @@ export async function capturePayment(orderId) {
     throw new ApiError(400, err?.message || "PayPal payment failed");
   }
 }
-
 async function sendPaymentSuccessEmail(payment) {
   const paymentType = payment.planId ? "PLAN" : "PRODUCT";
   const triggerEvent = TRIGGER_BY_TYPE[paymentType];

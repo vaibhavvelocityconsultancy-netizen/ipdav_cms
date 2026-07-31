@@ -459,7 +459,8 @@ export default function DashboardPage() {
   return (
     <>
       <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-        <div className="max-w-5xl p-4 md:p-8 mx-auto">
+        <div className="w-full p-4 md:p-8">
+          {" "}
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
@@ -468,22 +469,7 @@ export default function DashboardPage() {
                 Monitor your files, shares and account activity.
               </p>
             </div>
-            <div className="flex gap-3 mt-4 sm:mt-0">
-              <button
-                onClick={() => router.push("/subscription/file-sharing")}
-
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Upload className="w-4 h-4" />
-                Upload Files
-              </button>
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
-                <Share2 className="w-4 h-4" />
-                Share Files
-              </button>
-            </div>
           </div>
-
           {/* Section 1: Subscription Overview */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -529,7 +515,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
           {/* Section 2: Quick Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <StatCard
@@ -553,7 +538,6 @@ export default function DashboardPage() {
               value={subscription.stats?.viewedShares || 0}
             />
           </div>
-
           {/* Section 4: Recent Files */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -626,12 +610,10 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-
           {/* Section 5: Recent Shares */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Recent Shares</h3>
-              
             </div>
             {recentShares.length > 0 ? (
               <div className="overflow-x-auto">
@@ -726,7 +708,6 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-
           {/* Section 6: Recent Activity */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <h3 className="font-semibold text-gray-900 mb-4">
@@ -761,7 +742,6 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-
         </div>
       </div>
 
