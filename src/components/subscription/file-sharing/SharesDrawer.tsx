@@ -47,7 +47,7 @@ export default function SharesDrawer({
               const status = statusFor(s);
               return (
                 <div
-                  key={s.id}
+                  key={s.shareId}
                   className="rounded-lg border border-slate-200 p-3"
                 >
                   <p className="text-sm font-medium text-slate-900">

@@ -5,9 +5,11 @@ import { useState } from "react";
 export default function ShareModal({
   fileIds,
   onClose,
+  onSuccess,
 }: {
   fileIds: string[];
   onClose: () => void;
+  onSuccess: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -50,6 +52,7 @@ export default function ShareModal({
       if (!res.ok) throw new Error(json.message || "Failed to share");
 
       setSent(true);
+      // onSuccess();
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -67,7 +70,9 @@ export default function ShareModal({
               : `File shared with ${email}`}
           </p>
           <button
-            onClick={onClose}
+            onClick={() => {
+              onSuccess();
+            }}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
           >
             Done

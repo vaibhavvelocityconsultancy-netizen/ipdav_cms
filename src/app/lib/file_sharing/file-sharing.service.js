@@ -76,6 +76,13 @@ export async function shareFiles(fileIds, { email, message, password }) {
       id: { in: uniqueFileIds },
       tenantId,
     },
+    include: {
+      category: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
   if (files.length !== uniqueFileIds.length) {
@@ -123,19 +130,33 @@ export async function shareFiles(fileIds, { email, message, password }) {
     return createdShare;
   });
 
+  const uniqueCategories = [
+    ...new Set(files.map((f) => f.category?.name ?? "Uncategorized")),
+  ];
+
+  const emailCategory = uniqueCategories.join(", ");
+
   await sendTriggerEmails("FILE_SHARED", {
     sharedWith: email,
     fileCount: files.length,
     fileTitles: files.map((f) => f.title),
     title: files[0]?.title ?? null,
+    category: emailCategory,
     message: message ?? "",
     link: `${process.env.NEXT_PUBLIC_SITE_URL}/shared/${share.token}`,
     password: plainPassword,
     senderName: session.user.name,
   });
 
+  // console.log("EMAIL DATA:", {
+  //   category: emailCategory,
+  //   fileTitles: files.map((f) => f.title),
+  // });
+
   return { share };
 }
+
+
 
 // ─── Public access (no auth — token/password gated) ─────────
 
