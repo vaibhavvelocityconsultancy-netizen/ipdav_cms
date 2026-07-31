@@ -61,99 +61,62 @@ function getResourceType(mimeType) {
 }
 // ─── Create (multi-file) ────────────────────────────────────
 
-export async function shareFiles(fileIds, { email, message, password }) {
-  if (!Array.isArray(fileIds) || fileIds.length === 0) {
-    throw new ApiError(400, "At least one file ID is required");
-  }
-
-  const uniqueFileIds = [...new Set(fileIds.map(String))];
-
+export async function getFileShares(fileId) {
   const session = await requireActiveSubscription();
   const tenantId = session.user.tenantId;
 
-  const files = await prisma.uploadedFile.findMany({
+  const file = await prisma.uploadedFile.findFirst({
     where: {
-      id: { in: uniqueFileIds },
+      id: String(fileId),
       tenantId,
     },
+  });
+
+  if (!file) {
+    throw new ApiError(404, "File not found");
+  }
+
+  const items = await prisma.fileShareFile.findMany({
+    where: {
+      fileId: String(fileId),
+      shareLink: {
+        createdBy: Number(session.user.id),
+      },
+    },
+    orderBy: {
+      shareLink: {
+        createdAt: "desc",
+      },
+    },
     include: {
-      category: {
+      shareLink: {
         select: {
-          name: true,
+          id: true,
+          sharedWith: true,
+          message: true,
+          viewedAt: true,
+          zipDownloadedAt: true,
+          createdAt: true,
+          _count: {
+            select: {
+              files: true,
+            },
+          },
         },
       },
     },
   });
 
-  if (files.length !== uniqueFileIds.length) {
-    const foundIds = new Set(files.map((f) => f.id));
-    const missing = uniqueFileIds.filter((id) => !foundIds.has(id));
-    throw new ApiError(
-      404,
-      `File(s) not found or not accessible: ${missing.join(", ")}`,
-    );
-  }
-
-  // 🔧 NEW — block sharing files marked non-shareable
-  const nonShareable = files.filter((f) => !f.isShareable);
-  if (nonShareable.length > 0) {
-    throw new ApiError(
-      400,
-      `These files are not shareable: ${nonShareable.map((f) => f.title).join(", ")}`,
-    );
-  }
-
-  if (password && password.length < 6) {
-    throw new ApiError(400, "Password must be at least 6 characters");
-  }
-
-  const plainPassword = password || generateSharePassword();
-  const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-  const share = await prisma.$transaction(async (tx) => {
-    const createdShare = await tx.fileShareLink.create({
-      data: {
-        sharedWith: email,
-        message: message ?? null,
-        password: hashedPassword,
-        createdBy: Number(session.user.id),
-      },
-    });
-
-    await tx.fileShareFile.createMany({
-      data: uniqueFileIds.map((fileId) => ({
-        shareLinkId: createdShare.id,
-        fileId,
-      })),
-    });
-
-    return createdShare;
-  });
-
-  const uniqueCategories = [
-    ...new Set(files.map((f) => f.category?.name ?? "Uncategorized")),
-  ];
-
-  const emailCategory = uniqueCategories.join(", ");
-
-  await sendTriggerEmails("FILE_SHARED", {
-    sharedWith: email,
-    fileCount: files.length,
-    fileTitles: files.map((f) => f.title),
-    title: files[0]?.title ?? null,
-    category: emailCategory,
-    message: message ?? "",
-    link: `${process.env.NEXT_PUBLIC_SITE_URL}/shared/${share.token}`,
-    password: plainPassword,
-    senderName: session.user.name,
-  });
-
-  // console.log("EMAIL DATA:", {
-  //   category: emailCategory,
-  //   fileTitles: files.map((f) => f.title),
-  // });
-
-  return { share };
+  return items.map((item) => ({
+    shareId: item.shareLink.id,
+    sharedWith: item.shareLink.sharedWith,
+    message: item.shareLink.message,
+    viewedAt: item.shareLink.viewedAt,
+    zipDownloadedAt: item.shareLink.zipDownloadedAt,
+    downloadedAt: item.downloadedAt,
+    createdAt: item.shareLink.createdAt,
+    otherFilesCount: item.shareLink._count.files - 1,
+  }));
 }
 
 // ─── Public access (no auth — token/password gated) ─────────
