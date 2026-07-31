@@ -404,9 +404,6 @@ export function DataTable<T extends { id?: string | number }>({
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
-  const [columnFilters, setColumnFilters] = useState<
-    Record<string, Set<string>>
-  >({});
 
   const storageKey = persistKey ? `datatable-columns:${persistKey}` : null;
 
@@ -490,18 +487,6 @@ export function DataTable<T extends { id?: string | number }>({
     }
   };
 
-  const handleFilterChange = (key: string, values: Set<string>) => {
-    setColumnFilters((prev) => {
-      const next = { ...prev };
-      if (values.size === 0) {
-        delete next[key];
-      } else {
-        next[key] = values;
-      }
-      return next;
-    });
-    setCurrentPage(1);
-  };
 
   const searchFilteredData = useMemo(() => {
     if (!searchQuery.trim() || searchKeys.length === 0) return safeData;
@@ -517,21 +502,8 @@ export function DataTable<T extends { id?: string | number }>({
     );
   }, [safeData, searchQuery, searchKeys]);
 
-  const filteredData = useMemo(() => {
-    const filterKeys = Object.keys(columnFilters);
-    if (filterKeys.length === 0) return searchFilteredData;
-    return searchFilteredData.filter((row) =>
-      filterKeys.every((key) => {
-        const column = columns.find((c) => c.key === key);
-        const val = column?.filterValue
-          ? column.filterValue(row)
-          : (row as any)[key];
-        const strVal = val != null ? String(val) : "";
-        return columnFilters[key].has(strVal);
-      }),
-    );
-  }, [searchFilteredData, columnFilters, columns]);
 
+  const filteredData = searchFilteredData; // ✅ no more column filters, just search
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -540,7 +512,7 @@ export function DataTable<T extends { id?: string | number }>({
   // Reset to first page when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, pageSize, columnFilters]);
+  }, [searchQuery, pageSize]);
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
@@ -709,12 +681,6 @@ export function DataTable<T extends { id?: string | number }>({
         </div>
       )}
 
-      {/* Active Filters */}
-      <ActiveFiltersBar
-        columns={columns}
-        columnFilters={columnFilters}
-        onFilterChange={handleFilterChange}
-      />
 
       {/* Table */}
       <div className="border rounded-lg overflow-hidden bg-background">
@@ -781,22 +747,8 @@ export function DataTable<T extends { id?: string | number }>({
                             )}
                           </div>
                         )}
-                        {!isSelectionColumn && (
-                          <>
-                            <span>{column.header}</span>
-                            {isFilterable && (
-                              <ColumnFilterDropdown
-                                columnKey={column.key}
-                                columns={columns}
-                                data={safeData}
-                                activeFilters={
-                                  columnFilters[column.key] || new Set()
-                                }
-                                onFilterChange={handleFilterChange}
-                              />
-                            )}
-                          </>
-                        )}
+
+                        {!isSelectionColumn && <span>{column.header}</span>}
                       </div>
                     </TableHead>
                   );

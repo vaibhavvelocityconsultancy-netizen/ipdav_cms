@@ -1,10 +1,31 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiMutations } from "@/src/lib/apimutation";
 import { fetchers } from "@/src/lib/fetchers";
-// import { apiMutations } from "@/src/lib/apiMutations";
+// import { DataTable, type Column } from ".src/components/data-table";
+import { Button } from "@/src/ui/button";
+import { Badge } from "@/src/ui/badge";
+import {
+  FolderTree,
+  Plus,
+  Edit2,
+  Trash2,
+  FolderOpen,
+  FileText,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/src/ui/dialog";
+import { toast } from "@/src/hooks/use-toast";
+import { Column, DataTable } from "@/src/ui/data-table";
 
 type FileCategory = {
   id: string;
@@ -20,11 +41,6 @@ type FileCategoryTreeNode = FileCategory & {
   children: FileCategoryTreeNode[];
 };
 
-type CategoryOption = {
-  id: string;
-  label: string;
-};
-
 type CategoryFormPayload = {
   name: string;
   slug?: string;
@@ -32,81 +48,40 @@ type CategoryFormPayload = {
   parentId: string | null;
 };
 
-type CategoryFormProps = {
-  initial?: FileCategory | null;
-  parentOptions: CategoryOption[];
-  onSubmit: (payload: CategoryFormPayload) => void;
-  onCancel: () => void;
-  isSaving: boolean;
-};
-
-type CategoryRowProps = {
-  node: FileCategoryTreeNode;
-  depth: number;
-  onEdit: (cat: FileCategoryTreeNode) => void;
-  onDelete: (cat: FileCategoryTreeNode) => void;
-  deletingId: string | null;
-  isFetchingCategory: boolean;
-};
-
 // ─────────────────────────────────────────────────────────────
-// Small helpers
+// Category Form Component (Modal)
 // ─────────────────────────────────────────────────────────────
 
-function buildTree(categories: FileCategory[]): FileCategoryTreeNode[] {
-  const map = new Map<string, FileCategoryTreeNode>(
-    categories.map((c) => [c.id, { ...c, children: [] }]),
-  );
-  const roots: FileCategoryTreeNode[] = [];
-
-  for (const cat of map.values()) {
-    if (cat.parentId && map.has(cat.parentId)) {
-      const parent = map.get(cat.parentId);
-      if (parent) {
-        parent.children.push(cat);
-      } else {
-        roots.push(cat);
-      }
-    } else {
-      roots.push(cat);
-    }
-  }
-  return roots;
-}
-
-function flattenForSelect(
-  nodes: FileCategoryTreeNode[],
-  depth = 0,
-  excludeId: string | null = null,
-  out: CategoryOption[] = [],
-): CategoryOption[] {
-  for (const node of nodes) {
-    if (node.id !== excludeId) {
-      out.push({ id: node.id, label: `${"— ".repeat(depth)}${node.name}` });
-    }
-    flattenForSelect(node.children, depth + 1, excludeId, out);
-  }
-  return out;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Category form (create / edit)
-// ─────────────────────────────────────────────────────────────
-
-function CategoryForm({
+function CategoryFormModal({
+  open,
+  onOpenChange,
   initial,
   parentOptions,
   onSubmit,
-  onCancel,
   isSaving,
-}: CategoryFormProps) {
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initial?: FileCategory | null;
+  parentOptions: CategoryOption[];
+  onSubmit: (payload: CategoryFormPayload) => void;
+  isSaving: boolean;
+}) {
   const [name, setName] = useState(initial?.name ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [parentId, setParentId] = useState(initial?.parentId ?? "");
   const [error, setError] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    setName(initial?.name ?? "");
+    setSlug(initial?.slug ?? "");
+    setDescription(initial?.description ?? "");
+    setParentId(initial?.parentId ?? "");
+    setError("");
+  }, [initial]);
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -121,166 +96,135 @@ function CategoryForm({
       description: description.trim() || null,
       parentId: parentId || null,
     });
-  }
+  };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-lg border border-gray-200 bg-white p-4"
-    >
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Invoices"
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>
+            {initial ? "Edit Category" : "Create New Category"}
+          </DialogTitle>
+          <DialogDescription>
+            {initial
+              ? "Update the category details below."
+              : "Add a new category to organize your files."}
+          </DialogDescription>
+        </DialogHeader>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Slug</label>
-        <input
-          type="text"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="invoices"
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Invoices"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm outline-none transition-all focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-400/20"
+            />
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Parent category <span className="text-gray-400">(optional)</span>
-        </label>
-        <select
-          value={parentId}
-          onChange={(e) => setParentId(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="">— None (top level) —</option>
-          {parentOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Slug{" "}
+              <span className="text-slate-400 text-xs font-normal">
+                (optional)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="invoices"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm outline-none transition-all focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-400/20"
+            />
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Description <span className="text-gray-400">(optional)</span>
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={2}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Parent Category{" "}
+              <span className="text-slate-400 text-xs font-normal">
+                (optional)
+              </span>
+            </label>
+            <select
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm outline-none transition-all focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-400/20"
+            >
+              <option value="">— None (top level) —</option>
+              {parentOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Description{" "}
+              <span className="text-slate-400 text-xs font-normal">
+                (optional)
+              </span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Brief description of this category"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm outline-none transition-all focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-400/20 resize-none"
+            />
+          </div>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isSaving
-            ? "Saving..."
-            : initial
-              ? "Save changes"
-              : "Create category"}
-        </button>
-      </div>
-    </form>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2.5 border border-red-200">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-xl bg-slate-900 hover:bg-slate-800"
+            >
+              {isSaving
+                ? "Saving..."
+                : initial
+                  ? "Save Changes"
+                  : "Create Category"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // ─────────────────────────────────────────────────────────────
-// Tree row (recursive)
-// ─────────────────────────────────────────────────────────────
-
-function CategoryRow({
-  node,
-  depth,
-  onEdit,
-  onDelete,
-  deletingId,
-  isFetchingCategory,
-}: CategoryRowProps) {
-  // const [isFetchingCategory, setIsFetchingCategory] = useState(false);
-  return (
-    <>
-      <tr className="border-b border-gray-100 last:border-0">
-        <td
-          className="py-2 pl-2 pr-4 text-sm text-gray-800"
-          style={{ paddingLeft: `${depth * 20 + 8}px` }}
-        >
-          {depth > 0 && <span className="mr-1 text-gray-300">└</span>}
-          {node.name}
-        </td>
-        <td className="py-2 px-4 text-sm text-gray-500">{node.slug}</td>
-        <td className="py-2 px-4 text-sm text-gray-500">
-          {node._count?.files ?? 0}
-        </td>
-        <td className="py-2 px-4 text-sm text-gray-500">
-          {node._count?.children ?? 0}
-        </td>
-        <td className="py-2 px-4 text-right">
-          <button
-            onClick={() => onEdit(node)}
-            disabled={isFetchingCategory}
-            className="mr-3 text-sm font-medium text-blue-600 hover:underline disabled:opacity-50"
-          >
-            {isFetchingCategory ? "Loading..." : "Edit"}
-          </button>
-          <button
-            onClick={() => onDelete(node)}
-            disabled={deletingId === node.id}
-            className="text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
-          >
-            {deletingId === node.id ? "Deleting..." : "Delete"}
-          </button>
-        </td>
-      </tr>
-      {node.children.map((child) => (
-        <CategoryRow
-          key={child.id}
-          node={child}
-          depth={depth + 1}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          deletingId={deletingId}
-          isFetchingCategory={isFetchingCategory}
-        />
-      ))}
-    </>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Main component
+// Main Component
 // ─────────────────────────────────────────────────────────────
 
 export default function FileCategoryManager() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] =
-    useState<FileCategoryTreeNode | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<FileCategory | null>(
+    null,
+  );
   const [formError, setFormError] = useState("");
-  const [isFetchingCategory, setIsFetchingCategory] = useState(false);
 
+  // ── Queries ──
   const { data, isLoading, isError } = useQuery<FileCategory[]>({
     queryKey: ["fileCategories"],
     queryFn: async () => {
@@ -292,19 +236,20 @@ export default function FileCategoryManager() {
   const categories = data ?? [];
   const tree = useMemo(() => buildTree(categories), [categories]);
 
+  // ── Mutations ──
   const createMutation = useMutation({
     mutationFn: (payload: CategoryFormPayload) =>
       apiMutations.createFileCategory(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fileCategories"] });
-      setShowForm(false);
+      setFormOpen(false);
+      toast({
+        title: "Success",
+        description: "Category created successfully",
+      });
     },
     onError: (err: unknown) => {
-      if (err instanceof Error) {
-        setFormError(err.message);
-      } else {
-        setFormError("Something went wrong");
-      }
+      setFormError(err instanceof Error ? err.message : "Something went wrong");
     },
   });
 
@@ -319,175 +264,291 @@ export default function FileCategoryManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fileCategories"] });
       setEditingCategory(null);
+      setFormOpen(false);
+      toast({
+        title: "Success",
+        description: "Category updated successfully",
+      });
     },
     onError: (err: unknown) => {
-      if (err instanceof Error) {
-        setFormError(err.message);
-      } else {
-        setFormError("Something went wrong");
-      }
+      setFormError(err instanceof Error ? err.message : "Something went wrong");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiMutations.deleteFileCategory(id),
-    onMutate: (id: string) => setDeletingId(id),
-    onSettled: () => setDeletingId(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fileCategories"] });
+      toast({
+        title: "Success",
+        description: "Category deleted successfully",
+      });
     },
     onError: (err: unknown) => {
-      if (err instanceof Error) {
-        alert(err.message);
-      } else {
-        alert("Something went wrong");
-      }
+      const message =
+        err instanceof Error ? err.message : "Something went wrong";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
     },
   });
 
-  async function handleEdit(node: FileCategoryTreeNode) {
-    setIsFetchingCategory(true);
-    setFormError("");
+  // ── Handlers ──
+  const handleEdit = async (category: FileCategory) => {
     try {
-      const res = await fetchers.fileCategory(node.id);
-      setEditingCategory(res.data as FileCategoryTreeNode); // ✅ unwrap .data
-      setShowForm(false);
+      const res = await fetchers.fileCategory(category.id);
+      setEditingCategory(res.data as FileCategory);
+      setFormOpen(true);
     } catch (err) {
-      if (err instanceof Error) {
-        setFormError(err.message);
-      } else {
-        setFormError("Failed to load category details");
-      }
-    } finally {
-      setIsFetchingCategory(false);
+      const message =
+        err instanceof Error ? err.message : "Failed to load category";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
     }
-  }
+  };
 
-  function handleDelete(node: FileCategoryTreeNode) {
-    if (!confirm(`Delete "${node.name}"? This cannot be undone.`)) return;
-    deleteMutation.mutate(node.id);
-  }
+  const handleDelete = (category: FileCategory) => {
+    if (!confirm(`Delete "${category.name}"? This cannot be undone.`)) return;
+    deleteMutation.mutate(category.id);
+  };
 
-  function handleCreate(payload: CategoryFormPayload) {
+  const handleCreate = (payload: CategoryFormPayload) => {
     setFormError("");
     createMutation.mutate(payload);
-  }
+  };
 
-  function handleUpdate(payload: CategoryFormPayload) {
+  const handleUpdate = (payload: CategoryFormPayload) => {
     setFormError("");
     if (!editingCategory) return;
     updateMutation.mutate({ id: editingCategory.id, payload });
-  }
+  };
 
-  const parentOptionsForCreate = useMemo(() => flattenForSelect(tree), [tree]);
-  const parentOptionsForEdit = useMemo(
-    () =>
-      editingCategory ? flattenForSelect(tree, 0, editingCategory.id) : [],
-    [tree, editingCategory],
-  );
+  // ── DataTable Columns ──
+  const columns: Column<FileCategoryTreeNode>[] = [
+    {
+      key: "name",
+      header: "Category Name",
+
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <FolderOpen className="h-4 w-4 text-slate-400" />
+          <span className="font-medium text-slate-900">{row.name}</span>
+          {row.parentId && (
+            <Badge variant="outline" className="text-xs bg-slate-50">
+              Subcategory
+            </Badge>
+          )}
+        </div>
+      ),
+      filterable: true,
+      filterValue: (row) => row.name,
+    },
+    {
+      key: "slug",
+      header: "Slug",
+      cell: (row) => (
+        <code className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">
+          {row.slug}
+        </code>
+      ),
+      filterable: true,
+      filterValue: (row) => row.slug,
+    },
+    {
+      key: "description",
+      header: "Description",
+      cell: (row) => (
+        <span className="text-sm text-slate-500 line-clamp-1">
+          {row.description || "—"}
+        </span>
+      ),
+      filterable: true,
+      filterValue: (row) => row.description || "",
+    },
+    {
+      key: "files",
+      header: "Files",
+      cell: (row) => (
+        <Badge variant="secondary" className="gap-1">
+          <FileText className="h-3 w-3" />
+          {row._count?.files ?? 0}
+        </Badge>
+      ),
+    },
+    {
+      key: "children",
+      header: "Subcategories",
+      cell: (row) => (
+        <Badge variant="secondary" className="gap-1">
+          <FolderTree className="h-3 w-3" />
+          {row._count?.children ?? 0}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (row) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(row);
+            }}
+            className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+      hideable: false,
+    },
+  ];
+
+  // ── Flatten tree for table display ──
+  const flattenTree = (
+    nodes: FileCategoryTreeNode[],
+    depth = 0,
+  ): FileCategoryTreeNode[] => {
+    let result: FileCategoryTreeNode[] = [];
+    for (const node of nodes) {
+      // Add the current node with depth info
+      result.push({
+        ...node,
+        // Add a display name with indentation
+        name: `${"  ".repeat(depth)}${node.name}`,
+      });
+      // Recursively add children
+      result = result.concat(flattenTree(node.children, depth + 1));
+    }
+    return result;
+  };
+
+  const flatData = useMemo(() => flattenTree(tree), [tree]);
+
+  // ── Parent options ──
+  const parentOptions = useMemo(() => flattenForSelect(tree), [tree]);
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="w-full p-6">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">
-            File categories
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            File Categories
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500 mt-1">
             Organize uploaded files into categories and subcategories.
           </p>
         </div>
-        {!showForm && !editingCategory && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + New category
-          </button>
-        )}
+        <Button
+          onClick={() => {
+            setEditingCategory(null);
+            setFormOpen(true);
+          }}
+          className="gap-2 rounded-xl bg-slate-900 hover:bg-slate-800"
+        >
+          <Plus className="h-4 w-4" />
+          New Category
+        </Button>
       </div>
 
-      {showForm && (
-        <div className="mb-6">
-          {formError && (
-            <p className="mb-2 text-sm text-red-600">{formError}</p>
-          )}
-          <CategoryForm
-            parentOptions={parentOptionsForCreate}
-            onSubmit={handleCreate}
-            onCancel={() => {
-              setShowForm(false);
-              setFormError("");
-            }}
-            isSaving={createMutation.isPending}
-          />
-        </div>
-      )}
+      {/* DataTable */}
+      <DataTable
+        data={flatData}
+        columns={columns}
+        searchPlaceholder="Search categories..."
+        searchKeys={["name", "slug", "description"]}
+        pageSize={10}
+        pageSizeOptions={[10, 25, 50]}
+        emptyMessage={
+          isLoading
+            ? "Loading categories..."
+            : "No categories found. Create your first category above."
+        }
+      />
 
-      {editingCategory && (
-        <div className="mb-6">
-          {formError && (
-            <p className="mb-2 text-sm text-red-600">{formError}</p>
-          )}
-          <CategoryForm
-            initial={editingCategory}
-            parentOptions={parentOptionsForEdit}
-            onSubmit={handleUpdate}
-            onCancel={() => {
-              setEditingCategory(null);
-              setFormError("");
-            }}
-            isSaving={updateMutation.isPending}
-          />
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-lg border border-gray-200">
-        {isLoading ? (
-          <p className="p-6 text-sm text-gray-500">Loading categories...</p>
-        ) : isError ? (
-          <p className="p-6 text-sm text-red-600">Failed to load categories.</p>
-        ) : tree.length === 0 ? (
-          <p className="p-6 text-sm text-gray-500">
-            No categories yet — create your first one above.
-          </p>
-        ) : (
-          <table className="w-full text-left">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 pl-2 pr-4 text-xs font-semibold uppercase text-gray-500">
-                  Name
-                </th>
-                <th className="py-2 px-4 text-xs font-semibold uppercase text-gray-500">
-                  Slug
-                </th>
-                <th className="py-2 px-4 text-xs font-semibold uppercase text-gray-500">
-                  Files
-                </th>
-                <th className="py-2 px-4 text-xs font-semibold uppercase text-gray-500">
-                  Subcategories
-                </th>
-                <th className="py-2 px-4 text-xs font-semibold uppercase text-gray-500 text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {tree.map((node: any) => (
-                <CategoryRow
-                  key={node.id}
-                  node={node}
-                  depth={0}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  deletingId={deletingId}
-                  isFetchingCategory={false}
-                />
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Category Form Modal */}
+      <CategoryFormModal
+        key={editingCategory?.id ?? "new"}
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) {
+            setEditingCategory(null);
+            setFormError("");
+          }
+        }}
+        initial={editingCategory}
+        parentOptions={parentOptions}
+        onSubmit={editingCategory ? handleUpdate : handleCreate}
+        isSaving={createMutation.isPending || updateMutation.isPending}
+      />
     </div>
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Helper Functions
+// ─────────────────────────────────────────────────────────────
+
+function buildTree(categories: FileCategory[]): FileCategoryTreeNode[] {
+  const map = new Map<string, FileCategoryTreeNode>(
+    categories.map((c) => [c.id, { ...c, children: [] }]),
+  );
+  const roots: FileCategoryTreeNode[] = [];
+
+  for (const cat of map.values()) {
+    // If it has a parent and that parent exists in the map
+    if (cat.parentId && map.has(cat.parentId)) {
+      const parent = map.get(cat.parentId);
+      if (parent) {
+        parent.children.push(cat);
+      }
+      // Don't push to roots - it's a child
+    } else {
+      // No parent or parent doesn't exist in the map -> it's a root
+      roots.push(cat);
+    }
+  }
+
+  return roots;
+}
+
+type CategoryOption = {
+  id: string;
+  label: string;
+};
+
+function flattenForSelect(
+  nodes: FileCategoryTreeNode[],
+  depth = 0,
+  excludeId: string | null = null,
+  out: CategoryOption[] = [],
+): CategoryOption[] {
+  for (const node of nodes) {
+    if (node.id !== excludeId) {
+      out.push({ id: node.id, label: `${"— ".repeat(depth)}${node.name}` });
+    }
+    flattenForSelect(node.children, depth + 1, excludeId, out);
+  }
+  return out;
 }
