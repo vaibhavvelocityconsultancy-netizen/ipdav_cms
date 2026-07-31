@@ -9,7 +9,7 @@ export default function ShareModal({
 }: {
   fileIds: string[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -71,7 +71,11 @@ export default function ShareModal({
           </p>
           <button
             onClick={() => {
-              onSuccess();
+              if (onSuccess) {
+                onSuccess();
+              } else {
+                onClose();
+              }
             }}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
           >
