@@ -156,8 +156,6 @@ export async function shareFiles(fileIds, { email, message, password }) {
   return { share };
 }
 
-
-
 // ─── Public access (no auth — token/password gated) ─────────
 
 export async function verifySharePassword(token, password) {

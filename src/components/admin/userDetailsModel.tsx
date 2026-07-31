@@ -1,6 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/src/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/ui/tabs";
 
 interface ShareRecord {
   shareId: string;
@@ -10,6 +11,19 @@ interface ShareRecord {
   zipDownloadedAt: string | null;
   fileCount: number;
   fileTitles: string[];
+}
+
+interface UploadedFile {
+  id: string;
+  title: string;
+  originalName: string;
+  category: {
+    name: string;
+  } | null;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
 }
 
 interface UserDetails {
@@ -29,6 +43,7 @@ interface UserDetails {
     trialEndsAt: string | null;
   } | null;
   shares: ShareRecord[];
+  uploadedFiles: UploadedFile[];
 }
 
 function statusVariant(status: string) {
@@ -43,6 +58,11 @@ function statusVariant(status: string) {
     default:
       return "outline";
   }
+}
+
+function formatFileSize(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(2)} MB`;
 }
 
 export default function UserDetailsModal({
@@ -91,7 +111,9 @@ export default function UserDetailsModal({
 
             {/* ── Plan Details ── */}
             <section className="mb-6">
-              <h3 className="mb-2 text-sm font-medium text-slate-700">Plan Details</h3>
+              <h3 className="mb-2 text-sm font-medium text-slate-700">
+                Plan Details
+              </h3>
               {data.plan ? (
                 <div className="rounded-lg border border-slate-200 p-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -109,10 +131,14 @@ export default function UserDetailsModal({
                     <p className="font-medium">{data.plan.billingCycle}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-400">Current Period Ends</p>
+                    <p className="text-xs text-slate-400">
+                      Current Period Ends
+                    </p>
                     <p className="font-medium">
                       {data.plan.currentPeriodEnd
-                        ? new Date(data.plan.currentPeriodEnd).toLocaleDateString()
+                        ? new Date(
+                            data.plan.currentPeriodEnd,
+                          ).toLocaleDateString()
                         : "—"}
                     </p>
                   </div>
@@ -130,51 +156,139 @@ export default function UserDetailsModal({
               )}
             </section>
 
-            {/* ── Files They Shared ── */}
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-slate-700">
-                Files Shared ({data.shares.length})
-              </h3>
-              {data.shares.length === 0 ? (
-                <p className="text-sm text-slate-500">No files shared yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {data.shares.map((share) => (
-                    <div
-                      key={share.shareId}
-                      className="rounded-lg border border-slate-200 p-3 text-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">
-                          {share.fileCount > 1
-                            ? `${share.fileTitles[0]} +${share.fileCount - 1} more`
-                            : share.fileTitles[0]}
-                        </p>
-                        <span className="text-xs text-slate-400">
-                          {new Date(share.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Shared with:</span>
-                        <span className="text-sm font-medium text-slate-800">
-                          {share.sharedWith}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        <Badge variant={share.viewedAt ? "default" : "outline"}>
-                          {share.viewedAt ? "Viewed" : "Not viewed"}
-                        </Badge>
-                        {share.fileCount > 1 && (
-                          <Badge variant={share.zipDownloadedAt ? "default" : "outline"}>
-                            {share.zipDownloadedAt ? "Zip downloaded" : "Zip not downloaded"}
-                          </Badge>
-                        )}
-                      </div>
+            {/* ── Tabs ── */}
+            <Tabs defaultValue="shared" className="w-full">
+              <TabsList className="w-full justify-start border-b border-slate-200 rounded-none bg-transparent p-0 h-auto">
+                <TabsTrigger
+                  value="shared"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 data-[state=active]:shadow-none text-slate-500 hover:text-slate-700 rounded-none bg-transparent data-[state=active]:bg-transparent"
+                >
+                  Files Shared ({data.shares.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="uploaded"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 data-[state=active]:shadow-none text-slate-500 hover:text-slate-700 rounded-none bg-transparent data-[state=active]:bg-transparent"
+                >
+                  Files Uploaded ({data.uploadedFiles?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* ── Files Shared Tab ── */}
+              <TabsContent value="shared" className="mt-4">
+                <section>
+                  <h3 className="mb-2 text-sm font-medium text-slate-700">
+                    Files Shared ({data.shares.length})
+                  </h3>
+                  {data.shares.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No files shared yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {data.shares.map((share) => (
+                        <div
+                          key={share.shareId}
+                          className="rounded-lg border border-slate-200 p-3 text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium">
+                              {share.fileCount > 1
+                                ? `${share.fileTitles[0]} +${share.fileCount - 1} more`
+                                : share.fileTitles[0]}
+                            </p>
+                            <span className="text-xs text-slate-400">
+                              {new Date(share.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-xs text-slate-400">
+                              Shared with:
+                            </span>
+                            <span className="text-sm font-medium text-slate-800">
+                              {share.sharedWith}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            <Badge
+                              variant={share.viewedAt ? "default" : "outline"}
+                            >
+                              {share.viewedAt ? "Viewed" : "Not viewed"}
+                            </Badge>
+                            {share.fileCount > 1 && (
+                              <Badge
+                                variant={
+                                  share.zipDownloadedAt ? "default" : "outline"
+                                }
+                              >
+                                {share.zipDownloadedAt
+                                  ? "Zip downloaded"
+                                  : "Zip not downloaded"}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </section>
+                  )}
+                </section>
+              </TabsContent>
+
+              {/* ── Files Uploaded Tab ── */}
+              <TabsContent value="uploaded" className="mt-4">
+                <section>
+                  <h3 className="mb-2 text-sm font-medium text-slate-700">
+                    Files Uploaded ({data.uploadedFiles?.length || 0})
+                  </h3>
+                  {!data.uploadedFiles || data.uploadedFiles.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No files uploaded yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {data.uploadedFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          className="rounded-lg border border-slate-200 p-3 text-sm"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-900">
+                                {file.title}
+                              </p>
+                              <p className="text-xs text-slate-400 mt-0.5">
+                                {file.originalName}
+                              </p>
+                            </div>
+                            {file.category && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-2 shrink-0"
+                              >
+                                {file.category.name}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-2 flex items-center gap-3 flex-wrap">
+                            <span className="text-xs text-slate-400">
+                              {file.mimeType}
+                            </span>
+                            <span className="text-xs text-slate-300">|</span>
+                            <span className="text-xs text-slate-600">
+                              {formatFileSize(file.size)}
+                            </span>
+                            <span className="text-xs text-slate-300">|</span>
+                            <span className="text-xs text-slate-400">
+                              Uploaded:{" "}
+                              {new Date(file.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </div>
