@@ -245,47 +245,67 @@ export async function getShareMeta(token) {
 // ─── Shares list per file (admin/subscriber view) ───────────
 
 export async function getFileShares(fileId) {
-  const session = await requireActiveSubscription();
-  const tenantId = session.user.tenantId;
+  try {
+    const session = await requireActiveSubscription();
+    const tenantId = session.user.tenantId;
 
-  const file = await prisma.uploadedFile.findFirst({
-    where: { id: fileId, tenantId },
-  });
-  if (!file) throw new ApiError(404, "File not found");
+    const file = await prisma.uploadedFile.findFirst({
+      where: {
+        id: String(fileId),
+        tenantId,
+      },
+    });
 
-  const items = await prisma.fileShareFile.findMany({
-    where: {
-      fileId,
-      shareLink: { createdBy: session.user.id },
-    },
-    orderBy: { shareLink: { createdAt: "desc" } },
-    include: {
-      shareLink: {
-        select: {
-          id: true,
-          sharedWith: true,
-          message: true,
-          viewedAt: true,
-          zipDownloadedAt: true,
-          createdAt: true,
-          _count: { select: { files: true } },
+    if (!file) {
+      throw new ApiError(404, "File not found");
+    }
+
+    const items = await prisma.fileShareFile.findMany({
+      where: {
+        fileId: String(fileId),
+        shareLink: {
+          createdBy: Number(session.user.id),
         },
       },
-    },
-  });
+      orderBy: {
+        shareLink: {
+          createdAt: "desc",
+        },
+      },
+      include: {
+        shareLink: {
+          select: {
+            id: true,
+            sharedWith: true,
+            message: true,
+            viewedAt: true,
+            zipDownloadedAt: true,
+            createdAt: true,
+            _count: {
+              select: {
+                files: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-  return items.map((item) => ({
-    shareId: item.shareLink.id,
-    sharedWith: item.shareLink.sharedWith,
-    message: item.shareLink.message,
-    viewedAt: item.shareLink.viewedAt,
-    zipDownloadedAt: item.shareLink.zipDownloadedAt,
-    downloadedAt: item.downloadedAt,
-    createdAt: item.shareLink.createdAt,
-    otherFilesCount: item.shareLink._count.files - 1,
-  }));
+    return items.map((item) => ({
+      shareId: item.shareLink.id,
+      sharedWith: item.shareLink.sharedWith,
+      message: item.shareLink.message,
+      viewedAt: item.shareLink.viewedAt,
+      zipDownloadedAt: item.shareLink.zipDownloadedAt,
+      downloadedAt: item.downloadedAt,
+      createdAt: item.shareLink.createdAt,
+      otherFilesCount: item.shareLink._count.files - 1,
+    }));
+  } catch (error) {
+    console.error("getFileShares ERROR:", error);
+    throw error;
+  }
 }
-
 // ─── Admin CRUD ──────────────────────────────────────────────
 
 export async function getAllFilesAdmin() {
