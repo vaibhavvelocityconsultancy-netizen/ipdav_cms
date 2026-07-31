@@ -106,12 +106,24 @@ export async function capturePayment(orderId) {
   try {
     const { result: capture } = await client.execute(request);
 
+    // ✅ Check PayPal's own status value here
     if (capture.status !== "COMPLETED") {
       await updatePaymentStatus(orderId, "FAILED");
       throw new ApiError(400, "Payment not completed");
     }
 
-    // existing success code...
+    // ✅ Pull the real capture ID from PayPal's response
+    const captureId =
+      capture.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
+
+    // ✅ Save using YOUR enum value
+    await prisma.payment.updateMany({
+      where: { paypalOrderId: orderId },
+      data: {
+        status: "SUCCESS",       // your Prisma enum value
+        paypalCaptureId: captureId,
+      },
+    });
 
     return capture;
   } catch (err) {
@@ -125,7 +137,6 @@ export async function capturePayment(orderId) {
     );
   }
 }
-
 async function sendPaymentSuccessEmail(payment) {
   const paymentType = payment.planId ? "PLAN" : "PRODUCT";
   const triggerEvent = TRIGGER_BY_TYPE[paymentType];

@@ -100,8 +100,8 @@ function CategoryFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-<DialogContent className="w-full max-w-2xl">
-          <DialogHeader>
+      <DialogContent className="w-full max-w-2xl">
+        <DialogHeader>
           <DialogTitle>
             {initial ? "Edit Category" : "Create New Category"}
           </DialogTitle>
