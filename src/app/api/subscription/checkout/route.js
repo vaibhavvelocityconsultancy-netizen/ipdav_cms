@@ -1,5 +1,6 @@
 import { createSubscriptionCheckout } from "@/src/app/lib/services/common_urls/payment.service";
-import { getPlanById } from "@/src/app/lib/services/course/subscription.service";
+import { getPlanById } from "@/src/app/lib/services/subscription/subscription.service";
+// import { getPlanById } from "@/src/app/lib/services/course/subscription.service";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 import { requireAuth } from "@/src/app/lib/withPermission";

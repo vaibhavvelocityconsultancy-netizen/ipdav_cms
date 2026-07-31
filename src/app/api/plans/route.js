@@ -1,7 +1,8 @@
-import {
-  createPlan,
-  getAllPlans,
-} from "../../lib/services/course/subscription.service";
+// import {
+//   createPlan,
+//   getAllPlans,
+// } from "../../lib/services/course/subscription.service";
+import { getAllPlans, createPlan } from "../../lib/services/subscription/subscription.service";
 import { ApiError } from "../../lib/utils/ApiError";
 import { ApiResponse } from "../../lib/utils/ApiResponse";
 import { asyncHandler } from "../../lib/utils/asyncHandler";

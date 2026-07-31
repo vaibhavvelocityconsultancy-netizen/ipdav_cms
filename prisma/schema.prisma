@@ -31,7 +31,7 @@ enum SubscriptionStatus {
   PAST_DUE // ⬅ new: renewal payment failed, grace period
   EXPIRED
   CANCELED
-  PENDING
+  
 }
 
 enum rolepermission_role {
