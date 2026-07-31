@@ -25,29 +25,30 @@ export default function FileCard({
   const [sharesOpen, setSharesOpen] = useState(false);
 
   function handleCardClick() {
-    if (selectable) onToggleSelect?.();
+    if (selectable && file.isShareable) onToggleSelect?.();
   }
 
   return (
     <div
       onClick={handleCardClick}
       className={`relative rounded-xl border bg-white p-4 shadow-sm transition-colors ${
-        selectable ? "cursor-pointer" : ""
+        selectable && file.isShareable ? "cursor-pointer" : ""
       } ${
         selected ? "border-slate-900 ring-1 ring-slate-900" : "border-slate-200"
-      }`}
+      } ${selectable && !file.isShareable ? "opacity-60" : ""}`}
     >
       {selectable && (
         <div className="absolute right-3 top-3 z-10">
           <input
             type="checkbox"
             checked={selected}
+            disabled={!file.isShareable}
             onChange={(e) => {
               e.stopPropagation();
               onToggleSelect?.();
             }}
             onClick={(e) => e.stopPropagation()}
-            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
           />
         </div>
       )}
@@ -68,7 +69,9 @@ export default function FileCard({
       ) : null}
 
       {file.description ? (
-        <p className="mt-2 line-clamp-2 text-sm text-slate-500">{file.description}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-slate-500">
+          {file.description}
+        </p>
       ) : null}
 
       {/* {file.tags?.length > 0 && (
@@ -83,10 +86,11 @@ export default function FileCard({
           ))}
         </div>
       )} */}
-      
 
       {!file.isShareable && (
-        <p className="mt-2 text-[11px] font-medium text-amber-600">Not shareable</p>
+        <p className="mt-2 text-[11px] font-medium text-amber-600">
+          Not shareable
+        </p>
       )}
 
       <div className="mt-4 flex items-center justify-between gap-2">
@@ -108,7 +112,7 @@ export default function FileCard({
           >
             <Pencil className="mr-1 inline h-3 w-3" />
           </Link>
-        
+
           <a
             href={file.url}
             target="_blank"
@@ -118,12 +122,12 @@ export default function FileCard({
           >
             <Eye className="mr-1 inline h-3 w-3" />
           </a>
-        <button
-          onClick={onDelete}
-          className="text-sm text-slate-500 hover:text-slate-700"
-        >
-          <Trash className="mr-1 inline h-3 w-3" />
-        </button>
+          <button
+            onClick={onDelete}
+            className="text-sm text-slate-500 hover:text-slate-700"
+          >
+            <Trash className="mr-1 inline h-3 w-3" />
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

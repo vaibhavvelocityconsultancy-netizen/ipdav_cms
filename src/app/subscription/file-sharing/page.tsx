@@ -113,18 +113,27 @@ export default function FilesPage() {
   const allSelected =
     visibleFiles.length > 0 && selectedIds.length === visibleFiles.length;
 
-  function toggleSelect(fileId: string) {
-    setSelectedIds((prev) =>
-      prev.includes(fileId)
-        ? prev.filter((id) => id !== fileId)
-        : [...prev, fileId],
-    );
+function toggleSelect(fileId: string) {
+  const file = visibleFiles.find((f: any) => f.id === fileId);
+
+  if (file && !file.isShareable) {
+    alert(`"${file.title}" is not shareable and can't be selected.`);
+    return;
   }
 
-  function toggleSelectAll() {
-    setSelectedIds(allSelected ? [] : visibleFiles.map((f: any) => f.id));
-  }
-
+  setSelectedIds((prev) =>
+    prev.includes(fileId)
+      ? prev.filter((id) => id !== fileId)
+      : [...prev, fileId],
+  );
+}
+function toggleSelectAll() {
+  setSelectedIds(
+    allSelected
+      ? []
+      : visibleFiles.filter((f: any) => f.isShareable).map((f: any) => f.id),
+  );
+}
   function exitSelectMode() {
     setSelectMode(false);
     setSelectedIds([]);
