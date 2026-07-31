@@ -218,7 +218,13 @@ export async function capturePayment(orderId) {
       throw new ApiError(400, "Payment not completed");
     }
 
-    // existing success code...
+    const captureId =
+      capture.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
+
+    await prisma.payment.updateMany({
+      where: { paypalOrderId: orderId },
+      data: { status: "SUCCESS", paypalCaptureId: captureId },
+    });
 
     return capture;
   } catch (err) {
