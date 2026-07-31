@@ -1,12 +1,24 @@
 // src/lib/apiMutations.ts
 
-export async function mutationRequest(url: string, method: string, body?: any) {
+export async function mutationRequest(
+  url: string,
+  method: string,
+  body?: any
+) {
+  const isFormData = body instanceof FormData;
+
   const res = await fetch(url, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: isFormData
+      ? undefined
+      : {
+          "Content-Type": "application/json",
+        },
+    body: body
+      ? isFormData
+        ? body
+        : JSON.stringify(body)
+      : undefined,
   });
 
   const text = await res.text();
@@ -31,6 +43,7 @@ export async function mutationRequest(url: string, method: string, body?: any) {
 
   return data;
 }
+
 
 export const apiMutations = {
   create: (data: any) => mutationRequest("/api/courses", "POST", data),

@@ -8,6 +8,31 @@ import { ApiError } from "../utils/ApiError";
 import cloudinary from "@/src/lib/cloudinary";
 import { requireActiveSubscription } from "../utils/subscription-access";
 
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/svg+xml",
+  "image/gif",
+
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  "application/zip",
+
+  "video/mp4",
+  "video/webm",
+
+  "audio/mpeg",
+  "audio/wav",
+];
+
 function generateSharePassword() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -18,12 +43,22 @@ function generateSharePassword() {
 }
 
 function getResourceType(mimeType) {
-  if (!mimeType) return "raw";
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("video/")) return "video";
-  return "raw"; // pdf, docx, zip, etc.
-}
+  if (mimeType.startsWith("video/") || mimeType.startsWith("audio/")) {
+    return "video";
+  }
 
+  if (
+    mimeType === "application/pdf" ||
+    mimeType === "application/msword" ||
+    mimeType.includes("officedocument") ||
+    mimeType === "application/zip" ||
+    mimeType === "text/plain"
+  ) {
+    return "raw";
+  }
+
+  return "image";
+}
 // ─── Create (multi-file) ────────────────────────────────────
 
 export async function shareFiles(fileIds, { email, message, password }) {
@@ -46,7 +81,10 @@ export async function shareFiles(fileIds, { email, message, password }) {
   if (files.length !== uniqueFileIds.length) {
     const foundIds = new Set(files.map((f) => f.id));
     const missing = uniqueFileIds.filter((id) => !foundIds.has(id));
-    throw new ApiError(404, `File(s) not found or not accessible: ${missing.join(", ")}`);
+    throw new ApiError(
+      404,
+      `File(s) not found or not accessible: ${missing.join(", ")}`,
+    );
   }
 
   // 🔧 NEW — block sharing files marked non-shareable
@@ -139,7 +177,9 @@ export async function markFileDownloaded(token, fileId) {
   if (!share) throw new ApiError(404, "Invalid link");
 
   const item = await prisma.fileShareFile.findUnique({
-    where: { shareLinkId_fileId: { shareLinkId: share.id, fileId: String(fileId) } },
+    where: {
+      shareLinkId_fileId: { shareLinkId: share.id, fileId: String(fileId) },
+    },
   });
   if (!item) throw new ApiError(404, "File not part of this share");
 
@@ -163,7 +203,13 @@ export async function getShareMeta(token) {
   const share = await prisma.fileShareLink.findUnique({
     where: { token },
     include: {
-      files: { include: { file: { select: { title: true, category: { select: { name: true } } } } } },
+      files: {
+        include: {
+          file: {
+            select: { title: true, category: { select: { name: true } } },
+          },
+        },
+      },
     },
   });
   if (!share) throw new ApiError(404, "Invalid link");
@@ -241,7 +287,7 @@ export async function getAllFilesAdmin() {
 // file.service.js
 export async function getFileByIdAdmin(fileId) {
   // await requirePermission("subscriber_upload_files_info");
-  const session = await requireAuth();  
+  const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
   const file = await prisma.uploadedFile.findFirst({
@@ -259,7 +305,7 @@ export async function getFileByIdAdmin(fileId) {
 
 // 🔧 NEW — edit file metadata (title, descriptions, category, shareability)
 // Does NOT replace the uploaded file itself — that's a separate re-upload action
-export async function updateFileAdmin(fileId, data) {
+export async function updateFileAdmin(fileId, data, uploadedFile) {
   // await requirePermission("subscriber_upload_files_info");
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
@@ -277,23 +323,85 @@ export async function updateFileAdmin(fileId, data) {
     const category = await prisma.fileCategory.findUnique({
       where: { id: data.categoryId, tenantId },
     });
-    if (!category) throw new ApiError(400, "Category not found for this tenant");
+    if (!category)
+      throw new ApiError(400, "Category not found for this tenant");
+  }
+
+  // Replace uploaded file if a new one is selected
+  if (uploadedFile && typeof uploadedFile !== "string") {
+    if (!ALLOWED_TYPES.includes(uploadedFile.type)) {
+      throw new ApiError(400, `Unsupported file type: ${uploadedFile.type}`);
+    }
+
+    const bytes = await uploadedFile.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            folder: `subscriber-files/tenant-${tenantId}`,
+            resource_type: getResourceType(uploadedFile.type),
+            access_mode: "public",
+            use_filename: true,
+            unique_filename: true,
+            filename_override: uploadedFile.name,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          },
+        )
+        .end(buffer);
+    });
+
+    // Delete old file after successful upload
+    if (existing.fileName) {
+      try {
+        await cloudinary.uploader.destroy(existing.fileName, {
+          resource_type: getResourceType(existing.mimeType),
+        });
+      } catch (error) {
+        console.error("Cloudinary delete error:", error);
+      }
+    }
+
+    // Add the new file details into the update payload
+    data.fileName = uploadResult.public_id;
+    data.originalName = uploadedFile.name;
+    data.url = uploadResult.secure_url;
+    data.mimeType = uploadedFile.type;
+    data.size = uploadedFile.size;
   }
 
   return prisma.uploadedFile.update({
     where: { id: fileId, tenantId },
     data: {
       ...(data.title !== undefined && { title: data.title.trim() }),
-      ...(data.shortDesc !== undefined && { shortDesc: data.shortDesc?.trim() || null }),
-      ...(data.description !== undefined && { description: data.description?.trim() || null }),
-      ...(data.isShareable !== undefined && { isShareable: !!data.isShareable }),
-      ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
-      ...(data.tags !== undefined && { tags: data.tags?.trim() || null }), // ← NEW
+      ...(data.shortDesc !== undefined && {
+        shortDesc: data.shortDesc?.trim() || null,
+      }),
+      ...(data.description !== undefined && {
+        description: data.description?.trim() || null,
+      }),
+      ...(data.isShareable !== undefined && {
+        isShareable: !!data.isShareable,
+      }),
+      ...(data.categoryId !== undefined && {
+        categoryId: data.categoryId || null,
+      }),
+      ...(data.tags !== undefined && { tags: data.tags?.trim() || null }),
+
+      ...(data.fileName && { fileName: data.fileName }),
+      ...(data.originalName && { originalName: data.originalName }),
+      ...(data.url && { url: data.url }),
+      ...(data.mimeType && { mimeType: data.mimeType }),
+      ...(data.size && { size: data.size }),
     },
+
     include: { category: true },
   });
 }
-
 
 export async function deleteFileAdmin(fileId) {
   const session = await requireAuth();

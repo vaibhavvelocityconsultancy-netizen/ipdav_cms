@@ -23,7 +23,10 @@ export default function EditFilePage() {
   const [description, setDescription] = useState("");
   const [isShareable, setIsShareable] = useState(true);
   const [tags, setTags] = useState(""); // ← plain string
+  const [file, setFile] = useState(null);
+  const [currentFile, setCurrentFile] = useState<any>(null);
   const [categories, setCategories] = useState<FileCategoryOption[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +42,7 @@ export default function EditFilePage() {
         ]);
 
         const file = fileRes.data;
+        setCurrentFile(file);
         setTitle(file.title ?? "");
         setCategoryId(file.categoryId ?? "");
         setShortDesc(file.shortDesc ?? "");
@@ -66,16 +70,27 @@ export default function EditFilePage() {
 
     setSaving(true);
     try {
-      await apiMutations.updateFile(params.id, {
-        title: title.trim(),
-        shortDesc: shortDesc.trim() || null,
-        description: description.trim() || null,
-        isShareable,
-        categoryId: categoryId || null,
-        tags: tags.trim() || null, // ← plain string
+      const formData = new FormData();
+
+      formData.append("title", title.trim());
+      formData.append("categoryId", categoryId || "");
+      formData.append("shortDesc", shortDesc.trim());
+      formData.append("description", description.trim());
+      formData.append("tags", tags.trim());
+      formData.append("isShareable", String(isShareable));
+
+      if (file) {
+        formData.append("file", file);
+      }
+
+      await apiMutations.updateFile(params.id, formData);
+
+      queryClient.invalidateQueries({
+        queryKey: ["shared-files"],
       });
-      queryClient.invalidateQueries({ queryKey: ["shared-files"] }); // ✅ instance method
+
       router.push("/subscription/file-sharing");
+
       toast({
         title: "Success",
         description: "File updated successfully",
@@ -101,6 +116,41 @@ export default function EditFilePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl p-6">
+          <div className="mb-4 rounded-lg border border-slate-200 p-3">
+            <p className="text-sm font-medium text-slate-700">Current File</p>
+
+            {currentFile && (
+              <>
+                <a
+                  href={currentFile.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 underline"
+                >
+                  {currentFile.originalName}
+                </a>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  {(currentFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Replace File
+            </label>
+
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+
+            <p className="text-xs text-slate-500">
+              Leave empty to keep the existing file.
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700">
               Title

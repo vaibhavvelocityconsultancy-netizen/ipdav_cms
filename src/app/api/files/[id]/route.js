@@ -13,10 +13,26 @@ export const GET = asyncHandler(async (req, { params }) => {
 
 export const PUT = asyncHandler(async (req, { params }) => {
   const { id } = await params;
-  const body = await req.json();
 
-  const file = await updateFileAdmin(id, body);
-  return Response.json(new ApiResponse(200, file, "File updated successfully"));
+  const formData = await req.formData();
+
+  const uploadedFile = formData.get("file");
+
+  const data = {
+    title: formData.get("title")?.toString().trim(),
+    categoryId: formData.get("categoryId")?.toString().trim() || null,
+    shortDesc: formData.get("shortDesc")?.toString().trim() || null,
+    description: formData.get("description")?.toString().trim() || null,
+    tags: formData.get("tags")?.toString().trim() || null,
+    isShareable:
+      formData.get("isShareable")?.toString() === "true",
+  };
+
+  const file = await updateFileAdmin(id, data, uploadedFile);
+
+  return Response.json(
+    new ApiResponse(200, file, "File updated successfully")
+  );
 });
 
 export const DELETE = asyncHandler(async (req, { params }) => {
