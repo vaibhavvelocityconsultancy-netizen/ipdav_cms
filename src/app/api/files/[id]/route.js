@@ -3,7 +3,7 @@ import { requireAuth } from "@/src/app/lib/withPermission";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
-import { getFileByIdAdmin, getFileShares, updateFileAdmin } from "@/src/app/lib/file_sharing/file-sharing.service";
+import { deleteFileAdmin, getFileByIdAdmin, getFileShares, updateFileAdmin } from "@/src/app/lib/file_sharing/file-sharing.service";
 
 export const GET = asyncHandler(async (req, { params }) => {
   const { id } = await params;

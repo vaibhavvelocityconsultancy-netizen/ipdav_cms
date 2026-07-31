@@ -8,6 +8,7 @@ import ShareModal from "@/src/components/subscription/file-sharing/ShareModal";
 import { TrialExpiryPopup } from "@/src/components/subscription/TrialExpiryPopup";
 import { useSubscription } from "@/src/hooks/use-subscription";
 import { fetchers } from "@/src/lib/fetchers";
+import { apiMutations } from "@/src/lib/apimutation";
 
 const ALL_TAB = "__all__";
 const UNCATEGORIZED_TAB = "__uncategorized__";
@@ -21,6 +22,22 @@ export default function FilesPage() {
   const queryClient = useQueryClient();
 
   const { access, isLoading: subscriptionLoading } = useSubscription();
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // const queryClient = useQueryClient();
+  async function handleDelete(fileId: string) {
+    if (!confirm("Delete this file? This cannot be undone.")) return;
+    setDeletingId(fileId);
+    try {
+      await apiMutations.deleteFile(fileId);
+      queryClient.invalidateQueries({ queryKey: ["shared-files"] });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete file");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const hasAccess = useMemo(() => {
     if (!access) return false;
@@ -73,7 +90,13 @@ export default function FilesPage() {
       { id: ALL_TAB, label: "All", count: files.length },
       ...categoryTabs,
       ...(uncategorizedCount > 0
-        ? [{ id: UNCATEGORIZED_TAB, label: "Uncategorized", count: uncategorizedCount }]
+        ? [
+            {
+              id: UNCATEGORIZED_TAB,
+              label: "Uncategorized",
+              count: uncategorizedCount,
+            },
+          ]
         : []),
     ];
   }, [files, categories]);
@@ -82,7 +105,8 @@ export default function FilesPage() {
   const visibleFiles = useMemo(() => {
     if (!files) return [];
     if (activeTab === ALL_TAB) return files;
-    if (activeTab === UNCATEGORIZED_TAB) return files.filter((f: any) => !f.categoryId);
+    if (activeTab === UNCATEGORIZED_TAB)
+      return files.filter((f: any) => !f.categoryId);
     return files.filter((f: any) => f.categoryId === activeTab);
   }, [files, activeTab]);
 
@@ -91,7 +115,9 @@ export default function FilesPage() {
 
   function toggleSelect(fileId: string) {
     setSelectedIds((prev) =>
-      prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]
+      prev.includes(fileId)
+        ? prev.filter((id) => id !== fileId)
+        : [...prev, fileId],
     );
   }
 
@@ -112,7 +138,9 @@ export default function FilesPage() {
     <div className="p-6 pb-24">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Shared Files</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Shared Files
+          </h1>
           <p className="text-sm text-slate-500">
             Upload and manage files shared with your workspace.
           </p>
@@ -196,7 +224,9 @@ export default function FilesPage() {
             <FileIcon />
           </div>
           <p className="text-sm font-medium text-slate-700">
-            {activeTab === ALL_TAB ? "No files uploaded yet" : "No files in this category"}
+            {activeTab === ALL_TAB
+              ? "No files uploaded yet"
+              : "No files in this category"}
           </p>
           <p className="mt-1 text-sm text-slate-500">
             {activeTab === ALL_TAB
@@ -219,6 +249,8 @@ export default function FilesPage() {
             <FileCard
               key={file.id}
               file={file}
+              onDelete={() => handleDelete(file.id)}
+
               selectable={selectMode}
               selected={selectedIds.includes(file.id)}
               onToggleSelect={() => toggleSelect(file.id)}
@@ -270,7 +302,14 @@ export default function FilesPage() {
 
 function CheckSquareIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M8 12l3 3 5-5" />
     </svg>
@@ -279,7 +318,14 @@ function CheckSquareIcon() {
 
 function PlusIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M12 5v14M5 12h14" />
     </svg>
   );
@@ -287,7 +333,15 @@ function PlusIcon() {
 
 function InfoIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="shrink-0"
+    >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 16v-4M12 8h.01" />
     </svg>
@@ -296,7 +350,15 @@ function InfoIcon() {
 
 function FileIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-400">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="text-slate-400"
+    >
       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
       <path d="M14 2v6h6" />
     </svg>

@@ -17,6 +17,13 @@ function generateSharePassword() {
   return `SHR-${code}`;
 }
 
+function getResourceType(mimeType) {
+  if (!mimeType) return "raw";
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  return "raw"; // pdf, docx, zip, etc.
+}
+
 // ─── Create (multi-file) ────────────────────────────────────
 
 export async function shareFiles(fileIds, { email, message, password }) {
@@ -286,15 +293,22 @@ export async function updateFileAdmin(fileId, data) {
     include: { category: true },
   });
 }
+
+
 export async function deleteFileAdmin(fileId) {
-  await requirePermission("subscriber_upload_files_info");
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
   const file = await prisma.uploadedFile.findFirst({
-    where: { id: fileId, tenantId },
+    where: {
+      id: fileId,
+      tenantId,
+    },
   });
-  if (!file) throw new ApiError(404, "File not found");
+
+  if (!file) {
+    throw new ApiError(404, "File not found");
+  }
 
   if (file.fileName) {
     try {
@@ -302,11 +316,16 @@ export async function deleteFileAdmin(fileId) {
         resource_type: getResourceType(file.mimeType),
       });
     } catch (error) {
+      console.error("Cloudinary delete error:", error); // ← check server logs for the REAL reason now
       throw new ApiError(500, "Failed to delete file from Cloudinary");
     }
   }
 
-  await prisma.uploadedFile.delete({ where: { id: fileId } });
+  await prisma.uploadedFile.delete({
+    where: {
+      id: fileId,
+    },
+  });
 
   return new ApiResponse(200, null, "File deleted successfully");
 }

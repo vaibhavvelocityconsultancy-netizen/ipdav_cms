@@ -4,12 +4,14 @@ import { useState } from "react";
 import Link from "next/link"; // ← ADD THIS
 import ShareModal from "./ShareModal";
 import SharesDrawer from "./SharesDrawer";
+import { Eye, Pencil, Trash } from "lucide-react";
 
 type FileCardProps = {
   file: any;
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  onDelete?: () => void; // ← ADD THIS
 };
 
 export default function FileCard({
@@ -17,6 +19,7 @@ export default function FileCard({
   selectable = false,
   selected = false,
   onToggleSelect,
+  onDelete, // ← ADD THIS
 }: FileCardProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [sharesOpen, setSharesOpen] = useState(false);
@@ -103,8 +106,9 @@ export default function FileCard({
             onClick={(e) => e.stopPropagation()}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
           >
-            Edit
+            <Pencil className="mr-1 inline h-3 w-3" />
           </Link>
+        
           <a
             href={file.url}
             target="_blank"
@@ -112,8 +116,14 @@ export default function FileCard({
             onClick={(e) => e.stopPropagation()}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
           >
-            Open
+            <Eye className="mr-1 inline h-3 w-3" />
           </a>
+        <button
+          onClick={onDelete}
+          className="text-sm text-slate-500 hover:text-slate-700"
+        >
+          <Trash className="mr-1 inline h-3 w-3" />
+        </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

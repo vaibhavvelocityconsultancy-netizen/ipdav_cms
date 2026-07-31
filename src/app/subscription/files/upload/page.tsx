@@ -12,6 +12,8 @@ import {
   AlignLeft,
   Loader2,
 } from "lucide-react";
+import { toast } from "@/src/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 type FileCategoryOption = {
   id: string;
@@ -32,6 +34,7 @@ export default function UploadFilePage() {
   const [categories, setCategories] = useState<FileCategoryOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [dragActive, setDragActive] = useState(false);
+  const [tags, setTags] = useState("");
 
   useEffect(() => {
     async function loadCategories() {
@@ -46,7 +49,7 @@ export default function UploadFilePage() {
         const items = Array.isArray(json?.data) ? json.data : [];
         setCategories(items);
         if (items.length > 0) {
-          setCategory(items[0].name);
+          setCategoryId(items[0].id); // ✅ use id, not name
         }
       } catch (err) {
         console.error(err);
@@ -57,7 +60,9 @@ export default function UploadFilePage() {
 
     loadCategories();
   }, []);
+  const [categoryId, setCategoryId] = useState(""); // rename from `category`
 
+  const queryClient = useQueryClient();
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!file) return setError("Please select a file");
@@ -69,9 +74,10 @@ export default function UploadFilePage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("title", title);
-      formData.append("category", category);
-      formData.append("shortDescription", shortDescription);
-      formData.append("longDescription", longDescription);
+      formData.append("categoryId", categoryId); // ✅ renamed from "category"
+      formData.append("tags", tags);
+      formData.append("shortDesc", shortDescription);
+      formData.append("description", longDescription);
       formData.append("isShareable", String(isShareable));
 
       const res = await fetch("/api/files", {
@@ -82,8 +88,12 @@ export default function UploadFilePage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Upload failed");
 
-      router.push("subscription/file-sharing");
-      router.refresh();
+      router.push("/subscription/file-sharing");
+      queryClient.invalidateQueries({ queryKey: ["shared-files"] }); // ✅ add this
+      toast({
+        title: "Success",
+        description: "File uploaded successfully",
+      });
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -232,8 +242,8 @@ export default function UploadFilePage() {
                 <span className="text-red-500 ml-0.5">*</span>
               </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
                 disabled={loadingCategories || categories.length === 0}
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -243,12 +253,34 @@ export default function UploadFilePage() {
                   <option value="">No categories available</option>
                 ) : (
                   categories.map((c) => (
-                    <option key={c.id} value={c.name}>
+                    <option key={c.id} value={c.id}>
+                      {" "}
+                      {/* ✅ id, not name */}
                       {c.name}
                     </option>
                   ))
                 )}
               </select>
+            </div>
+
+            {/* Tags */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <span className="inline-flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-slate-400" />
+                  Tags
+                </span>
+                <span className="text-slate-400 text-xs font-normal ml-1">
+                  (optional, comma-separated)
+                </span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. invoice, 2026, urgent"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20"
+              />
             </div>
 
             {/* Short Description */}
