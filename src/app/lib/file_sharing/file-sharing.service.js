@@ -247,6 +247,7 @@ export async function getShareMeta(token) {
 export async function getFileShares(fileId) {
   const session = await requireActiveSubscription();
   const tenantId = session.user.tenantId;
+  const userId = Number(session.user.id);
 
   const file = await prisma.uploadedFile.findFirst({
     where: { id: fileId, tenantId },
@@ -256,7 +257,7 @@ export async function getFileShares(fileId) {
   const items = await prisma.fileShareFile.findMany({
     where: {
       fileId,
-      shareLink: { createdBy: session.user.id },
+      shareLink: { createdBy: userId },
     },
     orderBy: { shareLink: { createdAt: "desc" } },
     include: {

@@ -1,5 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { Download, Eye } from "lucide-react";
 import { Badge } from "@/src/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/ui/tabs";
 
@@ -63,6 +64,10 @@ function statusVariant(status: string) {
 function formatFileSize(bytes: number): string {
   const mb = bytes / (1024 * 1024);
   return `${mb.toFixed(2)} MB`;
+}
+
+function getDownloadUrl(url: string): string {
+  return url.replace("/raw/upload/", "/raw/upload/fl_attachment/");
 }
 
 export default function UserDetailsModal({
@@ -250,7 +255,7 @@ export default function UserDetailsModal({
                           key={file.id}
                           className="rounded-lg border border-slate-200 p-3 text-sm"
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <p className="font-medium text-slate-900">
                                 {file.title}
@@ -259,14 +264,34 @@ export default function UserDetailsModal({
                                 {file.originalName}
                               </p>
                             </div>
-                            {file.category && (
-                              <Badge
-                                variant="secondary"
-                                className="ml-2 shrink-0"
+                            <div className="flex shrink-0 items-center gap-2">
+                              {file.category && (
+                                <Badge variant="secondary">
+                                  {file.category.name}
+                                </Badge>
+                              )}
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`View ${file.title}`}
+                                title="View file"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                               >
-                                {file.category.name}
-                              </Badge>
-                            )}
+                                <Eye className="h-4 w-4" />
+                              </a>
+                              <a
+                                href={getDownloadUrl(file.url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={file.originalName}
+                                aria-label={`Download ${file.title}`}
+                                title="Download file"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                              >
+                                <Download className="h-4 w-4" />
+                              </a>
+                            </div>
                           </div>
                           <div className="mt-2 flex items-center gap-3 flex-wrap">
                             <span className="text-xs text-slate-400">
