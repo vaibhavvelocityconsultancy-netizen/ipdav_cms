@@ -278,18 +278,19 @@ model AICrawlContent {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Payment {
-  id              String        @id @default(cuid())
-  userId          Int
-  courseId        Int?
-  planId          Int?
-  billingCycle    BillingCycle  @default(LIFETIME)
-  paypalOrderId   String?       @unique
-  paypalCaptureId String?       @unique
-  amount          Int
-  currency        String        @default("INR")
-  status          PaymentStatus @default(PENDING)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  userId               Int
+  courseId             Int?
+  planId               Int?
+  billingCycle         BillingCycle  @default(LIFETIME)
+  paypalOrderId        String?       @unique
+  paypalCaptureId      String?       @unique
+  paypalSubscriptionId String?
+  amount               Int
+  currency             String        @default("INR")
+  status               PaymentStatus @default(PENDING)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   user user  @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan Plan? @relation(fields: [planId], references: [id], onDelete: Restrict)

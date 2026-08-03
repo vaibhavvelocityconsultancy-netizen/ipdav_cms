@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Folder,
@@ -33,7 +33,7 @@ import {
   FileCode,
 } from "lucide-react";
 import { TrialExpiryPopup } from "./TrialExpiryPopup";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Plan {
   id: number;
@@ -261,7 +261,11 @@ const FileIcon = ({ fileName }: { fileName?: string }) => {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showPopup, setShowPopup] = useState(false);
+  const [pollingTimedOut, setPollingTimedOut] = useState(false);
+  const [showActivationSuccess, setShowActivationSuccess] = useState(false);
+  const previousStatusRef = useRef<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<DashboardResponse>({
     queryKey: ["dashboard"],
@@ -270,9 +274,16 @@ export default function DashboardPage() {
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const status = query.state.data?.success
+        ? query.state.data.data?.status
+        : null;
+      return status === "PENDING" && !pollingTimedOut ? 3000 : false;
+    },
   });
 
   const subscription = data?.success ? data.data : null;
+  const subscriptionStatus = subscription?.status ?? null;
 
   useEffect(() => {
     if (!subscription) return;
@@ -291,8 +302,60 @@ export default function DashboardPage() {
     }
   }, [subscription]);
 
+  useEffect(() => {
+    if (subscriptionStatus !== "PENDING") {
+      setPollingTimedOut(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPollingTimedOut(true);
+    }, 60000);
+
+    return () => window.clearTimeout(timer);
+  }, [subscriptionStatus]);
+
+  useEffect(() => {
+    if (subscriptionStatus !== "ACTIVE") return;
+
+    setPollingTimedOut(false);
+    if (previousStatusRef.current === "PENDING") {
+      setShowActivationSuccess(true);
+    }
+    previousStatusRef.current = subscriptionStatus;
+
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const key = query.queryKey as Array<string | number>;
+        return key.some(
+          (segment) =>
+            typeof segment === "string" &&
+            /dashboard|subscription|plan/i.test(segment),
+        );
+      },
+    });
+  }, [subscriptionStatus, queryClient]);
+
+  useEffect(() => {
+    if (!subscription) {
+      previousStatusRef.current = null;
+      return;
+    }
+
+    if (previousStatusRef.current === null) {
+      previousStatusRef.current = subscriptionStatus;
+      return;
+    }
+
+    previousStatusRef.current = subscriptionStatus;
+  }, [subscriptionStatus, subscription]);
+
   const handlePopupDismiss = () => {
     setShowPopup(false);
+  };
+
+  const handleActivationSuccessClose = () => {
+    setShowActivationSuccess(false);
   };
 
   // Helper function to safely get file name
@@ -471,6 +534,20 @@ export default function DashboardPage() {
             </div>
           </div>
           {/* Section 1: Subscription Overview */}
+          {subscriptionStatus === "PENDING" && !pollingTimedOut && (
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span>Activating your subscription...</span>
+              </div>
+            </div>
+          )}
+          {subscriptionStatus === "PENDING" && pollingTimedOut && (
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              We&apos;re still waiting for PayPal to confirm your subscription.
+              Please refresh in a few moments.
+            </div>
+          )}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -744,6 +821,29 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {showActivationSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl border border-green-200 bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3 text-green-700">
+              <CheckCircle className="h-6 w-6" />
+              <h3 className="text-lg font-semibold">Your plan is now active</h3>
+            </div>
+            <p className="mt-3 text-sm text-gray-600">
+              Your subscription has been confirmed and your access is now
+              active.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={handleActivationSuccessClose}
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+              >
+                Great
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <TrialExpiryPopup
         show={showPopup}

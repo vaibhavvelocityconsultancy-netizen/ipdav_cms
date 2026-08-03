@@ -61,9 +61,12 @@ async function handleActivated(resource) {
 
   const subscription = await prisma.planSubscription.findUnique({
     where: { paypalSubscriptionId },
+    include: { plan: true },
   });
   if (!subscription) {
-    console.warn(`⚠️ No matching subscription for PayPal ID ${paypalSubscriptionId}`);
+    console.warn(
+      `⚠️ No matching subscription for PayPal ID ${paypalSubscriptionId}`,
+    );
     return;
   }
 
@@ -72,6 +75,23 @@ async function handleActivated(resource) {
   await prisma.planSubscription.update({
     where: { id: subscription.id },
     data: { status: "ACTIVE", startsAt: new Date(), currentPeriodEnd },
+  });
+
+  const amount =
+    subscription.billingCycle === "YEARLY"
+      ? subscription.plan?.yearlyPrice
+      : subscription.plan?.monthlyPrice;
+
+  await prisma.payment.create({
+    data: {
+      userId: subscription.userId,
+      planId: subscription.planId,
+      billingCycle: subscription.billingCycle,
+      amount: Math.round(Number(amount) * 100),
+      currency: process.env.PAYPAL_DEFAULT_CURRENCY || "USD",
+      status: "SUCCESS",
+      paypalSubscriptionId: subscription.paypalSubscriptionId,
+    },
   });
 
   console.log(`✅ Subscription ${subscription.id} activated`);
@@ -84,9 +104,12 @@ async function handleRenewal(resource) {
 
   const subscription = await prisma.planSubscription.findUnique({
     where: { paypalSubscriptionId },
+    include: { plan: true },
   });
   if (!subscription) {
-    console.warn(`⚠️ No matching subscription for PayPal ID ${paypalSubscriptionId}`);
+    console.warn(
+      `⚠️ No matching subscription for PayPal ID ${paypalSubscriptionId}`,
+    );
     return;
   }
 
@@ -97,7 +120,29 @@ async function handleRenewal(resource) {
     data: { status: "ACTIVE", currentPeriodEnd },
   });
 
-  console.log(`🔄 Subscription ${subscription.id} renewed, extended to ${currentPeriodEnd}`);
+  const amount =
+    subscription.billingCycle === "YEARLY"
+      ? subscription.plan?.yearlyPrice
+      : subscription.plan?.monthlyPrice;
+
+  await prisma.payment.create({
+    data: {
+      userId: subscription.userId,
+      planId: subscription.planId,
+      billingCycle: subscription.billingCycle,
+      amount: Math.round(Number(amount) * 100),
+      currency:
+        resource.amount?.currency ||
+        process.env.PAYPAL_DEFAULT_CURRENCY ||
+        "USD",
+      status: "SUCCESS",
+      paypalSubscriptionId: subscription.paypalSubscriptionId,
+    },
+  });
+
+  console.log(
+    `🔄 Subscription ${subscription.id} renewed, extended to ${currentPeriodEnd}`,
+  );
 }
 
 async function handleCancelled(resource) {
