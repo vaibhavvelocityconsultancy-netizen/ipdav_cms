@@ -5,15 +5,7 @@ import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const MonacoEditor = dynamic(
-  async () => {
-    const [{ default: Editor, loader }, monaco] = await Promise.all([
-      import("@monaco-editor/react"),
-      import("monaco-editor"),
-    ]);
-
-    loader.config({ monaco });
-    return Editor;
-  },
+  () => import("@monaco-editor/react").then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
