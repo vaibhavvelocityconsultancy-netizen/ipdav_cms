@@ -84,12 +84,6 @@ export async function updateSettings(input) {
             ? Number(input.postsPageId)
             : undefined,
 
-      coursesPageId:
-        input.coursesPageId !== undefined
-          ? input.coursesPageId
-            ? Number(input.coursesPageId)
-            : null
-          : undefined,
 
       globalCss: input.globalCss,
       globalJs: input.globalJs,
@@ -99,40 +93,16 @@ export async function updateSettings(input) {
           ? Boolean(input.showAdminToolbar)
           : undefined,
 
-      // SEARCH SETTINGS
-      showSearch:
-        input.showSearch !== undefined ? Boolean(input.showSearch) : undefined,
-
-      searchPlaceholder: input.searchPlaceholder,
-
-      searchInPages:
-        input.searchInPages !== undefined
-          ? Boolean(input.searchInPages)
-          : undefined,
-
-      searchInPosts:
-        input.searchInPosts !== undefined
-          ? Boolean(input.searchInPosts)
-          : undefined,
 
       highlightAutoLinks:
         input.highlightAutoLinks !== undefined
           ? Boolean(input.highlightAutoLinks)
           : undefined,
 
-      // ── Module toggles ────────────────────────────────
-      coursesEnabled:
-        input.coursesEnabled !== undefined
-          ? Boolean(input.coursesEnabled)
-          : undefined,
 
       seoEnabled:
         input.seoEnabled !== undefined ? Boolean(input.seoEnabled) : undefined,
 
-      ecommerceEnabled:
-        input.ecommerceEnabled !== undefined
-          ? Boolean(input.ecommerceEnabled)
-          : undefined,
     },
   });
 }

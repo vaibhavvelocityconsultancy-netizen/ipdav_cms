@@ -1,5 +1,8 @@
-import { prisma } from "../../prisma";
-import { ApiError } from "@/src/app/lib/utils/ApiError";
+// import { prisma } from "../../prisma.js";
+// import { ApiError } from "@/src/app/lib/utils/ApiError.js";
+import { prisma } from "../../prisma.js";
+import { ApiError } from "../../utils/ApiError.js";
+import { createPaypalBillingPlan } from "./paypal.service.js";
 
 // ═════════════════════════════════════════════════════════════
 // SUBSCRIPTION EXPIRATION HELPER
@@ -96,6 +99,111 @@ async function resolveUniqueSlug(tenantId, baseSlug) {
   }
 }
 
+function hasPaypalConfig() {
+  return Boolean(
+    process.env.PAYPAL_PRODUCT_ID &&
+    process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID &&
+    process.env.PAYPAL_CLIENT_SECRET,
+  );
+}
+
+function getValidAmount(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+async function ensurePaypalPlanIds(plan, previousPlan = null) {
+  const updates = {};
+
+  if (!hasPaypalConfig()) {
+    console.log(
+      `ℹ️ Skipping PayPal plan setup for "${plan.title}" because PayPal credentials or product ID are not configured.`,
+    );
+    return plan;
+  }
+
+  const monthlyPriceChanged =
+    previousPlan &&
+    previousPlan.monthlyPrice != null &&
+    Number(previousPlan.monthlyPrice) !== Number(plan.monthlyPrice);
+
+  const yearlyPriceChanged =
+    previousPlan &&
+    previousPlan.yearlyPrice != null &&
+    Number(previousPlan.yearlyPrice) !== Number(plan.yearlyPrice);
+
+  const monthlyAmount = getValidAmount(plan.monthlyPrice);
+  const yearlyAmount = getValidAmount(plan.yearlyPrice);
+
+  const needsMonthly =
+    plan.allowMonthly &&
+    monthlyAmount != null &&
+    (!plan.paypalMonthlyPlanId || monthlyPriceChanged);
+
+  const needsYearly =
+    plan.allowYearly &&
+    yearlyAmount != null &&
+    (!plan.paypalYearlyPlanId || yearlyPriceChanged);
+
+  if (needsMonthly) {
+    try {
+      const ppPlan = await createPaypalBillingPlan({
+        productId: process.env.PAYPAL_PRODUCT_ID,
+        name: `${plan.title} — Monthly`,
+        amount: monthlyAmount,
+        currency: process.env.PAYPAL_DEFAULT_CURRENCY || "USD",
+        interval: "MONTH",
+        trialDays: plan.trialDays ?? 0,
+      });
+      updates.paypalMonthlyPlanId = ppPlan.id;
+      if (monthlyPriceChanged) {
+        console.log(
+          `💰 Price changed for "${plan.title}" monthly — old subscribers stay on previous PayPal plan, new signups use ${ppPlan.id}`,
+        );
+      }
+    } catch (err) {
+      console.error(
+        `⚠️ Failed to create PayPal monthly plan for "${plan.title}":`,
+        err.message,
+      );
+    }
+  }
+
+  if (needsYearly) {
+    try {
+      const ppPlan = await createPaypalBillingPlan({
+        productId: process.env.PAYPAL_PRODUCT_ID,
+        name: `${plan.title} — Yearly`,
+        amount: yearlyAmount,
+        currency: process.env.PAYPAL_DEFAULT_CURRENCY || "USD",
+        interval: "YEAR",
+        trialDays: plan.trialDays ?? 0,
+      });
+      updates.paypalYearlyPlanId = ppPlan.id;
+      if (yearlyPriceChanged) {
+        console.log(
+          `💰 Price changed for "${plan.title}" yearly — old subscribers stay on previous PayPal plan, new signups use ${ppPlan.id}`,
+        );
+      }
+    } catch (err) {
+      console.error(
+        `⚠️ Failed to create PayPal yearly plan for "${plan.title}":`,
+        err.message,
+      );
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    return prisma.plan.update({
+      where: { id: plan.id },
+      data: updates,
+      include: { features: true },
+    });
+  }
+
+  return plan;
+}
+
 const FALLBACK_TRIAL_DAYS = 14;
 
 async function getTrialDaysForPlan(tenantId, plan) {
@@ -141,7 +249,7 @@ export async function createPlan(tenantId, input) {
   const baseSlug = input.slug || input.title || "plan";
   const slug = await resolveUniqueSlug(tenantId, baseSlug);
 
-  return prisma.plan.create({
+  const plan = await prisma.plan.create({
     data: {
       ...planData,
       slug,
@@ -155,6 +263,8 @@ export async function createPlan(tenantId, input) {
     },
     include: { features: true },
   });
+
+  return ensurePaypalPlanIds(plan);
 }
 
 export async function updatePlan(id, tenantId, input) {
@@ -190,7 +300,7 @@ export async function updatePlan(id, tenantId, input) {
     where: { planId: numericId, id: { notIn: incomingFeatureIds } },
   });
 
-  return prisma.plan.update({
+  const updatedPlan = await prisma.plan.update({
     where: { id: numericId },
     data: {
       ...planData,
@@ -208,6 +318,125 @@ export async function updatePlan(id, tenantId, input) {
     },
     include: { features: true },
   });
+
+  return ensurePaypalPlanIds(updatedPlan, existingPlan);
+}
+
+export async function recordPendingSubscription(userId, planId, billingCycle, paypalSubscriptionId) {
+  const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
+  if (!plan) throw new ApiError(404, "Plan not found");
+
+  const paypalPlanId =
+    billingCycle === "MONTHLY" ? plan.paypalMonthlyPlanId : plan.paypalYearlyPlanId;
+  if (!paypalPlanId) {
+    throw new ApiError(500, `No PayPal plan configured for ${plan.title} (${billingCycle})`);
+  }
+
+  const existing = await prisma.planSubscription.findUnique({
+    where: { userId_planId: { userId: Number(userId), planId: Number(planId) } },
+  });
+
+  if (existing) {
+    return prisma.planSubscription.update({
+      where: { id: existing.id },
+      data: { billingCycle, status: "PENDING", paypalSubscriptionId },
+      include: { plan: true },
+    });
+  }
+
+  return prisma.planSubscription.create({
+    data: {
+      userId: Number(userId),
+      planId: Number(planId),
+      billingCycle,
+      status: "PENDING",
+      startsAt: new Date(),
+      currentPeriodEnd: new Date(), // placeholder — webhook sets the real value
+      paypalSubscriptionId,
+    },
+    include: { plan: true },
+  });
+}
+
+export async function initiatePaypalSubscription(
+  userId,
+  planId,
+  billingCycle,
+  { returnUrl, cancelUrl },
+) {
+  const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
+  if (!plan) throw new ApiError(404, "Plan not found");
+  if (!plan.isPublished)
+    throw new ApiError(400, "This plan is not currently available");
+
+  if (billingCycle === "MONTHLY" && !plan.allowMonthly) {
+    throw new ApiError(400, "Monthly billing is not available.");
+  }
+  if (billingCycle === "YEARLY" && !plan.allowYearly) {
+    throw new ApiError(400, "Yearly billing is not available.");
+  }
+
+  const paypalPlanId =
+    billingCycle === "MONTHLY"
+      ? plan.paypalMonthlyPlanId
+      : plan.paypalYearlyPlanId;
+
+  if (!paypalPlanId) {
+    throw new ApiError(
+      500,
+      `No PayPal plan configured for ${plan.title} (${billingCycle})`,
+    );
+  }
+
+  const existing = await prisma.planSubscription.findUnique({
+    where: {
+      userId_planId: { userId: Number(userId), planId: Number(planId) },
+    },
+  });
+
+  if (existing && existing.status === "ACTIVE") {
+    throw new ApiError(
+      409,
+      "User already has an active subscription to this plan.",
+    );
+  }
+
+  const ppSubscription = await createPaypalSubscription({
+    planId: paypalPlanId,
+    userId,
+    returnUrl,
+    cancelUrl,
+  });
+
+  // Store as PENDING — webhook will flip this to ACTIVE once approved
+  if (existing) {
+    await prisma.planSubscription.update({
+      where: { id: existing.id },
+      data: {
+        billingCycle,
+        status: "PENDING",
+        paypalSubscriptionId: ppSubscription.id, // ← needs schema addition, see below
+      },
+    });
+  } else {
+    await prisma.planSubscription.create({
+      data: {
+        userId: Number(userId),
+        planId: Number(planId),
+        billingCycle,
+        status: "PENDING",
+        startsAt: new Date(),
+        currentPeriodEnd: new Date(), // placeholder — webhook sets the real value
+        paypalSubscriptionId: ppSubscription.id,
+      },
+    });
+  }
+
+  const approvalUrl = ppSubscription.links?.find(
+    (l) => l.rel === "approve",
+  )?.href;
+
+  return { subscriptionId: ppSubscription.id, approvalUrl };
 }
 
 export async function deletePlan(id, tenantId) {
@@ -740,15 +969,14 @@ export async function getSubscriberUsers() {
       planSubscriptions: {
         orderBy: { createdAt: "desc" },
         take: 1,
-        
-        include: { plan: { select: { title: true} } },
 
+        include: { plan: { select: { title: true } } },
       },
       _count: {
-        select: { 
+        select: {
           uploadedFiles: true, // files THEY uploaded
-          fileShares: true
-         }, // links THEY created
+          fileShares: true,
+        }, // links THEY created
       },
     },
     orderBy: { createdAt: "desc" },

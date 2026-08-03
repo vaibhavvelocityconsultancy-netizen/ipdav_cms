@@ -13,30 +13,26 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: currentUser, loading: userLoading } = useCurrentUser();
-  const [orderId, setOrderId] = useState(null);
-  const [loadingOrder, setLoadingOrder] = useState(true);
+  const [paypalPlanId, setPaypalPlanId] = useState(null);
+  const [loadingPlan, setLoadingPlan] = useState(true);
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const hasStarted = useRef(false);
 
   const planId = searchParams.get("plan");
   const billingCycle = searchParams.get("billingCycle") || "MONTHLY";
 
-  const capturePaymentMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const res = await fetch("/api/payment/capture-payment", {
+  const confirmMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const res = await fetch("/api/subscription/confirms", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ orderId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: Number(planId), billingCycle, subscriptionId }),
       });
-
       const data = await res.json();
-
       if (!res.ok || !data.success) {
-        throw new Error(data.message || "Payment capture failed");
+        throw new Error(data.message || "Failed to save subscription");
       }
-
       return data;
     },
     onSuccess: () => {
@@ -57,31 +53,27 @@ function CheckoutContent() {
     if (userLoading || !currentUser || !planId || hasStarted.current) return;
     hasStarted.current = true;
 
-    async function createOrder() {
+    async function fetchPlanInfo() {
       try {
-        const res = await fetch("/api/payment/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ planId: Number(planId), billingCycle }),
-        });
+        const res = await fetch(
+          `/api/subscription/plan-info?planId=${planId}&billingCycle=${billingCycle}`,
+        );
         const data = await res.json();
-
         if (!res.ok || !data.success) {
-          throw new Error(data.message || "Failed to start checkout");
+          throw new Error(data.message || "Failed to load plan");
         }
-
-        setOrderId(data.data.orderId);
+        setPaypalPlanId(data.data.paypalPlanId);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
-        setLoadingOrder(false);
+        setLoadingPlan(false);
       }
     }
 
-    createOrder();
+    fetchPlanInfo();
   }, [currentUser, planId, billingCycle, userLoading]);
 
-  if (userLoading || loadingOrder) {
+  if (userLoading || loadingPlan) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -90,7 +82,7 @@ function CheckoutContent() {
     );
   }
 
-  if (error || !planId) {
+  if (error || !planId || !paypalPlanId) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-center">
         <p className="text-sm font-medium text-red-600">
@@ -106,28 +98,29 @@ function CheckoutContent() {
     );
   }
 
-  // Capturing payment: swap the PayPal buttons out entirely so
-  // nothing from the payment gateway stays visible underneath.
-  if (capturePaymentMutation.isPending) {
+  if (confirming || confirmMutation.isPending) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="text-sm text-gray-600">
-          Activating your subscription...
-        </p>
+        <p className="text-sm text-gray-600">Activating your subscription...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-sm text-muted-foreground">Complete your payment</p>
+      <p className="text-sm text-muted-foreground">Complete your subscription</p>
       <div className="w-full max-w-xs">
         <PayPalButtons
           style={{ layout: "vertical" }}
-          createOrder={() => Promise.resolve(orderId)}
-          onApprove={() => capturePaymentMutation.mutateAsync(orderId!)}
-          onError={() => setError("Payment failed. Please try again.")}
+          createSubscription={(data, actions) =>
+            actions.subscription.create({ plan_id: paypalPlanId })
+          }
+          onApprove={async (data) => {
+            setConfirming(true);
+            await confirmMutation.mutateAsync(data.subscriptionID);
+          }}
+          onError={() => setError("Subscription failed. Please try again.")}
         />
       </div>
     </div>
@@ -136,23 +129,22 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <>
-      <PayPalScriptProvider
-        options={{
-          clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-          currency: "USD",
-        }}
+    <PayPalScriptProvider
+      options={{
+        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+        vault: true,
+        intent: "subscription",
+      }}
+    >
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        }
       >
-        <Suspense
-          fallback={
-            <div className="min-h-screen flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
-          }
-        >
-          <CheckoutContent />
-        </Suspense>
-      </PayPalScriptProvider>
-    </>
+        <CheckoutContent />
+      </Suspense>
+    </PayPalScriptProvider>
   );
 }
