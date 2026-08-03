@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/vercel-prebuild.mjs && next build",
+   "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
     "start": "next start",
     "postinstall": "prisma generate --schema=./prisma/schema.prisma",
     "lint": "eslint .",
