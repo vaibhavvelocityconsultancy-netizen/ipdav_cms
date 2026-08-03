@@ -1,6 +1,3 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "BillingCycle" AS ENUM ('MONTHLY', 'YEARLY', 'LIFETIME');
 
@@ -8,7 +5,7 @@ CREATE TYPE "BillingCycle" AS ENUM ('MONTHLY', 'YEARLY', 'LIFETIME');
 CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 
 -- CreateEnum
-CREATE TYPE "SubscriptionStatus" AS ENUM ('TRIALING', 'ACTIVE', 'EXPIRED', 'CANCELED');
+CREATE TYPE "SubscriptionStatus" AS ENUM ('TRIAL', 'ACTIVE', 'EXPIRED', 'CANCELED', 'PENDING');
 
 -- CreateEnum
 CREATE TYPE "rolepermission_role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR', 'VIEWER', 'SUBSCRIBER');
@@ -34,6 +31,55 @@ CREATE TABLE "tenant" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "tenant_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailTemplate" (
+    "id" TEXT NOT NULL,
+    "triggerEvent" TEXT NOT NULL,
+    "recipientType" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "bodyHtml" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "variables" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EmailTemplate_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailSettings" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "senderName" TEXT NOT NULL DEFAULT '',
+    "fromEmail" TEXT NOT NULL DEFAULT '',
+    "replyToEmail" TEXT,
+    "adminEmail" TEXT NOT NULL DEFAULT '',
+    "lastTestStatus" TEXT,
+    "lastTestAt" TIMESTAMP(3),
+    "lastTestError" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EmailSettings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailLog" (
+    "id" TEXT NOT NULL,
+    "templateId" TEXT,
+    "triggerEvent" TEXT NOT NULL,
+    "recipientType" TEXT NOT NULL,
+    "emailTo" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "error" TEXT,
+    "metadata" JSONB,
+    "sentAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -66,6 +112,7 @@ CREATE TABLE "AICrawlSettings" (
     "excludeDrafts" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "autoGenerateScripts" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "AICrawlSettings_pkey" PRIMARY KEY ("id")
 );
@@ -85,86 +132,19 @@ CREATE TABLE "user" (
 );
 
 -- CreateTable
-CREATE TABLE "Course" (
+CREATE TABLE "AICrawlContent" (
     "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "shortDescription" TEXT,
-    "instructor" TEXT,
-    "thumbnail" TEXT,
-    "price" DECIMAL(10,2) NOT NULL DEFAULT 0,
-    "billingCycle" "BillingCycle" NOT NULL DEFAULT 'LIFETIME',
-    "billingPeriodDays" INTEGER,
-    "durationHours" INTEGER,
-    "level" TEXT,
-    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
-    "isPublished" BOOLEAN NOT NULL DEFAULT true,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "tenantId" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "sitemapEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "sitemapPriority" DECIMAL(2,1) NOT NULL DEFAULT 0.8,
-    "sitemapChangeFreq" "sitemapChangeFrequency" NOT NULL DEFAULT 'WEEKLY',
-    "courseContentId" INTEGER,
-
-    CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "PricingFeature" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "courseId" INTEGER NOT NULL,
-
-    CONSTRAINT "PricingFeature_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CourseContent" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "contentId" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "shortDescription" TEXT,
-    "longDescription" TEXT,
-    "thumbnail" TEXT,
-    "instructor" TEXT,
-    "level" TEXT,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "tenantId" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "markdown" TEXT NOT NULL,
+    "wordCount" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "CourseContent_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CourseModule" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "videoType" TEXT NOT NULL DEFAULT 'URL',
-    "videoUrl" TEXT NOT NULL DEFAULT '',
-    "durationMinutes" INTEGER NOT NULL DEFAULT 0,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "courseContentId" INTEGER NOT NULL,
-
-    CONSTRAINT "CourseModule_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CourseMaterial" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "type" TEXT NOT NULL DEFAULT 'PDF',
-    "url" TEXT NOT NULL,
-    "size" INTEGER,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "courseModuleId" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "CourseMaterial_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "AICrawlContent_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -174,7 +154,9 @@ CREATE TABLE "Payment" (
     "courseId" INTEGER,
     "planId" INTEGER,
     "billingCycle" "BillingCycle" NOT NULL DEFAULT 'LIFETIME',
-    "stripePaymentIntentId" TEXT,
+    "paypalOrderId" TEXT,
+    "paypalCaptureId" TEXT,
+    "paypalSubscriptionId" TEXT,
     "amount" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'INR',
     "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
@@ -190,7 +172,7 @@ CREATE TABLE "Subscription" (
     "userId" INTEGER NOT NULL,
     "courseId" INTEGER NOT NULL,
     "billingCycle" "BillingCycle" NOT NULL DEFAULT 'MONTHLY',
-    "status" "SubscriptionStatus" NOT NULL DEFAULT 'TRIALING',
+    "status" "SubscriptionStatus" NOT NULL DEFAULT 'TRIAL',
     "startsAt" TIMESTAMP(3) NOT NULL,
     "currentPeriodEnd" TIMESTAMP(3) NOT NULL,
     "canceledAt" TIMESTAMP(3),
@@ -201,14 +183,76 @@ CREATE TABLE "Subscription" (
 );
 
 -- CreateTable
-CREATE TABLE "CourseEnrollment" (
+CREATE TABLE "Plan" (
+    "id" SERIAL NOT NULL,
+    "tenantId" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "tagline" TEXT,
+    "description" TEXT,
+    "monthlyPrice" DECIMAL(10,2),
+    "yearlyPrice" DECIMAL(10,2),
+    "allowMonthly" BOOLEAN NOT NULL DEFAULT true,
+    "allowYearly" BOOLEAN NOT NULL DEFAULT true,
+    "billingPeriodDays" INTEGER,
+    "paypalMonthlyPlanId" TEXT,
+    "paypalYearlyPlanId" TEXT,
+    "trialDays" INTEGER,
+    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
+    "isPublished" BOOLEAN NOT NULL DEFAULT true,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Plan_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlanSettings" (
+    "id" SERIAL NOT NULL,
+    "tenantId" INTEGER NOT NULL,
+    "defaultTrialDays" INTEGER NOT NULL DEFAULT 7,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PlanSettings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlanFeature" (
+    "id" SERIAL NOT NULL,
+    "title" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "planId" INTEGER NOT NULL,
+
+    CONSTRAINT "PlanFeature_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlanSubscription" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
-    "courseId" INTEGER NOT NULL,
-    "purchasedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "billingCycle" TEXT NOT NULL DEFAULT 'LIFETIME',
+    "planId" INTEGER NOT NULL,
+    "billingCycle" "BillingCycle" NOT NULL DEFAULT 'MONTHLY',
+    "status" "SubscriptionStatus" NOT NULL DEFAULT 'TRIAL',
+    "startsAt" TIMESTAMP(3) NOT NULL,
+    "currentPeriodEnd" TIMESTAMP(3) NOT NULL,
+    "trialEndsAt" TIMESTAMP(3),
+    "paypalSubscriptionId" TEXT,
+    "canceledAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "CourseEnrollment_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "PlanSubscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlanEnrollment" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "planId" INTEGER NOT NULL,
+    "purchasedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PlanEnrollment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -441,7 +485,6 @@ CREATE TABLE "sitesettings" (
     "homepageType" TEXT NOT NULL DEFAULT 'posts',
     "homepagePageId" INTEGER,
     "postsPageId" INTEGER,
-    "coursesPageId" INTEGER,
     "globalCss" TEXT,
     "globalJs" TEXT,
     "showAdminToolbar" BOOLEAN NOT NULL DEFAULT true,
@@ -456,12 +499,14 @@ CREATE TABLE "sitesettings" (
     "includePosts" BOOLEAN NOT NULL DEFAULT true,
     "includeCategories" BOOLEAN NOT NULL DEFAULT true,
     "includeTags" BOOLEAN NOT NULL DEFAULT false,
-    "includeCourses" BOOLEAN NOT NULL DEFAULT true,
     "pingSearchEngines" BOOLEAN NOT NULL DEFAULT false,
     "cachedSitemapXml" TEXT,
     "cachedSitemapExpiresAt" TIMESTAMP(3),
+    "highlightAutoLinks" BOOLEAN NOT NULL DEFAULT false,
+    "seoEnabled" BOOLEAN NOT NULL DEFAULT false,
     "robotsEnabled" BOOLEAN NOT NULL DEFAULT false,
     "robotsContent" TEXT,
+    "customCrawlerRules" TEXT,
 
     CONSTRAINT "sitesettings_pkey" PRIMARY KEY ("id")
 );
@@ -554,13 +599,16 @@ CREATE TABLE "BreadcrumbSettings" (
     "postsEnabled" BOOLEAN NOT NULL DEFAULT true,
     "categoriesEnabled" BOOLEAN NOT NULL DEFAULT true,
     "tagsEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "coursesEnabled" BOOLEAN NOT NULL DEFAULT true,
     "hideOnHome" BOOLEAN NOT NULL DEFAULT true,
     "hideOn404" BOOLEAN NOT NULL DEFAULT true,
     "hideOnSearch" BOOLEAN NOT NULL DEFAULT false,
     "schemaEnabled" BOOLEAN NOT NULL DEFAULT true,
     "cssClass" TEXT,
     "customCss" TEXT,
+    "linkColor" TEXT NOT NULL DEFAULT '#4b5563',
+    "linkHoverColor" TEXT NOT NULL DEFAULT '#111827',
+    "currentColor" TEXT NOT NULL DEFAULT '#6b7280',
+    "separatorColor" TEXT NOT NULL DEFAULT '#9ca3af',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -618,6 +666,91 @@ CREATE TABLE "RedirectImport" (
 );
 
 -- CreateTable
+CREATE TABLE "InternalLinkRule" (
+    "id" TEXT NOT NULL,
+    "tenantId" INTEGER NOT NULL,
+    "keyword" TEXT NOT NULL,
+    "destinationType" TEXT,
+    "destinationId" TEXT,
+    "destinationUrl" TEXT NOT NULL,
+    "linkTitle" TEXT,
+    "openInNewTab" BOOLEAN NOT NULL DEFAULT false,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "wholeWordOnly" BOOLEAN NOT NULL DEFAULT true,
+    "caseSensitive" BOOLEAN NOT NULL DEFAULT false,
+    "firstOccurrenceOnly" BOOLEAN NOT NULL DEFAULT false,
+    "ignoreHeadings" BOOLEAN NOT NULL DEFAULT true,
+    "ignoreExistingLinks" BOOLEAN NOT NULL DEFAULT true,
+    "maxLinksPerPage" INTEGER NOT NULL DEFAULT 1,
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "InternalLinkRule_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FileCategory" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "parentId" TEXT,
+    "tenantId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "FileCategory_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UploadedFile" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "shortDesc" TEXT,
+    "description" TEXT,
+    "isShareable" BOOLEAN NOT NULL DEFAULT true,
+    "tags" TEXT,
+    "fileName" TEXT NOT NULL,
+    "originalName" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "uploadedBy" INTEGER NOT NULL,
+    "tenantId" INTEGER NOT NULL,
+    "categoryId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UploadedFile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FileShareLink" (
+    "id" TEXT NOT NULL,
+    "sharedWith" TEXT NOT NULL,
+    "message" TEXT,
+    "password" TEXT NOT NULL,
+    "createdBy" INTEGER NOT NULL,
+    "token" TEXT NOT NULL,
+    "viewedAt" TIMESTAMP(3),
+    "zipDownloadedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "FileShareLink_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FileShareFile" (
+    "id" TEXT NOT NULL,
+    "shareLinkId" TEXT NOT NULL,
+    "fileId" TEXT NOT NULL,
+    "downloadedAt" TIMESTAMP(3),
+
+    CONSTRAINT "FileShareFile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_posttotag" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -637,52 +770,40 @@ CREATE TABLE "_categorytopost" (
 CREATE UNIQUE INDEX "tenant_slug_key" ON "tenant"("slug");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "EmailTemplate_triggerEvent_recipientType_key" ON "EmailTemplate"("triggerEvent", "recipientType");
+
+-- CreateIndex
+CREATE INDEX "EmailLog_status_idx" ON "EmailLog"("status");
+
+-- CreateIndex
+CREATE INDEX "EmailLog_triggerEvent_idx" ON "EmailLog"("triggerEvent");
+
+-- CreateIndex
+CREATE INDEX "EmailLog_templateId_idx" ON "EmailLog"("templateId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "analyticsSettings_tenantId_key" ON "analyticsSettings"("tenantId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AICrawlSettings_tenantId_key" ON "AICrawlSettings"("tenantId");
 
 -- CreateIndex
-CREATE INDEX "AICrawlSettings_tenantId_idx" ON "AICrawlSettings"("tenantId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Course_courseContentId_key" ON "Course"("courseContentId");
+CREATE INDEX "AICrawlContent_tenantId_idx" ON "AICrawlContent"("tenantId");
 
 -- CreateIndex
-CREATE INDEX "Course_tenantId_idx" ON "Course"("tenantId");
+CREATE INDEX "AICrawlContent_contentType_idx" ON "AICrawlContent"("contentType");
 
 -- CreateIndex
-CREATE INDEX "Course_isPublished_isFeatured_idx" ON "Course"("isPublished", "isFeatured");
+CREATE UNIQUE INDEX "AICrawlContent_tenantId_contentType_contentId_key" ON "AICrawlContent"("tenantId", "contentType", "contentId");
 
 -- CreateIndex
-CREATE INDEX "Course_sortOrder_idx" ON "Course"("sortOrder");
+CREATE UNIQUE INDEX "Payment_paypalOrderId_key" ON "Payment"("paypalOrderId");
 
 -- CreateIndex
-CREATE INDEX "Course_billingCycle_idx" ON "Course"("billingCycle");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Course_slug_tenantId_key" ON "Course"("slug", "tenantId");
-
--- CreateIndex
-CREATE INDEX "PricingFeature_courseId_idx" ON "PricingFeature"("courseId");
-
--- CreateIndex
-CREATE INDEX "CourseContent_tenantId_idx" ON "CourseContent"("tenantId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "CourseContent_slug_tenantId_key" ON "CourseContent"("slug", "tenantId");
-
--- CreateIndex
-CREATE INDEX "CourseModule_courseContentId_idx" ON "CourseModule"("courseContentId");
-
--- CreateIndex
-CREATE INDEX "CourseMaterial_courseModuleId_idx" ON "CourseMaterial"("courseModuleId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Payment_stripePaymentIntentId_key" ON "Payment"("stripePaymentIntentId");
+CREATE UNIQUE INDEX "Payment_paypalCaptureId_key" ON "Payment"("paypalCaptureId");
 
 -- CreateIndex
 CREATE INDEX "Payment_userId_idx" ON "Payment"("userId");
@@ -691,10 +812,10 @@ CREATE INDEX "Payment_userId_idx" ON "Payment"("userId");
 CREATE INDEX "Payment_courseId_idx" ON "Payment"("courseId");
 
 -- CreateIndex
-CREATE INDEX "Payment_status_idx" ON "Payment"("status");
+CREATE INDEX "Payment_planId_idx" ON "Payment"("planId");
 
 -- CreateIndex
-CREATE INDEX "Payment_stripePaymentIntentId_idx" ON "Payment"("stripePaymentIntentId");
+CREATE INDEX "Payment_status_idx" ON "Payment"("status");
 
 -- CreateIndex
 CREATE INDEX "Payment_createdAt_idx" ON "Payment"("createdAt");
@@ -715,16 +836,43 @@ CREATE INDEX "Subscription_currentPeriodEnd_idx" ON "Subscription"("currentPerio
 CREATE UNIQUE INDEX "Subscription_userId_courseId_key" ON "Subscription"("userId", "courseId");
 
 -- CreateIndex
-CREATE INDEX "CourseEnrollment_userId_idx" ON "CourseEnrollment"("userId");
+CREATE INDEX "Plan_tenantId_idx" ON "Plan"("tenantId");
 
 -- CreateIndex
-CREATE INDEX "CourseEnrollment_courseId_idx" ON "CourseEnrollment"("courseId");
+CREATE UNIQUE INDEX "Plan_slug_tenantId_key" ON "Plan"("slug", "tenantId");
 
 -- CreateIndex
-CREATE INDEX "CourseEnrollment_purchasedAt_idx" ON "CourseEnrollment"("purchasedAt");
+CREATE UNIQUE INDEX "PlanSettings_tenantId_key" ON "PlanSettings"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CourseEnrollment_userId_courseId_key" ON "CourseEnrollment"("userId", "courseId");
+CREATE INDEX "PlanFeature_planId_idx" ON "PlanFeature"("planId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PlanSubscription_paypalSubscriptionId_key" ON "PlanSubscription"("paypalSubscriptionId");
+
+-- CreateIndex
+CREATE INDEX "PlanSubscription_userId_idx" ON "PlanSubscription"("userId");
+
+-- CreateIndex
+CREATE INDEX "PlanSubscription_planId_idx" ON "PlanSubscription"("planId");
+
+-- CreateIndex
+CREATE INDEX "PlanSubscription_status_idx" ON "PlanSubscription"("status");
+
+-- CreateIndex
+CREATE INDEX "PlanSubscription_currentPeriodEnd_idx" ON "PlanSubscription"("currentPeriodEnd");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PlanSubscription_userId_planId_key" ON "PlanSubscription"("userId", "planId");
+
+-- CreateIndex
+CREATE INDEX "PlanEnrollment_userId_idx" ON "PlanEnrollment"("userId");
+
+-- CreateIndex
+CREATE INDEX "PlanEnrollment_planId_idx" ON "PlanEnrollment"("planId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PlanEnrollment_userId_planId_key" ON "PlanEnrollment"("userId", "planId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "permission_name_key" ON "permission"("name");
@@ -853,10 +1001,55 @@ CREATE INDEX "NotFoundLog_path_idx" ON "NotFoundLog"("path");
 CREATE INDEX "NotFoundLog_isResolved_idx" ON "NotFoundLog"("isResolved");
 
 -- CreateIndex
+CREATE INDEX "InternalLinkRule_tenantId_idx" ON "InternalLinkRule"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "InternalLinkRule_keyword_idx" ON "InternalLinkRule"("keyword");
+
+-- CreateIndex
+CREATE INDEX "FileCategory_tenantId_idx" ON "FileCategory"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "FileCategory_parentId_idx" ON "FileCategory"("parentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FileCategory_tenantId_slug_key" ON "FileCategory"("tenantId", "slug");
+
+-- CreateIndex
+CREATE INDEX "UploadedFile_tenantId_idx" ON "UploadedFile"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "UploadedFile_uploadedBy_idx" ON "UploadedFile"("uploadedBy");
+
+-- CreateIndex
+CREATE INDEX "UploadedFile_categoryId_idx" ON "UploadedFile"("categoryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FileShareLink_token_key" ON "FileShareLink"("token");
+
+-- CreateIndex
+CREATE INDEX "FileShareLink_token_idx" ON "FileShareLink"("token");
+
+-- CreateIndex
+CREATE INDEX "FileShareLink_createdBy_idx" ON "FileShareLink"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "FileShareFile_shareLinkId_idx" ON "FileShareFile"("shareLinkId");
+
+-- CreateIndex
+CREATE INDEX "FileShareFile_fileId_idx" ON "FileShareFile"("fileId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FileShareFile_shareLinkId_fileId_key" ON "FileShareFile"("shareLinkId", "fileId");
+
+-- CreateIndex
 CREATE INDEX "_posttotag_B_index" ON "_posttotag"("B");
 
 -- CreateIndex
 CREATE INDEX "_categorytopost_B_index" ON "_categorytopost"("B");
+
+-- AddForeignKey
+ALTER TABLE "EmailLog" ADD CONSTRAINT "EmailLog_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "EmailTemplate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "analyticsSettings" ADD CONSTRAINT "analyticsSettings_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -868,40 +1061,37 @@ ALTER TABLE "AICrawlSettings" ADD CONSTRAINT "AICrawlSettings_tenantId_fkey" FOR
 ALTER TABLE "user" ADD CONSTRAINT "user_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Course" ADD CONSTRAINT "Course_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Course" ADD CONSTRAINT "Course_courseContentId_fkey" FOREIGN KEY ("courseContentId") REFERENCES "CourseContent"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PricingFeature" ADD CONSTRAINT "PricingFeature_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CourseContent" ADD CONSTRAINT "CourseContent_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CourseModule" ADD CONSTRAINT "CourseModule_courseContentId_fkey" FOREIGN KEY ("courseContentId") REFERENCES "CourseContent"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CourseMaterial" ADD CONSTRAINT "CourseMaterial_courseModuleId_fkey" FOREIGN KEY ("courseModuleId") REFERENCES "CourseModule"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AICrawlContent" ADD CONSTRAINT "AICrawlContent_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Plan" ADD CONSTRAINT "Plan_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CourseEnrollment" ADD CONSTRAINT "CourseEnrollment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PlanSettings" ADD CONSTRAINT "PlanSettings_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CourseEnrollment" ADD CONSTRAINT "CourseEnrollment_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PlanFeature" ADD CONSTRAINT "PlanFeature_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlanSubscription" ADD CONSTRAINT "PlanSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlanSubscription" ADD CONSTRAINT "PlanSubscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlanEnrollment" ADD CONSTRAINT "PlanEnrollment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlanEnrollment" ADD CONSTRAINT "PlanEnrollment_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "rolepermission" ADD CONSTRAINT "rolepermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -994,6 +1184,33 @@ ALTER TABLE "NotFoundLog" ADD CONSTRAINT "NotFoundLog_tenantId_fkey" FOREIGN KEY
 ALTER TABLE "RedirectImport" ADD CONSTRAINT "RedirectImport_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "InternalLinkRule" ADD CONSTRAINT "InternalLinkRule_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FileCategory" ADD CONSTRAINT "FileCategory_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FileCategory" ADD CONSTRAINT "FileCategory_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "FileCategory"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UploadedFile" ADD CONSTRAINT "UploadedFile_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "FileCategory"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UploadedFile" ADD CONSTRAINT "UploadedFile_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UploadedFile" ADD CONSTRAINT "UploadedFile_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FileShareLink" ADD CONSTRAINT "FileShareLink_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FileShareFile" ADD CONSTRAINT "FileShareFile_shareLinkId_fkey" FOREIGN KEY ("shareLinkId") REFERENCES "FileShareLink"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FileShareFile" ADD CONSTRAINT "FileShareFile_fileId_fkey" FOREIGN KEY ("fileId") REFERENCES "UploadedFile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "_posttotag" ADD CONSTRAINT "_posttotag_A_fkey" FOREIGN KEY ("A") REFERENCES "post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1004,4 +1221,3 @@ ALTER TABLE "_categorytopost" ADD CONSTRAINT "_categorytopost_A_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "_categorytopost" ADD CONSTRAINT "_categorytopost_B_fkey" FOREIGN KEY ("B") REFERENCES "post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "UploadedFile" ALTER COLUMN "tags" DROP NOT NULL,
-ALTER COLUMN "tags" SET DATA TYPE TEXT;
