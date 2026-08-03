@@ -21,7 +21,7 @@ const courses = [
       "https://www.youtube.com/watch?v=wm5gMKuwSYk", // Next.js Projects
       "https://www.youtube.com/watch?v=9P8mASSREYM", // Next.js Advanced
       "https://www.youtube.com/watch?v=1WmNXEVia8I", // Next.js Deployment
-    ]
+    ],
   },
   {
     title: "Node.js API Development",
@@ -37,7 +37,7 @@ const courses = [
       "https://www.youtube.com/watch?v=pKd0Rpw7O48", // Node.js Express
       "https://www.youtube.com/watch?v=fgTGADljAeg", // Node.js Authentication
       "https://www.youtube.com/watch?v=Z1ktxiqyiLA", // Node.js Deployment
-    ]
+    ],
   },
   {
     title: "TypeScript From Scratch",
@@ -53,23 +53,23 @@ const courses = [
       "https://www.youtube.com/watch?v=gp5H0Vw39yw", // TypeScript Advanced
       "https://www.youtube.com/watch?v=2lGGYV8a1eA", // TypeScript with React
       "https://www.youtube.com/watch?v=1WmNXEVia8I", // TypeScript Deployment
-    ]
+    ],
   },
   {
-    title: "PostgreSQL & Prisma ORM",
-    slug: "postgresql-prisma-orm",
+    title: "MySQL & Prisma ORM",
+    slug: "mysql-prisma-orm",
     instructor: "David Brown",
     level: "Intermediate",
     price: 3999,
     durationHours: 16,
     thumbnail: "https://picsum.photos/800/450?random=4",
     videoUrls: [
-      "https://www.youtube.com/watch?v=qw--VYLpxG4", // PostgreSQL Intro
+      "https://www.youtube.com/watch?v=qw--VYLpxG4", // MySQL Intro
       "https://www.youtube.com/watch?v=0WixS3cK16A", // Prisma Intro
       "https://www.youtube.com/watch?v=_txVU0UcYHI", // Prisma CRUD
       "https://www.youtube.com/watch?v=1GcGj5l12rE", // Prisma Relations
       "https://www.youtube.com/watch?v=7Kb1M3X5W_M", // Prisma Deployment
-    ]
+    ],
   },
   {
     title: "Full Stack MERN Bootcamp",
@@ -85,7 +85,7 @@ const courses = [
       "https://www.youtube.com/watch?v=7CqJlxBYj-M", // React Frontend
       "https://www.youtube.com/watch?v=ngc9gnGgUdA", // Node.js Backend
       "https://www.youtube.com/watch?v=FcxjCPeicvY", // MERN Deployment
-    ]
+    ],
   },
   {
     title: "Advanced JavaScript",
@@ -101,7 +101,7 @@ const courses = [
       "https://www.youtube.com/watch?v=8aGhZQkoFbQ", // Async/Await
       "https://www.youtube.com/watch?v=BIk1k2P1s6w", // Functional Programming
       "https://www.youtube.com/watch?v=DHjqpvDnNGE", // Design Patterns
-    ]
+    ],
   },
   {
     title: "Tailwind CSS Masterclass",
@@ -117,7 +117,7 @@ const courses = [
       "https://www.youtube.com/watch?v=UBOj6rSyR4o", // Tailwind Components
       "https://www.youtube.com/watch?v=3HIdpZlvIuQ", // Tailwind Advanced
       "https://www.youtube.com/watch?v=HPh_9qPD_OY", // Tailwind Projects
-    ]
+    ],
   },
 ];
 
@@ -153,7 +153,7 @@ async function main() {
       "Core Concepts",
       "Building a Project",
       "Advanced Techniques",
-      "Deployment & Wrap Up"
+      "Deployment & Wrap Up",
     ];
 
     const moduleData = item.videoUrls.map((url, index) => ({
@@ -217,7 +217,9 @@ async function main() {
       ],
     });
 
-    console.log(`✅ Created ${item.title} with ${item.videoUrls.length} videos`);
+    console.log(
+      `✅ Created ${item.title} with ${item.videoUrls.length} videos`,
+    );
   }
 
   console.log("🎉 Seeding completed");

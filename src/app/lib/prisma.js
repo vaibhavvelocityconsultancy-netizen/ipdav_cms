@@ -5,7 +5,7 @@ const globalForPrisma = globalThis;
 const getPrismaUrl = () => {
   const baseUrl =
     process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
+    process.env.MYSQL_URL ||
     process.env.PRISMA_DATABASE_URL ||
     "";
 
