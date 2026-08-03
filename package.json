@@ -64,6 +64,7 @@
     "@tiptap/starter-kit": "^3.22.4",
     "@vercel/analytics": "1.6.1",
     "archiver": "^8.0.0",
+    "autoprefixer": "^10.4.20",
     "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
@@ -85,6 +86,7 @@
     "next": "^16.2.7",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.13",
+    "postcss": "^8.5",
     "razorpay": "^2.9.6",
     "react": "^19.2.7",
     "react-day-picker": "9.13.2",
@@ -99,6 +101,7 @@
     "sharp": "^0.34.5",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.3.1",
+    "tailwindcss": "3.4.19",
     "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
     "zod": "^3.24.1"
@@ -113,10 +116,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.5",
     "prisma": "^6.19.3",
-    "tailwindcss": "3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.7.3"
   }
