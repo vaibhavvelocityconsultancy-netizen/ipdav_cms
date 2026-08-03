@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-   "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
+    "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "email:dev": "email dev --dir emails"
@@ -103,6 +103,7 @@
     "tailwindcss": "3.4.19",
     "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
+    "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -116,7 +117,6 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
     "prisma": "^6.19.3",
-    "tailwindcss-animate": "^1.0.7",
     "typescript": "5.7.3"
   }
 }
