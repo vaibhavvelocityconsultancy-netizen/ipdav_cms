@@ -5,21 +5,45 @@ import {
 } from "@/src/app/lib/services/media/media.service";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
-import { NextResponse } from "next/server";
+import { ApiError } from "@/src/app/lib/utils/ApiError";
 
 
-export async function GET(req, { params }) {
-  const media = await getMediaById(params.id);
+export const GET = asyncHandler(async (req, { params }) => {
+  const { id } = await params;
+  const media = await getMediaById(id);
+  const requestUrl = new URL(req.url);
+  const sourceUrl = media.url ? new URL(media.url, requestUrl.origin) : null;
+  const isProxyUrl =
+    sourceUrl &&
+    sourceUrl.origin === requestUrl.origin &&
+    /\/api\/media\/\d+$/.test(sourceUrl.pathname);
 
-  const response = await fetch(media.url);
+  if (!sourceUrl || isProxyUrl) {
+    throw new ApiError(
+      422,
+      "Media source URL is missing. Restore the original Cloudinary URL for this media item.",
+    );
+  }
+
+  const response = await fetch(sourceUrl);
+
+  if (!response.ok) {
+    throw new ApiError(response.status, "Failed to fetch media source");
+  }
 
   return new Response(response.body, {
     headers: {
-      "Content-Type": response.headers.get("Content-Type"),
-      "Content-Length": response.headers.get("Content-Length") ?? "",
+      "Content-Type":
+        response.headers.get("Content-Type") ||
+        media.mimeType ||
+        "application/octet-stream",
+      ...(response.headers.get("Content-Length")
+        ? { "Content-Length": response.headers.get("Content-Length") }
+        : {}),
+      "Cache-Control": "public, max-age=31536000, immutable",
     },
   });
-}
+});
 
 export const DELETE = asyncHandler(async (req, { params }) => {
   const { id } = await params;

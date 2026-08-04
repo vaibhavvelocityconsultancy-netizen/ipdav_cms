@@ -53,6 +53,19 @@ function generateTitleFromFilename(filename) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function getMediaProxyUrl(media) {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  return `${basePath}/api/media/${media.id}`;
+}
+
+function exposeMediaUrl(media) {
+  return {
+    ...media,
+    originalUrl: media.url,
+    url: getMediaProxyUrl(media),
+  };
+}
+
 // ─────────────────────────────────────────────
 // CREATE MEDIA
 // ─────────────────────────────────────────────
@@ -129,7 +142,7 @@ export async function createMedia(input) {
       },
     });
 
-    uploadedMedia.push(media);
+    uploadedMedia.push(exposeMediaUrl(media));
   }
 
   return Array.isArray(input) ? uploadedMedia : uploadedMedia[0];
@@ -186,7 +199,7 @@ export async function getAllMedia({ page = 1, limit = 20, search = "" }) {
   ]);
 
   return {
-    items,
+    items: items.map(exposeMediaUrl),
     pagination: {
       total,
       page,
@@ -221,7 +234,7 @@ export async function updateMedia(id, input) {
   // Never trust tenantId from input - only update allowed fields
   const { tenantId: inputTenantId, ...updateData } = input;
 
-  return prisma.media.update({
+  const media = await prisma.media.update({
     where: {
       id: Number(id),
       tenantId: tenantId, // Extra safety in where clause
@@ -233,6 +246,8 @@ export async function updateMedia(id, input) {
       description: updateData.description ?? null,
     },
   });
+
+  return exposeMediaUrl(media);
 }
 
 // ─────────────────────────────────────────────
