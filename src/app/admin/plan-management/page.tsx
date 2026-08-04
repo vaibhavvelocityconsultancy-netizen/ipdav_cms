@@ -12,6 +12,9 @@ import {
   GripVertical,
 } from "lucide-react";
 import { toast } from "@/src/hooks/use-toast";
+import { getApiBaseUrl } from "@/src/lib/axios";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 interface Feature {
   id: string;
@@ -71,7 +74,7 @@ export default function PlanManagementPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/plans");
+      const res = await fetch(apiPath("/api/plans"));
       if (!res.ok) throw new Error("Failed to load plans");
       const data = await res.json();
       const sortedPlans = (data.data ?? []).sort(
@@ -166,7 +169,7 @@ export default function PlanManagementPage() {
     setReordering(true);
     try {
       for (let i = 0; i < updatedPlans.length; i++) {
-        await fetch(`/api/plans/${updatedPlans[i].id}`, {
+        await fetch(apiPath(`/api/plans/${updatedPlans[i].id}`), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sortOrder: i + 1 }),
@@ -218,7 +221,7 @@ export default function PlanManagementPage() {
 
     try {
       const res = await fetch(
-        editingId ? `/api/plans/${editingId}` : "/api/plans",
+        apiPath(editingId ? `/api/plans/${editingId}` : "/api/plans"),
         {
           method: editingId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -276,7 +279,7 @@ export default function PlanManagementPage() {
   async function handleDelete(id: string) {
     setError(null);
     try {
-      const res = await fetch(`/api/plans/${id}`, { method: "DELETE" });
+      const res = await fetch(apiPath(`/api/plans/${id}`), { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Failed to delete plan");

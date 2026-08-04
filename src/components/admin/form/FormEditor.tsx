@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/src/ui/button";
 import { FormSubmissions } from "./FormSubmissions";
+import { getApiBaseUrl } from "@/src/lib/axios";
 // import { FormSubmissions } from "./FormSubmissions";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 // ── Field types ───────────────────────────────────────────
 const FIELD_TYPES = [
@@ -508,7 +511,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
     setError("");
 
     try {
-      const url = isNew ? "/api/form" : `/api/form/${form.id}`;
+      const url = apiPath(isNew ? "/api/form" : `/api/form/${form.id}`);
       const method = isNew ? "POST" : "PATCH";
 
       const res = await fetch(url, {

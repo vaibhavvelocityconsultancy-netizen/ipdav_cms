@@ -48,6 +48,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { authApi } from "@/src/lib/auth";
+import { getApiBaseUrl } from "@/src/lib/axios";
 import { useModuleFlags } from "@/src/lib/ecom/useModuleFlags";
 import {
   Sidebar as UISidebar,
@@ -67,6 +68,8 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/src/ui/sidebar";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 interface NavItem {
   id: string;
@@ -378,7 +381,7 @@ export function Sidebar({ userRole }: SidebarProps) {
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const res = await fetch("/api/form/unread-count");
+        const res = await fetch(apiPath("/api/form/unread-count"));
         const data = await res.json();
         setUnreadSubmissions(data.data?.count || 0);
       } catch {}

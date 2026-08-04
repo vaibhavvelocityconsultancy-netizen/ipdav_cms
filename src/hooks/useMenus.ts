@@ -1,4 +1,22 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { getApiBaseUrl } from "@/src/lib/axios";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
+async function readJsonResponse(res: Response) {
+  const contentType = res.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(
+      text.trim().startsWith("<")
+        ? `Request failed with a non-JSON response (${res.status})`
+        : text || `Request failed (${res.status})`,
+    );
+  }
+
+  return res.json();
+}
 
 interface MenuItem {
   id: number;
@@ -56,8 +74,8 @@ export function useMenus() {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/menus");
-      const data = await res.json();
+      const res = await fetch(apiPath("/api/menus"));
+      const data = await readJsonResponse(res);
 
       if (!res.ok) throw new Error(data.message);
 
@@ -75,8 +93,8 @@ export function useMenus() {
   }
   // GET /api/menus/[id] - Get single menu (used by refreshMenu)
   async function getMenuById(id: number): Promise<Menu> {
-    const res = await fetch(`/api/menus/${id}`);
-    const data = await res.json();
+    const res = await fetch(apiPath(`/api/menus/${id}`));
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     return data.data;
   }
@@ -86,7 +104,7 @@ export function useMenus() {
     name: string;
     location: string;
   }): Promise<Menu> {
-    const res = await fetch("/api/menus", {
+    const res = await fetch(apiPath("/api/menus"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -95,7 +113,7 @@ export function useMenus() {
         items: [],
       }),
     });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     setMenus((prev) => [...prev, data.data]);
     return data.data;
@@ -106,12 +124,12 @@ export function useMenus() {
     id: number,
     updates: UpdateMenuInput,
   ): Promise<Menu> {
-    const res = await fetch(`/api/menus/${id}`, {
+    const res = await fetch(apiPath(`/api/menus/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     setMenus((prev) => prev.map((m) => (m.id === id ? data.data : m)));
     // clear draft for this menu
@@ -125,8 +143,8 @@ export function useMenus() {
 
   // DELETE /api/menus/[id] - Delete menu
   async function deleteMenu(id: number): Promise<void> {
-    const res = await fetch(`/api/menus/${id}`, { method: "DELETE" });
-    const data = await res.json();
+    const res = await fetch(apiPath(`/api/menus/${id}`), { method: "DELETE" });
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     setMenus((prev) => prev.filter((m) => m.id !== id));
   }
@@ -136,12 +154,12 @@ export function useMenus() {
     menuId: number,
     item: AddMenuItemInput,
   ): Promise<MenuItem> {
-    const res = await fetch(`/api/menus/${menuId}/items`, {
+    const res = await fetch(apiPath(`/api/menus/${menuId}/items`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(item),
     });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     await refreshMenu(menuId);
     return data.data;
@@ -158,12 +176,12 @@ export function useMenus() {
       url?: string | null;
     },
   ): Promise<MenuItem> {
-    const res = await fetch(`/api/menus/${menuId}/items/${itemId}`, {
+    const res = await fetch(apiPath(`/api/menus/${menuId}/items/${itemId}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     await refreshMenu(menuId);
     return data.data;
@@ -171,10 +189,10 @@ export function useMenus() {
 
   // DELETE /api/menus?menuId=[id]&itemId=[itemId] - Delete single item
   async function deleteMenuItem(menuId: number, itemId: number): Promise<void> {
-    const res = await fetch(`/api/menus?menuId=${menuId}&itemId=${itemId}`, {
+    const res = await fetch(apiPath(`/api/menus?menuId=${menuId}&itemId=${itemId}`), {
       method: "DELETE",
     });
-    const data = await res.json();
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     await refreshMenu(menuId);
   }
@@ -205,13 +223,13 @@ export function useMenus() {
     );
 
     // Fire the API call; if it fails, revert and throw
-    const res = await fetch(`/api/menus/${menuId}/items`, {
+    const res = await fetch(apiPath(`/api/menus/${menuId}/items`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items }),
     });
 
-    const data = await res.json();
+    const data = await readJsonResponse(res);
 
     if (!res.ok) {
       // revert
@@ -224,8 +242,8 @@ export function useMenus() {
   async function getMenuByLocation(
     location: "header" | "footer",
   ): Promise<Menu> {
-    const res = await fetch(`/api/menus/location/${location}`);
-    const data = await res.json();
+    const res = await fetch(apiPath(`/api/menus/location/${location}`));
+    const data = await readJsonResponse(res);
     if (!res.ok) throw new Error(data.message);
     return data.data;
   }

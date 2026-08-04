@@ -6,7 +6,10 @@ import { Button } from "@/src/ui/button";
 import { DataTable, Column } from "@/src/ui/data-table";
 import { toast } from "@/src/hooks/use-toast";
 import { FormEditor } from "./FormEditor";
+import { getApiBaseUrl } from "@/src/lib/axios";
 // import { FormEditor } from "./FormEditor";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 interface Form {
   id: number;
@@ -30,7 +33,7 @@ export function FormsSection() {
   const fetchForms = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/form");
+      const res = await fetch(apiPath("/api/form"));
       const data = await res.json();
       setForms(data.data ?? []);
     } catch {
@@ -69,14 +72,14 @@ export function FormsSection() {
   }, [selectedForms]);
 
   async function handleEdit(id: number) {
-    const res = await fetch(`/api/form/${id}`);
+    const res = await fetch(apiPath(`/api/form/${id}`));
     const data = await res.json();
     setEditingForm(data.data);
     setIsNew(false);
   }
 
   async function handleDelete(id: number) {
-    await fetch(`/api/form/${id}`, { method: "DELETE" });
+    await fetch(apiPath(`/api/form/${id}`), { method: "DELETE" });
     setForms((prev) => prev.filter((f) => f.id !== id));
     setDeleteConfirm(null);
   }

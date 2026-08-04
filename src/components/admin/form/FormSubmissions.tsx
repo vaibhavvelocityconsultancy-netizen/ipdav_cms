@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { Trash2, Download } from "lucide-react";
 import { Button } from "@/src/ui/button";
+import { getApiBaseUrl } from "@/src/lib/axios";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 interface Submission {
   id: number;
@@ -26,7 +29,7 @@ export function FormSubmissions({ formId }: { formId: number }) {
     try {
       setLoading(true);
       const res = await fetch(
-        `/api/form/${numericFormId}/submissions?page=${page}&perPage=20`,
+        apiPath(`/api/form/${numericFormId}/submissions?page=${page}&perPage=20`),
       );
       const data = await res.json();
       setSubmissions(data.data?.submissions ?? []);
@@ -46,7 +49,7 @@ export function FormSubmissions({ formId }: { formId: number }) {
   async function handleDelete(id: number) {
     if (!hasValidFormId) return;
 
-    await fetch(`/api/form/${numericFormId}/submissions`, {
+    await fetch(apiPath(`/api/form/${numericFormId}/submissions`), {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
@@ -58,7 +61,7 @@ export function FormSubmissions({ formId }: { formId: number }) {
   useEffect(() => {
     if (!hasValidFormId) return;
 
-    fetch(`/api/form/${numericFormId}/submissions/mark-read`, {
+    fetch(apiPath(`/api/form/${numericFormId}/submissions/mark-read`), {
       method: "PATCH",
     });
   }, [hasValidFormId, numericFormId]);
