@@ -2,37 +2,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getApiBaseUrl } from "@/src/lib/axios";
 
 interface FormField {
-  id:          string;
-  type:        string;
-  name:        string;
-  label:       string;
-  required:    boolean;
+  id: string;
+  type: string;
+  name: string;
+  label: string;
+  required: boolean;
   placeholder?: string;
-  options?:    string[];
-  message?:    string;
+  options?: string[];
+  message?: string;
 }
 
 interface PublicForm {
-  id:                  number;
-  slug:                string;
-  fields:              FormField[];
-  submitButtonLabel:   string;
-  confirmationType:    string;
+  id: number;
+  slug: string;
+  fields: FormField[];
+  submitButtonLabel: string;
+  confirmationType: string;
   confirmationMessage: string;
-  redirectUrl:         string;
+  redirectUrl: string;
 }
 
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
 export function FormEmbed({ slug }: { slug: string }) {
-  const [form, setForm]       = useState<PublicForm | null>(null);
-  const [values, setValues]   = useState<Record<string, string>>({});
+  const [form, setForm] = useState<PublicForm | null>(null);
+  const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/form/slug/${slug}`)
+    fetch(apiPath(`/api/form/slug/${slug}`))
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setForm(d.data);
@@ -47,10 +50,10 @@ export function FormEmbed({ slug }: { slug: string }) {
     setError("");
 
     try {
-      const res  = await fetch(`/api/form/submit/${slug}`, {
-        method:  "POST",
+      const res = await fetch(apiPath(`/api/form/submit/${slug}`), {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(values),
+        body: JSON.stringify(values),
       });
       const data = await res.json();
 
@@ -122,7 +125,9 @@ export function FormEmbed({ slug }: { slug: string }) {
               >
                 <option value="">Select an option</option>
                 {field.options?.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
                 ))}
               </select>
             ) : field.type === "checkbox" ? (
@@ -155,9 +160,7 @@ export function FormEmbed({ slug }: { slug: string }) {
         );
       })}
 
-      {error && (
-        <p className="text-red-500 text-sm">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-sm">{error}</p>}
 
       <button
         type="submit"

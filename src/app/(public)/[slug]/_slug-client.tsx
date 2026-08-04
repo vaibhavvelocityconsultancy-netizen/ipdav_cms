@@ -16,8 +16,11 @@ import {
 } from "@/src/lib/shortcode/renderBreadcrumbHtml";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
+import { getApiBaseUrl } from "@/src/lib/axios";
 import Link from "next/link";
 import { SchemaRenderer } from "@/src/components/admin/pages/SchemaOutput";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 // Skeleton Components
 const PostCardSkeleton = () => (
@@ -230,7 +233,7 @@ export default function PreviewPage() {
           });
 
         try {
-          const res = await fetch(`/api/form/submit/${slug}`, {
+          const res = await fetch(apiPath(`/api/form/submit/${slug}`), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),

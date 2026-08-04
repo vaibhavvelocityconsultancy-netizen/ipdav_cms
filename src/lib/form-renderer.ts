@@ -72,6 +72,8 @@ export function resolveFormSlugs(html: string): string[] {
 // Step 2 — Fetch forms from the API
 // ─────────────────────────────────────────────
 
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
 export async function fetchFormsBySlug(
   slugs: string[],
   baseUrl = "",
@@ -82,7 +84,9 @@ export async function fetchFormsBySlug(
   await Promise.all(
     slugs.map(async (slug) => {
       try {
-        const res = await fetch(`${baseUrl}/api/form/slug/${slug}`);
+        const res = await fetch(
+          `${baseUrl}${apiPath(`/api/form/slug/${slug}`)}`,
+        );
         if (!res.ok) return;
         const json = await res.json();
         const form: FormData | undefined = json.data ?? json.form ?? json;
@@ -314,7 +318,7 @@ export const FORM_SUBMIT_SCRIPT = `
     });
 
     try {
-      var res = await fetch('/api/form/submit/' + slug, {
+      var res = await fetch((window.location.origin || '') + apiPath('/api/form/submit/' + slug), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
