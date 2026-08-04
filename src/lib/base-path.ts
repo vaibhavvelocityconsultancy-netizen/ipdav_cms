@@ -43,6 +43,9 @@ export function resolveAppUrl(path: string, fallbackOrigin = "") {
   }
 
   if (normalizedPath.startsWith("/api")) {
+    if (fallbackOrigin) {
+      return new URL(`${basePath}${normalizedPath}`, fallbackOrigin).toString();
+    }
     return `${basePath}${normalizedPath}`;
   }
 
