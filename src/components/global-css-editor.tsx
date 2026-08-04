@@ -3,12 +3,13 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiMutations } from "@/src/lib/apiMutations";
+// import { apiMutations } from "@/src/lib/apiMutations";
 import { fetchers } from "@/src/lib/fetchers";
+import { apiMutations } from "../lib/apimutation";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((mod) => mod.default),
-  {
+  {s
     ssr: false,
     loading: () => (
       <div className="flex h-[420px] items-center justify-center bg-[#1e1e1e] text-sm text-[#858585]">

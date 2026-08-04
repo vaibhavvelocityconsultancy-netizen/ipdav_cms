@@ -2,11 +2,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiMutations } from "@/src/lib/apiMutations";
+// import { apiMutations } from "@/src/lib/apiMutations";
 import { fetchers } from "@/src/lib/fetchers";
 import { authApi } from "@/src/lib/auth";
 import { SiteSettings } from "../Cms";
 import { SettingsPage } from "../SettingsPage";
+import { apiMutations } from "@/src/lib/apimutation";
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
