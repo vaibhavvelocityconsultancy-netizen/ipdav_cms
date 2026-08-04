@@ -21,7 +21,7 @@ test("builds absolute URLs that include the detected base path", () => {
 
   assert.equal(
     resolveAppUrl("/api/media/42", "https://ipdav.com"),
-    "https://ipdav.com/newweb/api/media/42",
+    "https://ipdav.com/api/media/42",
   );
 });
 

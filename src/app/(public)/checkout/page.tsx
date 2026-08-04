@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useMutation } from "@tanstack/react-query";
+import { resolveAppUrl } from "@/src/lib/base-path";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -22,12 +23,22 @@ function CheckoutContent() {
   const planId = searchParams.get("plan");
   const billingCycle = searchParams.get("billingCycle") || "MONTHLY";
 
+  const buildApiUrl = (path: string) =>
+    resolveAppUrl(
+      path,
+      typeof window !== "undefined" ? window.location.origin : "",
+    );
+
   const confirmMutation = useMutation({
     mutationFn: async (subscriptionId: string) => {
-      const res = await fetch("/api/subscription/confirms", {
+      const res = await fetch(buildApiUrl("/api/subscription/confirms"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: Number(planId), billingCycle, subscriptionId }),
+        body: JSON.stringify({
+          planId: Number(planId),
+          billingCycle,
+          subscriptionId,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -56,7 +67,9 @@ function CheckoutContent() {
     async function fetchPlanInfo() {
       try {
         const res = await fetch(
-          `/api/subscription/plan-info?planId=${planId}&billingCycle=${billingCycle}`,
+          buildApiUrl(
+            `/api/subscription/plan-info?planId=${encodeURIComponent(planId)}&billingCycle=${encodeURIComponent(billingCycle)}`,
+          ),
         );
         const data = await res.json();
         if (!res.ok || !data.success) {
@@ -109,7 +122,9 @@ function CheckoutContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-sm text-muted-foreground">Complete your subscription</p>
+      <p className="text-sm text-muted-foreground">
+        Complete your subscription
+      </p>
       <div className="w-full max-w-xs">
         <PayPalButtons
           style={{ layout: "vertical" }}

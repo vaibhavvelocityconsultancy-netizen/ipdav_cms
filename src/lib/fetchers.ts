@@ -1,28 +1,19 @@
 // src/lib/fetchers.ts
 
-function getBaseUrl() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+import { resolveAppUrl } from "./base-path";
 
+function getBaseUrl() {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (siteUrl) {
     try {
-      const url = new URL(siteUrl);
-      return url.pathname.replace(/\/$/, "");
+      return new URL(siteUrl).origin;
     } catch {
       return "";
     }
-  }
-
-  if (typeof window !== "undefined") {
-    const pathname = window.location.pathname.replace(/\/$/, "");
-    if (!pathname || pathname === "/") return "";
-
-    const knownBasePaths = ["/newweb", "/cms", "/app"];
-    const matchedBasePath = knownBasePaths.find(
-      (basePath) =>
-        pathname === basePath || pathname.startsWith(`${basePath}/`),
-    );
-
-    return matchedBasePath ?? "";
   }
 
   return "";
@@ -46,9 +37,7 @@ const fetcher = async (url: string) => {
   const baseUrl = getBaseUrl();
   const fullUrl = url.startsWith("http")
     ? url
-    : baseUrl && url.startsWith("/api") && !url.startsWith(`${baseUrl}/api`)
-      ? `${baseUrl}${url}`
-      : `${baseUrl}${url}`;
+    : resolveAppUrl(url, baseUrl || undefined);
   const res = await fetch(fullUrl, {
     cache: "no-store",
   });

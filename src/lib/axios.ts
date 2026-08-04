@@ -1,28 +1,20 @@
 import axios from "axios";
+import { resolveAppUrl } from "./base-path";
 
 function getApiBaseUrl() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (typeof window !== "undefined") {
+    return resolveAppUrl("", window.location.origin);
+  }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (siteUrl) {
     try {
-      const url = new URL(siteUrl);
-      return url.pathname.replace(/\/$/, "");
+      return (
+        new URL(siteUrl).origin + new URL(siteUrl).pathname.replace(/\/$/, "")
+      );
     } catch {
       return "";
     }
-  }
-
-  if (typeof window !== "undefined") {
-    const pathname = window.location.pathname.replace(/\/$/, "");
-    if (!pathname || pathname === "/") return "";
-
-    const knownBasePaths = ["/newweb", "/cms", "/app"];
-    const matchedBasePath = knownBasePaths.find(
-      (basePath) =>
-        pathname === basePath || pathname.startsWith(`${basePath}/`),
-    );
-
-    return matchedBasePath ?? "";
   }
 
   return "";
