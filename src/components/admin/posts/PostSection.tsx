@@ -224,7 +224,7 @@ export function PostsSection() {
       cell: (row) => (
         <div className="relative group w-[280px]">
           <button
-            onClick={() => window.open(`/posts/${row.slug}`, "_blank")}
+            onClick={() => window.open(`newweb/posts/${row.slug}`, "_blank")}
             className="block w-full overflow-hidden whitespace-nowrap text-ellipsis text-left font-mono text-xs text-primary hover:underline"
           >
             /posts/{row.slug}

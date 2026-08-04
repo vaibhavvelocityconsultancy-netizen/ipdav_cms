@@ -270,8 +270,8 @@ export default function PublicPostPage() {
       return "";
     return renderBreadcrumbHtml(
       [
-        { label: "Posts", href: "/posts" },
-        { label: post?.title || "Post", href: `/posts/${post?.slug ?? ""}` },
+        { label: "Posts", href: "newweb/posts" },
+        { label: post?.title || "Post", href: `newweb/posts/${post?.slug ?? ""}` },
       ],
       breadcrumbSettings ?? DEFAULT_BREADCRUMB_SETTINGS,
     );
@@ -285,9 +285,9 @@ export default function PublicPostPage() {
     return injectBreadcrumb(
       post.content,
       [
-        { label: settings?.homeLabel || "Home", href: "/" },
-        { label: "Posts", href: "/posts" },
-        { label: post.title, href: `/posts/${post.slug}` },
+        { label: settings?.homeLabel || "Home", href: "newweb" },
+        { label: "Posts", href: "newweb/posts" },
+        { label: post.title, href: `newweb/posts/${post.slug}` },
       ],
       breadcrumbSettings,
       { isHome: false, is404: false, isSearch: false },

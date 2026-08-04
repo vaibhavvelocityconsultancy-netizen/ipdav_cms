@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiBaseUrl } from "@/src/lib/axios";
 
 interface PhraseMatch {
   phrase: string;
@@ -34,12 +35,16 @@ interface ContentRow {
   type: "page" | "post";
 }
 
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
 // Fetch linkable content (pages and posts) for the initial list
 export function useLinkableContent() {
   return useQuery({
     queryKey: ["linkable-content"],
     queryFn: async () => {
-      const res = await fetch("/api/seo/internal-links/linkable-content");
+      const res = await fetch(
+        apiPath("/api/seo/internal-links/linkable-content"),
+      );
       if (!res.ok) throw new Error("Failed to fetch linkable content");
       return res.json() as Promise<ContentRow[]>;
     },
@@ -52,10 +57,15 @@ export function useSuggestInternalLinksWithPhrases(
   sourceType?: "page" | "post",
   sourceId?: string | number,
   sourceTitle?: string,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: ["internal-links", "suggestions-with-phrases", sourceType, sourceId],
+    queryKey: [
+      "internal-links",
+      "suggestions-with-phrases",
+      sourceType,
+      sourceId,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         sourceType: sourceType || "",
@@ -64,7 +74,7 @@ export function useSuggestInternalLinksWithPhrases(
       });
 
       const res = await fetch(
-        `/api/seo/internal-links/suggestions-with-phrases?${params}`,
+        apiPath(`/api/seo/internal-links/suggestions-with-phrases?${params}`),
       );
       if (!res.ok) throw new Error("Failed to fetch suggestions");
       return res.json() as Promise<SuggestionWithPhrases[]>;
@@ -78,7 +88,7 @@ export function useSuggestInternalLinksWithPhrases(
 export function useSuggestInternalLinks(
   sourceType?: "page" | "post",
   sourceId?: string | number,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: ["internal-links", "suggestions", sourceType, sourceId],
@@ -89,7 +99,7 @@ export function useSuggestInternalLinks(
       });
 
       const res = await fetch(
-        `/api/seo/internal-links/suggestions?${params}`,
+        apiPath(`/api/seo/internal-links/suggestions?${params}`),
       );
       if (!res.ok) throw new Error("Failed to fetch suggestions");
       return res.json() as Promise<Suggestion[]>;
@@ -104,7 +114,7 @@ export function useInternalLinkRules() {
   return useQuery({
     queryKey: ["internal-link-rules"],
     queryFn: async () => {
-      const res = await fetch("/api/seo/internal-links/rules");
+      const res = await fetch(apiPath("/api/seo/internal-links/rules"));
       if (!res.ok) throw new Error("Failed to fetch rules");
       return res.json();
     },
@@ -123,7 +133,7 @@ export function useCreateRule() {
       destinationId?: string;
       destinationUrl?: string;
     }) => {
-      const res = await fetch("/api/seo/internal-links/rules", {
+      const res = await fetch(apiPath("/api/seo/internal-links/rules"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -175,7 +185,7 @@ export function useDeleteRule() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/seo/internal-links/rules/${id}`, {
+      const res = await fetch(apiPath(`/api/seo/internal-links/rules/${id}`), {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete rule");
@@ -194,7 +204,7 @@ export function useToggleRule() {
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(
-        `/api/seo/internal-links/rules/${id}/toggle`,
+        apiPath(`/api/seo/internal-links/rules/${id}/toggle`),
         {
           method: "POST",
         },

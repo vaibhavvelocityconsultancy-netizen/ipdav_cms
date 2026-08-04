@@ -52,6 +52,7 @@ export default function AdminUsersPage() {
 
   const { data: users, isLoading } = useQuery<SubscriberRow[]>({
     queryKey: ["admin-users"],
+
     queryFn: async () => {
       const res = await fetch("/api/subscription-user");
       const json = await res.json();

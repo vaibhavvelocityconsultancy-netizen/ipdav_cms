@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { toast } from "@/src/ui/use-toast";
+import { getApiBaseUrl } from "@/src/lib/axios";
 
 interface SeoItem {
   id: string;
@@ -60,6 +61,7 @@ interface BulkSeoResponse {
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 // Helper to generate canonical URL
 const generateCanonicalUrl = (slug: string) => {
@@ -68,7 +70,7 @@ const generateCanonicalUrl = (slug: string) => {
 
 // API Functions
 const fetchBulkSeo = async (): Promise<BulkSeoResponse> => {
-  const response = await fetch("/api/seo/bulk");
+  const response = await fetch(apiPath("/api/seo/bulk"));
   const result = await response.json();
 
   if (!response.ok) {
@@ -85,7 +87,8 @@ const fetchBulkSeo = async (): Promise<BulkSeoResponse> => {
       status: item.status.toLowerCase(),
       metaTitle: item.seoData?.metaTitle ?? "",
       metaDescription: item.seoData?.metaDescription ?? "",
-      canonicalUrl: item.seoData?.canonicalUrl || generateCanonicalUrl(item.slug),
+      canonicalUrl:
+        item.seoData?.canonicalUrl || generateCanonicalUrl(item.slug),
       robots:
         item.seoData?.robots ??
         `${item.seoData?.robotsIndex ? "index" : "noindex"},${item.seoData?.robotsFollow ? "follow" : "nofollow"}`,
@@ -94,7 +97,7 @@ const fetchBulkSeo = async (): Promise<BulkSeoResponse> => {
 };
 
 const saveBulkSeo = async (items: SeoUpdateItem[]): Promise<void> => {
-  const response = await fetch("/api/seo/bulk", {
+  const response = await fetch(apiPath("/api/seo/bulk"), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ items }),
@@ -149,7 +152,9 @@ export default function BulkSeoEditorPage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "published" | "draft">("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "published" | "draft"
+  >("all");
 
   // Local state for editing
   const [localItems, setLocalItems] = useState<SeoItem[]>([]);
@@ -453,9 +458,12 @@ export default function BulkSeoEditorPage() {
               <div className="mb-6 pb-4 border-b">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold">{currentItem.title}</h2>
+                    <h2 className="text-xl font-semibold">
+                      {currentItem.title}
+                    </h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {currentItem.url} • {currentItem.type} • {currentItem.status}
+                      {currentItem.url} • {currentItem.type} •{" "}
+                      {currentItem.status}
                     </p>
                   </div>
                   {isDirty && (
@@ -486,11 +494,12 @@ export default function BulkSeoEditorPage() {
                     className="mb-2"
                   />
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Recommended: 50-60 characters</span>
+                    <span className="text-muted-foreground">
+                      Recommended: 50-60 characters
+                    </span>
                     <span
                       className={
-                        getCharacterCountStatus(currentItem.metaTitle, 60)
-                          .color
+                        getCharacterCountStatus(currentItem.metaTitle, 60).color
                       }
                     >
                       {currentItem.metaTitle?.length || 0} / 60
@@ -516,7 +525,9 @@ export default function BulkSeoEditorPage() {
                     className="w-full px-3 py-2 border rounded-md min-h-[80px] text-sm font-sans mb-2"
                   />
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Recommended: 150-160 characters</span>
+                    <span className="text-muted-foreground">
+                      Recommended: 150-160 characters
+                    </span>
                     <span
                       className={
                         getCharacterCountStatus(
@@ -582,7 +593,9 @@ export default function BulkSeoEditorPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="not-set">Not set</SelectItem>
-                      <SelectItem value="index,follow">Index, Follow</SelectItem>
+                      <SelectItem value="index,follow">
+                        Index, Follow
+                      </SelectItem>
                       <SelectItem value="index,nofollow">
                         Index, NoFollow
                       </SelectItem>
@@ -606,8 +619,7 @@ export default function BulkSeoEditorPage() {
                   </div>
                   <div className="text-xs text-muted-foreground mt-3 space-y-1">
                     <p>
-                      ✓ Meta Title:{" "}
-                      {currentItem.metaTitle?.trim() ? "✓" : "✗"}
+                      ✓ Meta Title: {currentItem.metaTitle?.trim() ? "✓" : "✗"}
                     </p>
                     <p>
                       ✓ Meta Description:{" "}

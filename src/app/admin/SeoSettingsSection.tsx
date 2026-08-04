@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiBaseUrl } from "@/src/lib/axios";
 import {
   ExternalLink,
   RotateCcw,
@@ -164,6 +165,8 @@ function CrawlerCard({
   );
 }
 
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
 export function SeoSettingsSection() {
   const queryClient = useQueryClient();
 
@@ -192,7 +195,7 @@ export function SeoSettingsSection() {
   const { data, isLoading: fetching } = useQuery({
     queryKey: ["robots-txt"],
     queryFn: async () => {
-      const res = await fetch("/api/seo/robots");
+      const res = await fetch(apiPath("/api/seo/robots"));
       const result = await res.json();
       if (!result.success) throw new Error(result.message);
       return {
@@ -272,7 +275,7 @@ export function SeoSettingsSection() {
   // ── Save Mutation ──
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/seo/robots", {
+      const res = await fetch(apiPath("/api/seo/robots"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -305,7 +308,7 @@ Allow: /
 
 Sitemap: ${siteUrl}/sitemap.xml
 `;
-      const res = await fetch("/api/seo/robots", {
+      const res = await fetch(apiPath("/api/seo/robots"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

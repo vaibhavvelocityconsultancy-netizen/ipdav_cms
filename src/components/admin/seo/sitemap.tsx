@@ -30,6 +30,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/src/lib/utils";
 import { toast } from "@/src/ui/use-toast";
+import { getApiBaseUrl } from "@/src/lib/axios";
 
 // Types
 interface SitemapSettings {
@@ -67,9 +68,11 @@ interface SitemapPreview {
   total: number;
 }
 
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
 // API Functions
 const fetchSitemapSettings = async () => {
-  const response = await fetch("/api/seo/sitemap");
+  const response = await fetch(apiPath("/api/seo/sitemap"));
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message);
@@ -78,14 +81,14 @@ const fetchSitemapSettings = async () => {
 };
 
 const fetchSitemapStats = async (): Promise<SitemapStats> => {
-  const response = await fetch("/api/seo/sitemap/stats");
+  const response = await fetch(apiPath("/api/seo/sitemap/stats"));
   const json = await response.json();
   if (!response.ok) throw new Error(json.message);
   return json.data;
 };
 
 const fetchSitemapPreview = async (): Promise<SitemapPreview> => {
-  const response = await fetch("/api/seo/sitemap/preview");
+  const response = await fetch(apiPath("/api/seo/sitemap/preview"));
   const json = await response.json();
 
   if (!response.ok) throw new Error(json.message);
@@ -96,7 +99,7 @@ const fetchSitemapPreview = async (): Promise<SitemapPreview> => {
   };
 };
 const updateSitemapSettings = async (data: Partial<SitemapSettings>) => {
-  const response = await fetch("/api/seo/sitemap", {
+  const response = await fetch(apiPath("/api/seo/sitemap"), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -106,7 +109,7 @@ const updateSitemapSettings = async (data: Partial<SitemapSettings>) => {
 };
 
 const regenerateSitemap = async () => {
-  const response = await fetch("/api/seo/sitemap/regenerate", {
+  const response = await fetch(apiPath("/api/seo/sitemap/regenerate"), {
     method: "POST",
   });
   if (!response.ok) throw new Error("Failed to regenerate sitemap");

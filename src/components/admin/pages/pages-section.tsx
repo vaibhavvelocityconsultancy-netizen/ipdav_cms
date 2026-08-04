@@ -408,7 +408,7 @@ export function PagesSection() {
       cell: (page) => (
         <button
           onClick={() => {
-            window.open(`/${page.slug}`, "_blank");
+            window.open(`newweb/${page.slug}`, "_blank");
           }}
           className="text-xs font-mono text-primary hover:underline cursor-pointer"
         >

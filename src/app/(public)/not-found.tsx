@@ -3,6 +3,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { getApiBaseUrl } from "@/src/lib/axios";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
 export default function NotFound() {
   useEffect(() => {
@@ -10,7 +13,7 @@ export default function NotFound() {
     console.log("🚨 404 page loaded for:", pathname);
 
     // Test if fetch works
-    fetch("/api/logs/404", {
+    fetch(apiPath("/api/logs/404"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

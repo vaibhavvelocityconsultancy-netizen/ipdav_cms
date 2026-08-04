@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/src/ui/card";
 import { Label } from "@/src/ui/label";
 import { Switch } from "@/src/ui/switch";
 import { useToast } from "@/src/ui/use-toast";
+import { getApiBaseUrl } from "@/src/lib/axios";
 
 type AICrawlSettings = {
   enableMarkdownGeneration: boolean;
@@ -40,6 +41,8 @@ const DEFAULT_SETTINGS: AICrawlSettings = {
   excludeDrafts: true,
 };
 
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
 export default function AILLMSettingsPage() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<AICrawlSettings>(DEFAULT_SETTINGS);
@@ -56,7 +59,7 @@ export default function AILLMSettingsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["ai-crawl-settings"],
     queryFn: async () => {
-      const res = await fetch("/api/ai-crawl-settings");
+      const res = await fetch(apiPath("/api/ai-crawl-settings"));
       if (!res.ok) throw new Error("Failed to fetch settings");
       const json = await res.json();
       return json.data;
@@ -67,7 +70,7 @@ export default function AILLMSettingsPage() {
   const { data: llmsData } = useQuery({
     queryKey: ["llms-txt-content"],
     queryFn: async () => {
-      const res = await fetch("/api/llms-txt");
+      const res = await fetch(apiPath("/api/llms-txt"));
       if (!res.ok) throw new Error("Failed to fetch llms.txt");
       const json = await res.json();
       return json.data;
@@ -79,7 +82,7 @@ export default function AILLMSettingsPage() {
   const { data: contentList, refetch: refetchContentList } = useQuery({
     queryKey: ["ai-crawl-content"],
     queryFn: async () => {
-      const res = await fetch("/api/ai-crawl-content");
+      const res = await fetch(apiPath("/api/ai-crawl-content"));
       if (!res.ok) throw new Error("Failed to fetch content");
       const json = await res.json();
       return json.data as AICrawlContentItem[];
@@ -90,7 +93,7 @@ export default function AILLMSettingsPage() {
   // Update settings mutation
   const updateMutation = useMutation({
     mutationFn: async (newSettings: AICrawlSettings) => {
-      const res = await fetch("/api/ai-crawl-settings", {
+      const res = await fetch(apiPath("/api/ai-crawl-settings"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSettings),
@@ -118,7 +121,7 @@ export default function AILLMSettingsPage() {
   // Regenerate markdown mutation
   const regenerateMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/regenerate-markdown", {
+      const res = await fetch(apiPath("/api/regenerate-markdown"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });

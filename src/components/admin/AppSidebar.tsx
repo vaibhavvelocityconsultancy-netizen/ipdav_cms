@@ -649,7 +649,7 @@ export function Sidebar({ userRole }: SidebarProps) {
               tooltip="Visit Site"
               className="h-auto rounded-xl py-2"
             >
-              <a href="/" target="_blank" rel="noreferrer">
+              <a href="/newweb" target="_blank" rel="noreferrer">
                 <ExternalLink size={18} strokeWidth={1.5} />
                 <span className="flex-1 overflow-hidden text-left">
                   <span className="block truncate text-sm font-medium">

@@ -425,10 +425,10 @@ export default function PreviewPage() {
                 >
                   {post.featuredImage && (
                     <a
-                      href={`/posts/${post.slug}`}
+                      href={`newweb/posts/${post.slug}`}
                       onClick={(e: React.MouseEvent) => {
                         e.preventDefault();
-                        router.push(`/posts/${post.slug}`);
+                        router.push(`newweb/posts/${post.slug}`);
                       }}
                       className="overflow-hidden"
                     >
@@ -454,10 +454,10 @@ export default function PreviewPage() {
                     )}
                     <h2 className="text-lg font-bold text-gray-900 mb-2 leading-snug">
                       <a
-                        href={`/posts/${post.slug}`}
+                        href={`newweb/posts/${post.slug}`}
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
-                          router.push(`/posts/${post.slug}`);
+                          router.push(`newweb/posts/${post.slug}`);
                         }}
                         className="hover:text-gray-700 transition-colors"
                       >
@@ -479,7 +479,7 @@ export default function PreviewPage() {
                         </span>
                       )}
                       <Link
-                        href={`/posts/${post.slug}`}
+                        href={`newweb/posts/${post.slug}`}
                         className="text-sm font-semibold text-gray-900 hover:underline"
                         onMouseEnter={() => {
                           queryClient.prefetchQuery({
