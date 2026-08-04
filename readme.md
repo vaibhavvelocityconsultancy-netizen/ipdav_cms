@@ -5,7 +5,7 @@
 Before starting the development server, ensure you have:
 
 - **Node.js** (v16 or higher)
-- **MySQL** (running locally or remotely)
+- **PostgreSQL** (running locally or remotely)
 - **npm** or **pnpm** package manager
 
 ## Setup Steps
@@ -23,7 +23,7 @@ pnpm install
 Create or update `.env` file in the root directory with:
 
 ```env
-DATABASE_URL="mysql://username:password@localhost:3306/database_name"
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
 NEXTAUTH_SECRET="your-secret-key"
 NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"

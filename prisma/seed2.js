@@ -56,15 +56,15 @@ const courses = [
     ],
   },
   {
-    title: "MySQL & Prisma ORM",
-    slug: "mysql-prisma-orm",
+    title: "PostgreSQL & Prisma ORM",
+    slug: "postgresql-prisma-orm",
     instructor: "David Brown",
     level: "Intermediate",
     price: 3999,
     durationHours: 16,
     thumbnail: "https://picsum.photos/800/450?random=4",
     videoUrls: [
-      "https://www.youtube.com/watch?v=qw--VYLpxG4", // MySQL Intro
+      "https://www.youtube.com/watch?v=qw--VYLpxG4", // PostgreSQL Intro
       "https://www.youtube.com/watch?v=0WixS3cK16A", // Prisma Intro
       "https://www.youtube.com/watch?v=_txVU0UcYHI", // Prisma CRUD
       "https://www.youtube.com/watch?v=1GcGj5l12rE", // Prisma Relations

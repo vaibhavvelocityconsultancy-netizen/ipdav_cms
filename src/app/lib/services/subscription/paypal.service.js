@@ -1,6 +1,4 @@
 // src/app/lib/services/paypal.service.js
-import fetch from "node-fetch"; // or global fetch if Node 18+
-
 const PAYPAL_BASE =
   process.env.PAYPAL_MODE === "live"
     ? "https://api-m.paypal.com"
@@ -121,7 +119,6 @@ export async function createPaypalBillingPlan({
   return data;
 }
 
-
 export async function verifyPaypalWebhook(headers, rawBody) {
   const token = await getAccessToken();
 
@@ -135,14 +132,17 @@ export async function verifyPaypalWebhook(headers, rawBody) {
     webhook_event: JSON.parse(rawBody),
   };
 
-  const res = await fetch(`${PAYPAL_BASE}/v1/notifications/verify-webhook-signature`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const res = await fetch(
+    `${PAYPAL_BASE}/v1/notifications/verify-webhook-signature`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(verificationPayload),
     },
-    body: JSON.stringify(verificationPayload),
-  });
+  );
 
   const data = await res.json();
   return data.verification_status === "SUCCESS";
