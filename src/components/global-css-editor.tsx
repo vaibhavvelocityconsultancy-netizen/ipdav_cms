@@ -9,7 +9,7 @@ import { apiMutations } from "../lib/apimutation";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((mod) => mod.default),
-  {s
+  {
     ssr: false,
     loading: () => (
       <div className="flex h-[420px] items-center justify-center bg-[#1e1e1e] text-sm text-[#858585]">
