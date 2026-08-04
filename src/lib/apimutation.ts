@@ -1,23 +1,8 @@
 // src/lib/apiMutations.ts
 
-// src/lib/apiMutations.ts
+import { getBaseUrl } from "./config";
 
-function getBaseUrl() {
-  if (typeof window === "undefined") {
-    return (
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "https://ipdav.com/newweb"
-    );
-  }
-  try {
-    const url = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "https://ipdav.com/newweb",
-    );
-    return url.pathname.replace(/\/$/, "");
-  } catch {
-    return "";
-  }
-}
+// src/lib/apiMutations.ts
 
 export async function mutationRequest(url: string, method: string, body?: any) {
   const isFormData = body instanceof FormData;
@@ -90,6 +75,11 @@ export const apiMutations = {
   //   return res.json();
   // },
 
+  updateSettings: (data: any) => mutationRequest("/api/setting", "PATCH", data),
+
+  updateAdminToolbar: (data: any) =>
+    mutationRequest("/api/setting/admin-toolbar", "PATCH", data),
+
   updateGlobalCss: (css: string) =>
     mutationRequest("/api/setting/global-css", "PUT", { css }),
 
@@ -111,6 +101,11 @@ export const apiMutations = {
 
   deleteProduct: (id: string) =>
     mutationRequest(`/api/ecommerce/products/${id}`, "DELETE"),
+
+  // Content taxonomy
+  createCategory: (data: any) =>
+    mutationRequest("/api/categories", "POST", data),
+  createTag: (data: any) => mutationRequest("/api/tags", "POST", data),
 
   // Categories
   createProductCategory: (data: any) =>

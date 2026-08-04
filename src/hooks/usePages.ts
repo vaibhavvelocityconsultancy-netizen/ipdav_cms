@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { fetchers } from "@/src/lib/fetchers";
 
 export type Page = {
   id: number;
@@ -7,13 +8,7 @@ export type Page = {
 };
 
 async function fetchPages(): Promise<Page[]> {
-  const res = await fetch("/api/pages");
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data?.message || "Failed to fetch pages");
-  }
-
+  const data = await fetchers.pages();
   return data.data ?? [];
 }
 

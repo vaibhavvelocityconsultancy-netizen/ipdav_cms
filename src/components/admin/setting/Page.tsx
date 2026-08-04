@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { apiMutations } from "@/src/lib/apiMutations";
+import { fetchers } from "@/src/lib/fetchers";
+import { authApi } from "@/src/lib/auth";
 import { SiteSettings } from "../Cms";
 import { SettingsPage } from "../SettingsPage";
 
@@ -15,8 +18,7 @@ export default function AdminSettings() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch(`/api/setting?t=${Date.now()}`);
-      const data = await response.json();
+      const data = await fetchers.settings({ t: Date.now() });
 
       console.log("FETCH SETTINGS:", data);
 
@@ -29,17 +31,12 @@ export default function AdminSettings() {
   };
 
   const handleSave = async (newSettings: Partial<SiteSettings>) => {
-    const response = await fetch("/api/setting", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newSettings),
-    });
+    const updated = await apiMutations.updateSettings(newSettings);
 
-    if (!response.ok) {
-      throw new Error("Failed to save settings");
+    if (!updated.success) {
+      throw new Error(updated.message || "Failed to save settings");
     }
 
-    const updated = await response.json();
     setSettings(updated.data);
   };
 
@@ -50,17 +47,13 @@ export default function AdminSettings() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const response = await authApi.uploadFile(formData);
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Upload failed");
+    if (!response.success) {
+      throw new Error(response.message || "Upload failed");
     }
 
-    const result = await response.json();
+    const result = response;
     console.log("Upload response:", result);
 
     // Fix: Access the nested data.url

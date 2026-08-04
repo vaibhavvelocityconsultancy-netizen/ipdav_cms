@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/src/ui/card";
 import { Label } from "@/src/ui/label";
 import { Switch } from "@/src/ui/switch";
 import { Input } from "@/src/ui/input";
+import { fetchers } from "@/src/lib/fetchers";
 
 // ─── Image Upload Component (Simplified - No URL input) ─────────────────────
 
@@ -192,8 +193,7 @@ export function SettingsPage({
 
   useEffect(() => {
     const fetchPages = async () => {
-      const response = await fetch("/api/pages");
-      const data = await response.json();
+      const data = await fetchers.pages();
       setPages(data.data);
     };
     fetchPages();
@@ -257,7 +257,8 @@ export function SettingsPage({
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Configure your site&apos;s global settings, SEO defaults, and appearance
+            Configure your site&apos;s global settings, SEO defaults, and
+            appearance
           </p>
         </div>
 
@@ -521,106 +522,91 @@ export function SettingsPage({
           </div>
 
           <Card>
-  <CardHeader>
-    <CardTitle>
-      Public Search Settings
-    </CardTitle>
-  </CardHeader>
+            <CardHeader>
+              <CardTitle>Public Search Settings</CardTitle>
+            </CardHeader>
 
-  <CardContent className="space-y-6">
+            <CardContent className="space-y-6">
+              {/* ENABLE SEARCH */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Enable Search</Label>
 
-    {/* ENABLE SEARCH */}
-    <div className="flex items-center justify-between">
-      <div>
-        <Label>
-          Enable Search
-        </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show search bar on public website
+                  </p>
+                </div>
 
-        <p className="text-sm text-muted-foreground">
-          Show search bar on public website
-        </p>
-      </div>
+                <Switch
+                  checked={settings.showSearch}
+                  onCheckedChange={(value) =>
+                    setSettings({
+                      ...settings,
+                      showSearch: value,
+                    })
+                  }
+                />
+              </div>
 
-      <Switch
-        checked={settings.showSearch}
-        onCheckedChange={(value) =>
-          setSettings({
-            ...settings,
-            showSearch: value,
-          })
-        }
-      />
-    </div>
+              {/* SEARCH PLACEHOLDER */}
+              <div className="space-y-2">
+                <Label>Search Placeholder</Label>
 
-    {/* SEARCH PLACEHOLDER */}
-    <div className="space-y-2">
-      <Label>
-        Search Placeholder
-      </Label>
+                <Input
+                  placeholder="Search..."
+                  value={settings.searchPlaceholder || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      searchPlaceholder: e.target.value,
+                    })
+                  }
+                />
+              </div>
 
-      <Input
-        placeholder="Search..."
-        value={
-          settings.searchPlaceholder || ""
-        }
-        onChange={(e) =>
-          setSettings({
-            ...settings,
-            searchPlaceholder:
-              e.target.value,
-          })
-        }
-      />
-    </div>
+              {/* SEARCH IN PAGES */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Search In Pages</Label>
 
-    {/* SEARCH IN PAGES */}
-    <div className="flex items-center justify-between">
-      <div>
-        <Label>
-          Search In Pages
-        </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Include pages in search results
+                  </p>
+                </div>
 
-        <p className="text-sm text-muted-foreground">
-          Include pages in search results
-        </p>
-      </div>
+                <Switch
+                  checked={settings.searchInPages}
+                  onCheckedChange={(value) =>
+                    setSettings({
+                      ...settings,
+                      searchInPages: value,
+                    })
+                  }
+                />
+              </div>
 
-      <Switch
-        checked={settings.searchInPages}
-        onCheckedChange={(value) =>
-          setSettings({
-            ...settings,
-            searchInPages: value,
-          })
-        }
-      />
-    </div>
+              {/* SEARCH IN POSTS */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Search In Posts</Label>
 
-    {/* SEARCH IN POSTS */}
-    <div className="flex items-center justify-between">
-      <div>
-        <Label>
-          Search In Posts
-        </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Include posts in search results
+                  </p>
+                </div>
 
-        <p className="text-sm text-muted-foreground">
-          Include posts in search results
-        </p>
-      </div>
-
-      <Switch
-        checked={settings.searchInPosts}
-        onCheckedChange={(value) =>
-          setSettings({
-            ...settings,
-            searchInPosts: value,
-          })
-        }
-      />
-    </div>
-
-  </CardContent>
-</Card>
+                <Switch
+                  checked={settings.searchInPosts}
+                  onCheckedChange={(value) =>
+                    setSettings({
+                      ...settings,
+                      searchInPosts: value,
+                    })
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
@@ -654,12 +640,9 @@ export function SettingsPage({
               {saveStatus === "idle" &&
                 (hasChanges ? "Save Changes" : "No Changes")}
             </button>
-
           </div>
         </form>
       </div>
     </div>
-
-    
   );
 }

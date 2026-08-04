@@ -1,15 +1,11 @@
 "use client";
 
 import { ROLE_LABELS } from "@/src/app/lib/permissions";
+import { authApi } from "@/src/lib/auth";
 import { useEffect, useState } from "react";
 
 type RoleName =
-  | "SUPER_ADMIN"
-  | "ADMIN"
-  | "EDITOR"
-  | "AUTHOR"
-  | "VIEWER"
-  | "SUBSCRIBER";
+  "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "AUTHOR" | "VIEWER" | "SUBSCRIBER";
 
 interface PermissionRow {
   id: number;
@@ -48,8 +44,7 @@ export function PermissionsSection() {
   const fetchPermissions = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/permissions");
-      const data = await res.json();
+      const { data } = await authApi.permissions();
 
       // ← KEY FIX: flatten [{role: "ADMIN"}] → ["ADMIN"]
       const normalized = (data.data ?? []).map((p: any) => ({
@@ -73,9 +68,8 @@ export function PermissionsSection() {
     try {
       setSeeding(true);
       setError("");
-      const res = await fetch("/api/permissions/seed", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
+      const { data } = await authApi.seedPermissions();
+      if (!data.success) {
         setError(data.message || "Seeding failed");
         return;
       }
@@ -99,18 +93,13 @@ export function PermissionsSection() {
     setError("");
 
     try {
-      const res = await fetch("/api/permissions/role", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role,
-          permission: permissionName,
-          allowed: !currentlyHas,
-        }),
+      const { data } = await authApi.updatePermissionRole({
+        role,
+        permission: permissionName,
+        allowed: !currentlyHas,
       });
 
-      const data = await res.json();
-      if (!res.ok) {
+      if (!data.success) {
         setError(data.message || "Failed to update");
         return;
       }

@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { authApi } from "@/src/lib/auth";
+import { fetchers } from "@/src/lib/fetchers";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,8 +26,8 @@ export default function LoginPage() {
   useEffect(() => {
     setRedirect(new URLSearchParams(window.location.search).get("redirect"));
 
-    fetch("/api/public/settings")
-      .then((res) => res.json())
+    fetchers
+      .publicSettings()
       .then((json) => setSettings(json?.data ?? null))
       .catch(() => setSettings(null));
   }, []);
@@ -36,14 +38,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, rememberMe }),
-        credentials: "include",
-      });
-
-      const data = await res.json();
+      const { data } = await authApi.login({ email, password, rememberMe });
 
       if (!data.success) {
         setError(data.message || "Invalid credentials");
@@ -59,8 +54,12 @@ export default function LoginPage() {
       } else {
         window.location.replace("/dashboard");
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Network error. Please try again.";
+      setError(message);
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@
 "use client";
 
 import useSWR from "swr";
+import { fetchers } from "@/src/lib/fetchers";
 
 /**
  * Reads sitesettings module toggles from /api/setting.
@@ -26,9 +27,7 @@ export function useModuleFlags(): ModuleFlags {
   const { data } = useSWR(
     "module-flags",
     async () => {
-      const res = await fetch("/api/setting", { cache: "no-store" });
-      if (!res.ok) throw new Error("failed");
-      const json = await res.json();
+      const json = await fetchers.settings();
       return json?.data as Partial<ModuleFlags> | null;
     },
     { revalidateOnFocus: false, shouldRetryOnError: false },

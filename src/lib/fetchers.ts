@@ -19,6 +19,20 @@ function getBaseUrl() {
   }
 }
 
+type QueryParams = Record<string, string | number | boolean | null | undefined>;
+
+const buildUrl = (path: string, params?: QueryParams) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    query.set(key, String(value));
+  });
+
+  const queryString = query.toString();
+  return queryString ? `${path}?${queryString}` : path;
+};
+
 const fetcher = async (url: string) => {
   const fullUrl = url.startsWith("http") ? url : `${getBaseUrl()}${url}`;
   const res = await fetch(fullUrl, {
@@ -36,39 +50,46 @@ const fetcher = async (url: string) => {
 };
 
 export const fetchers = {
-  settings: () => fetcher("/api/setting"),
+  // settings
+  settings: (params?: QueryParams) => fetcher(buildUrl("/api/setting", params)),
   globalCss: () => fetcher("/api/setting/global-css"),
   globalJs: () => fetcher("/api/setting/global-js"),
   footerSettings: () => fetcher("/api/footer-setting"),
+
+  // menus
   menus: () => fetcher("/api/menus"),
+  
+  // pages 
+
   page: (slug: string) => fetcher(`/api/pages/slug/${slug}`),
+  pages: () => fetcher("/api/pages"),
   pageById: (id: string | number) => fetcher(`/api/public/pages/${id}`),
+
+  // posts
   post: (slug: string) => fetcher(`/api/posts/slug/${slug}`),
   postComments: (postId: string) => fetcher(`/api/posts/${postId}/comments`),
   posts: () => fetcher("/api/posts"),
+  
+  // categories
+  categories: () => fetcher("/api/categories"),
+  
+  // tags
+  tags: () => fetcher("/api/tags"),
+
+
+  // public
   publicSettings: () => fetcher("/api/public/settings"),
+  publicPosts: () => fetcher("/api/public/posts"),
   publicFooterSettings: () => fetcher("/api/public/footer-settings"),
   publicMenus: () => fetcher("/api/public/menus"),
   publicPageBySlug: (slug: string) => fetcher(`/api/public/pages/slug/${slug}`),
-  publicPosts: () => fetcher("/api/public/posts"),
   publicBootstrap: () => fetcher("/api/public/bootstrap"),
   footerMenus: () =>
     fetcher("/api/menus").then((d) => ({
       ...d,
       data: (d.data ?? []).filter((m: any) => m.location === "footer"),
     })),
-  courses: () => fetcher("/api/courses"),
-  course: (id: string | number) => fetcher(`/api/courses/${id}`),
-  publicCourses: () => fetcher("/api/courses/public"),
-  publicCourse: (slug: string) => fetcher(`/api/courses/slug/${slug}`),
-  getCourseContents: () => fetcher("/api/course-content"),
-  getCoursecontentByID: (id: string | number) =>
-    fetcher(`/api/course-content/${id}`),
-  courseDetail: (id: string) => fetcher(`/api/courses/${id}/detail`),
-  availableCourseContent: () =>
-    fetcher("/api/course-content?withoutPricing=true"),
   getDashboardData: () => fetcher("/api/subscriber-dashbaord"),
-  getMycourses: () => fetcher("/api/enrollments/my"),
   getNavbarConfig: () => fetcher("/api/navbar-config"),
 
   // ── E-commerce ─────────────────────────────────────────────

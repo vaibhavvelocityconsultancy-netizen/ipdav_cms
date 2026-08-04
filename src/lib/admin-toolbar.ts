@@ -78,8 +78,7 @@ export function buildAdminToolbarHtml({
     panel.setAttribute("aria-hidden", "false");
     setStatus("Loading...");
     try {
-      var res = await fetch("/api/setting/global-css");
-      var data = await res.json();
+      var data = await fetch("/api/setting/global-css", { credentials: "include" }).then((res) => res.json());
       editor.value = data && data.data ? data.data.css || "" : "";
       setStatus("");
       editor.focus();
@@ -92,12 +91,13 @@ export function buildAdminToolbarHtml({
     if (!editor) return;
     setStatus("Saving...");
     try {
-      var res = await fetch("/api/setting/global-css", {
+      var data = await fetch("/api/setting/global-css", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ css: editor.value })
-      });
-      if (!res.ok) throw new Error("Save failed");
+        body: JSON.stringify({ css: editor.value }),
+        credentials: "include"
+      }).then((res) => res.json());
+      if (!data.success) throw new Error("Save failed");
       setStatus("Saved");
       setTimeout(function(){ setStatus(""); }, 1800);
     } catch (error) {
@@ -114,7 +114,8 @@ export function buildAdminToolbarHtml({
       await fetch("/api/setting/admin-toolbar", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showAdminToolbar: false })
+        body: JSON.stringify({ showAdminToolbar: false }),
+        credentials: "include"
       });
     } catch (error) {}
   }

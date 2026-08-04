@@ -1,12 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, Tag, FolderOpen, Eye, Save, Loader2, X } from "lucide-react";
+import {
+  ChevronDown,
+  Tag,
+  FolderOpen,
+  Eye,
+  Save,
+  Loader2,
+  X,
+} from "lucide-react";
+import { apiMutations } from "@/src/lib/apimutation";
+import { fetchers } from "@/src/lib/fetchers";
 import { Post } from "./Post.type";
 
-
-interface Category { id: string; name: string; }
-interface Tag { id: string; name: string; }
+interface Category {
+  id: string;
+  name: string;
+}
+interface Tag {
+  id: string;
+  name: string;
+}
 
 interface PostEditorActionsProps {
   post: Post;
@@ -17,13 +32,20 @@ interface PostEditorActionsProps {
 
 // ─── Status Badge ─────────────────────────────────────────
 
-function StatusBadge({ status, onChange }: { status: string; onChange: (s: string) => void }) {
+function StatusBadge({
+  status,
+  onChange,
+}: {
+  status: string;
+  onChange: (s: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -41,7 +63,9 @@ function StatusBadge({ status, onChange }: { status: string; onChange: (s: strin
             : "bg-muted text-muted-foreground border-border hover:bg-accent"
         }`}
       >
-        <span className={`w-1.5 h-1.5 rounded-full ${isPublished ? "bg-primary" : "bg-muted-foreground"}`} />
+        <span
+          className={`w-1.5 h-1.5 rounded-full ${isPublished ? "bg-primary" : "bg-muted-foreground"}`}
+        />
         {isPublished ? "Published" : "Draft"}
         <ChevronDown size={11} />
       </button>
@@ -50,7 +74,10 @@ function StatusBadge({ status, onChange }: { status: string; onChange: (s: strin
           {["DRAFT", "PUBLISHED"].map((s) => (
             <button
               key={s}
-              onClick={() => { onChange(s); setOpen(false); }}
+              onClick={() => {
+                onChange(s);
+                setOpen(false);
+              }}
               className={`w-full text-left px-3 py-2 text-xs transition-colors ${
                 status === s
                   ? "bg-muted text-foreground font-medium"
@@ -82,14 +109,16 @@ function CategoriesDropdown({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((d) => setCategories(d.data || []));
+    fetchers
+      .categories()
+      .then((d) => setCategories(d.data || []))
+      .catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -99,12 +128,7 @@ function CategoriesDropdown({
     if (!newName.trim()) return;
     setAdding(true);
     try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      const data = await res.json();
+      const data = await apiMutations.createCategory({ name: newName.trim() });
       const created = data.data;
       setCategories((prev) => [...prev, created]);
       onToggle(created.id);
@@ -137,7 +161,9 @@ function CategoriesDropdown({
           </div>
           <div className="max-h-48 overflow-y-auto py-1">
             {categories.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">No categories yet</p>
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                No categories yet
+              </p>
             ) : (
               categories.map((cat) => (
                 <label
@@ -157,7 +183,9 @@ function CategoriesDropdown({
           </div>
           {/* Add new category */}
           <div className="border-t border-border px-3 py-2">
-            <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide font-medium">New category</p>
+            <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide font-medium">
+              New category
+            </p>
             <div className="flex gap-1.5">
               <input
                 value={newName}
@@ -199,14 +227,16 @@ function TagsDropdown({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/tags")
-      .then((r) => r.json())
-      .then((d) => setTags(d.data || []));
+    fetchers
+      .tags()
+      .then((d) => setTags(d.data || []))
+      .catch(() => setTags([]));
   }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -216,12 +246,7 @@ function TagsDropdown({
     if (!input.trim()) return;
     setAdding(true);
     try {
-      const res = await fetch("/api/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: input.trim() }),
-      });
-      const data = await res.json();
+      const data = await apiMutations.createTag({ name: input.trim() });
       const created = data.data;
       setTags((prev) => [...prev, created]);
       onAddNew(created);
@@ -254,7 +279,9 @@ function TagsDropdown({
           </div>
           <div className="max-h-48 overflow-y-auto py-1">
             {tags.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">No tags yet</p>
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                No tags yet
+              </p>
             ) : (
               tags.map((tag) => (
                 <label
@@ -273,7 +300,9 @@ function TagsDropdown({
             )}
           </div>
           <div className="border-t border-border px-3 py-2">
-            <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide font-medium">New tag</p>
+            <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide font-medium">
+              New tag
+            </p>
             <div className="flex gap-1.5">
               <input
                 value={input}
@@ -299,7 +328,12 @@ function TagsDropdown({
 
 // ─── Main Actions Bar ─────────────────────────────────────
 
-export function PostEditorActions({ post, onChange, onSave, isSaving }: PostEditorActionsProps) {
+export function PostEditorActions({
+  post,
+  onChange,
+  onSave,
+  isSaving,
+}: PostEditorActionsProps) {
   const categoryIds: string[] = (post as any).categoryIds ?? [];
   const tagIds: string[] = (post as any).tagIds ?? [];
 
@@ -362,7 +396,11 @@ export function PostEditorActions({ post, onChange, onSave, isSaving }: PostEdit
           disabled={isSaving}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
-          {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          {isSaving ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Save size={13} />
+          )}
           Save Draft
         </button>
       )}

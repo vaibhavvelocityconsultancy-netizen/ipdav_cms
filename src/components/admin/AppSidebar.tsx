@@ -47,6 +47,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { authApi } from "@/src/lib/auth";
 import { useModuleFlags } from "@/src/lib/ecom/useModuleFlags";
 import {
   Sidebar as UISidebar,
@@ -390,8 +391,7 @@ export function Sidebar({ userRole }: SidebarProps) {
   useEffect(() => {
     const fetchModuleVisibility = async () => {
       try {
-        const meRes = await fetch("/api/auth/me", { credentials: "include" });
-        const meData = await meRes.json();
+        const { data: meData } = await authApi.me();
         if (!meData.success) return;
 
         const user = meData.user;
@@ -402,8 +402,7 @@ export function Sidebar({ userRole }: SidebarProps) {
         const currentRole = user?.role;
         if (currentRole === "SUBSCRIBER") return;
 
-        const res = await fetch("/api/permissions");
-        const data = await res.json();
+        const { data } = await authApi.permissions();
         if (data.data) {
           const modules: Record<string, boolean> = {};
           if (currentRole === "SUPER_ADMIN" || currentRole === "ADMIN") {

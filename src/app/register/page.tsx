@@ -6,6 +6,7 @@ import { useState, Suspense } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { authApi } from "@/src/lib/auth";
 
 function RegisterFormContent() {
   const router = useRouter();
@@ -40,21 +41,15 @@ function RegisterFormContent() {
     setLoading(true);
 
     try {
-      const registerResponse = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          planId: planId ? Number(planId) : null,
-          billingCycle: billingCycle || "MONTHLY",
-        }),
+      const { data: registerResult } = await authApi.register({
+        name,
+        email,
+        password,
+        planId: planId ? Number(planId) : null,
+        billingCycle: billingCycle || "MONTHLY",
       });
 
-      const registerResult = await registerResponse.json();
-
-      if (!registerResponse.ok) {
+      if (!registerResult?.success) {
         setError(registerResult?.message || "Registration failed");
         return;
       }
@@ -67,8 +62,12 @@ function RegisterFormContent() {
       } else {
         router.push(redirect || "/dashboard");
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Something went wrong. Please try again.";
+      setError(message);
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiMutations } from "@/src/lib/apiMutations";
+import { fetchers } from "@/src/lib/fetchers";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((mod) => mod.default),
@@ -31,8 +33,7 @@ export function GlobalCssEditor() {
   const { data: savedCss = "", isLoading: fetching } = useQuery({
     queryKey: ["global-css"],
     queryFn: async () => {
-      const res = await fetch("/api/setting/global-css");
-      const data = await res.json();
+      const data = await fetchers.globalCss();
       if (!data.success) throw new Error(data.message);
       return data.data?.css ?? "";
     },
@@ -43,8 +44,7 @@ export function GlobalCssEditor() {
   const { data: savedJs = "", isLoading: jsFetching } = useQuery({
     queryKey: ["global-js"],
     queryFn: async () => {
-      const res = await fetch("/api/setting/global-js");
-      const data = await res.json();
+      const data = await fetchers.globalJs();
       if (!data.success) throw new Error(data.message);
       return data.data?.js ?? "";
     },
@@ -59,13 +59,11 @@ export function GlobalCssEditor() {
   const saveMutation = useMutation({
     mutationFn: async (type: "css" | "js") => {
       const value = type === "css" ? css : js;
-      const res = await fetch(`/api/setting/global-${type}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [type]: value }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to save");
+      const data =
+        type === "css"
+          ? await apiMutations.updateGlobalCss(value)
+          : await apiMutations.updateGlobalJs(value);
+      if (!data.success) throw new Error(data.message || "Failed to save");
       return type;
     },
     onSuccess: async (type) => {
@@ -81,13 +79,11 @@ export function GlobalCssEditor() {
   // ── Reset Mutation ──
   const resetMutation = useMutation({
     mutationFn: async (type: "css" | "js") => {
-      const res = await fetch(`/api/setting/global-${type}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [type]: "" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to reset");
+      const data =
+        type === "css"
+          ? await apiMutations.updateGlobalCss("")
+          : await apiMutations.updateGlobalJs("");
+      if (!data.success) throw new Error(data.message || "Failed to reset");
       return type;
     },
     onSuccess: async (type) => {
