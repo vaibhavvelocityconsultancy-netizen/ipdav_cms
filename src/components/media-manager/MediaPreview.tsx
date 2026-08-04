@@ -14,6 +14,7 @@ import {
 } from "@/src/ui/dialog";
 import { MediaItem } from "./MediaManager";
 import { Field, FieldContent, FieldGroup, FieldLabel } from "@/src/ui/field";
+import { resolveAppUrl } from "@/src/lib/base-path";
 // import {
 //   Field,
 //   FieldLabel,
@@ -65,7 +66,7 @@ export function MediaPreview({
   if (!item) return null;
 
   const isImage = item.mimeType?.startsWith("image/");
-const fileUrl = getViewerUrl(item);
+  const fileUrl = getViewerUrl(item);
 
   const copyUrl = async () => {
     await navigator.clipboard.writeText(fileUrl);
@@ -94,8 +95,8 @@ const fileUrl = getViewerUrl(item);
   };
 
   function getViewerUrl(item: ExtendedMediaItem) {
-  return `${window.location.origin}/api/media/${item.id}`;
-}
+    return resolveAppUrl(`/api/media/${item.id}`, window.location.origin);
+  }
   const handleSave = async () => {
     if (!onUpdate) return;
 

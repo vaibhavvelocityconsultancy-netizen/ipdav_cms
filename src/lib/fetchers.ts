@@ -1,22 +1,31 @@
 // src/lib/fetchers.ts
 
 function getBaseUrl() {
-  // Server-side: MUST use absolute URL for Node.js fetch()
-  if (typeof window === "undefined") {
-    return (
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "https://ipdav.com/newweb"
-    );
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (siteUrl) {
+    try {
+      const url = new URL(siteUrl);
+      return url.pathname.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
   }
-  // Client-side: relative URL works fine
-  try {
-    const url = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "https://ipdav.com/newweb",
+
+  if (typeof window !== "undefined") {
+    const pathname = window.location.pathname.replace(/\/$/, "");
+    if (!pathname || pathname === "/") return "";
+
+    const knownBasePaths = ["/newweb", "/cms", "/app"];
+    const matchedBasePath = knownBasePaths.find(
+      (basePath) =>
+        pathname === basePath || pathname.startsWith(`${basePath}/`),
     );
-    return url.pathname.replace(/\/$/, ""); // "/newweb" or ""
-  } catch {
-    return "";
+
+    return matchedBasePath ?? "";
   }
+
+  return "";
 }
 
 type QueryParams = Record<string, string | number | boolean | null | undefined>;
@@ -34,7 +43,12 @@ const buildUrl = (path: string, params?: QueryParams) => {
 };
 
 const fetcher = async (url: string) => {
-  const fullUrl = url.startsWith("http") ? url : `${getBaseUrl()}${url}`;
+  const baseUrl = getBaseUrl();
+  const fullUrl = url.startsWith("http")
+    ? url
+    : baseUrl && url.startsWith("/api") && !url.startsWith(`${baseUrl}/api`)
+      ? `${baseUrl}${url}`
+      : `${baseUrl}${url}`;
   const res = await fetch(fullUrl, {
     cache: "no-store",
   });
@@ -58,8 +72,8 @@ export const fetchers = {
 
   // menus
   menus: () => fetcher("/api/menus"),
-  
-  // pages 
+
+  // pages
 
   page: (slug: string) => fetcher(`/api/pages/slug/${slug}`),
   pages: () => fetcher("/api/pages"),
@@ -69,13 +83,12 @@ export const fetchers = {
   post: (slug: string) => fetcher(`/api/posts/slug/${slug}`),
   postComments: (postId: string) => fetcher(`/api/posts/${postId}/comments`),
   posts: () => fetcher("/api/posts"),
-  
+
   // categories
   categories: () => fetcher("/api/categories"),
-  
+
   // tags
   tags: () => fetcher("/api/tags"),
-
 
   // public
   publicSettings: () => fetcher("/api/public/settings"),

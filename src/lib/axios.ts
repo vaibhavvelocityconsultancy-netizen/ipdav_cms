@@ -1,25 +1,33 @@
 import axios from "axios";
 
 function getApiBaseUrl() {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "");
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  if (!siteUrl) return "";
-
-  try {
-    const url = new URL(siteUrl);
-
-    // Example:
-    // http://localhost:3000        -> ""
-    // https://ipdav.com/newweb     -> "/newweb"
-    // https://client.com/cms       -> "/cms"
-    return url.pathname.replace(/\/$/, "");
-  } catch {
-    return "";
+  if (siteUrl) {
+    try {
+      const url = new URL(siteUrl);
+      return url.pathname.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
   }
+
+  if (typeof window !== "undefined") {
+    const pathname = window.location.pathname.replace(/\/$/, "");
+    if (!pathname || pathname === "/") return "";
+
+    const knownBasePaths = ["/newweb", "/cms", "/app"];
+    const matchedBasePath = knownBasePaths.find(
+      (basePath) =>
+        pathname === basePath || pathname.startsWith(`${basePath}/`),
+    );
+
+    return matchedBasePath ?? "";
+  }
+
+  return "";
 }
-  
+
 export const api = axios.create({
   baseURL: getApiBaseUrl(),
   headers: {
@@ -34,10 +42,7 @@ api.interceptors.response.use(
     const payload = error.response?.data;
 
     const enhancedError = new Error(
-      payload?.message ||
-      payload?.error ||
-      error.message ||
-      "Request failed"
+      payload?.message || payload?.error || error.message || "Request failed",
     ) as any;
 
     enhancedError.status = error.response?.status;
@@ -45,7 +50,7 @@ api.interceptors.response.use(
     enhancedError.data = payload;
 
     return Promise.reject(enhancedError);
-  }
+  },
 );
 
 // Export helper for fetch() if needed

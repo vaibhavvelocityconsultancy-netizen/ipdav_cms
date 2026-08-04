@@ -23,11 +23,16 @@ if (
     }
 
     if (typeof window !== "undefined") {
-      try {
-        return new URL(window.location.origin).pathname.replace(/\/$/, "");
-      } catch {
-        return "";
-      }
+      const pathname = window.location.pathname.replace(/\/$/, "");
+      if (!pathname || pathname === "/") return "";
+
+      const knownBasePaths = ["/newweb", "/cms", "/app"];
+      const matchedBasePath = knownBasePaths.find(
+        (basePath) =>
+          pathname === basePath || pathname.startsWith(`${basePath}/`),
+      );
+
+      return matchedBasePath ?? "";
     }
 
     return "";
@@ -36,10 +41,28 @@ if (
   const patchedFetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const basePath = getBasePath();
 
-    if (basePath && typeof input === "string" && input.startsWith("/api")) {
-      const alreadyPrefixed = input.startsWith(`${basePath}/api`);
-      if (!alreadyPrefixed) {
+    const shouldPrefix = (target: string) =>
+      basePath &&
+      target.startsWith("/api") &&
+      !target.startsWith(`${basePath}/api`);
+
+    if (typeof input === "string") {
+      if (shouldPrefix(input)) {
         input = `${basePath}${input}`;
+      }
+    } else if (input instanceof URL) {
+      const pathname = input.pathname;
+      if (shouldPrefix(pathname)) {
+        input = new URL(`${basePath}${pathname}${input.search}`, input.origin);
+      }
+    } else if (input instanceof Request) {
+      const requestUrl = new URL(input.url);
+      if (shouldPrefix(requestUrl.pathname)) {
+        const prefixedUrl = new URL(
+          `${basePath}${requestUrl.pathname}${requestUrl.search}`,
+          requestUrl.origin,
+        );
+        input = new Request(prefixedUrl, input);
       }
     }
 

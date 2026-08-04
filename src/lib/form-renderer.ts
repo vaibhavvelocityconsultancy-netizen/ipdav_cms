@@ -1,4 +1,6 @@
 // src/lib/form-renderer.ts
+import { resolveAppUrl } from "./base-path";
+
 // Detects form embeds in page HTML, fetches them, and replaces with rendered HTML.
 //
 // Supported embed formats:
@@ -8,18 +10,31 @@
 // Use the form slug from your CMS form record. Both syntaxes work the same.
 
 function getApiBaseUrl() {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "");
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  if (!siteUrl) return "";
-
-  try {
-    const url = new URL(siteUrl);
-    return url.pathname.replace(/\/$/, "");
-  } catch {
-    return "";
+  if (siteUrl) {
+    try {
+      const url = new URL(siteUrl);
+      return url.pathname.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
   }
+
+  if (typeof window !== "undefined") {
+    const pathname = window.location.pathname.replace(/\/$/, "");
+    if (!pathname || pathname === "/") return "";
+
+    const knownBasePaths = ["/newweb", "/cms", "/app"];
+    const matchedBasePath = knownBasePaths.find(
+      (basePath) =>
+        pathname === basePath || pathname.startsWith(`${basePath}/`),
+    );
+
+    return matchedBasePath ?? "";
+  }
+
+  return "";
 }
 
 // ─────────────────────────────────────────────
@@ -333,7 +348,7 @@ export const FORM_SUBMIT_SCRIPT = `
     });
 
     try {
-      var res = await fetch((window.location.origin || '') + apiPath('/api/form/submit/' + slug), {
+      var res = await fetch(resolveAppUrl('/api/form/submit/' + slug, window.location.origin || ''), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

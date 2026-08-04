@@ -8,6 +8,7 @@ import { cn } from "@/src/lib/utils";
 import { MediaItem } from "./MediaManager";
 import { Column, DataTable } from "@/src/ui/data-table";
 import { toast } from "@/src/hooks/use-toast";
+import { resolveAppUrl } from "@/src/lib/base-path";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -155,7 +156,7 @@ export function MediaTable({ items, onPreview, onDelete }: MediaTableProps) {
                   onClick={(e) => {
                     e.stopPropagation();
                     navigator.clipboard.writeText(
-                      `${window.location.origin}${item.url}`,
+                      resolveAppUrl(item.url, window.location.origin),
                     );
                     toast({
                       title: "URL copied",
