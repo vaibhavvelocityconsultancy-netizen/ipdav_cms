@@ -18,6 +18,24 @@ import { Column, DataTable } from "@/src/ui/data-table";
 import { useBulkDelete } from "@/src/hooks/use-bulkdelete";
 import { toast } from "@/src/hooks/use-toast";
 import { useAdminSave } from "@/src/hooks/use-adminsave";
+import { getApiBaseUrl } from "@/src/lib/axios";
+
+const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
+async function readJsonResponse(res: Response) {
+  const contentType = res.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(
+      text.trim().startsWith("<")
+        ? `Request failed with a non-JSON response (${res.status})`
+        : text || `Request failed (${res.status})`,
+    );
+  }
+
+  return res.json();
+}
 
 export function PagesSection() {
   const [editingPage, setEditingPage] = useState<Page | null>(null);
@@ -42,8 +60,8 @@ export function PagesSection() {
   const handleExport = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/export");
-      const json = await res.json();
+      const res = await fetch(apiPath("/api/export"));
+      const json = await readJsonResponse(res);
 
       // json.data is the actual export payload (pages, menus, __meta etc.)
       const blob = new Blob([JSON.stringify(json.data, null, 2)], {
@@ -87,7 +105,7 @@ export function PagesSection() {
         const text = await file.text();
         const data = JSON.parse(text);
 
-        const res = await fetch("/api/import", {
+        const res = await fetch(apiPath("/api/import"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           // strategy: 'skip' means if a slug already exists, leave it alone
@@ -95,7 +113,7 @@ export function PagesSection() {
           body: JSON.stringify({ data, strategy: "skip" }),
         });
 
-        const json = await res.json();
+        const json = await readJsonResponse(res);
 
         if (!res.ok) {
           throw new Error(json.message || "Import failed");
@@ -216,7 +234,7 @@ export function PagesSection() {
 
       // ── Step 1: Validate + convert HTML → JSX ──
       const validateRes = await fetch(
-        `/api/pages/${pageForValidation.id}/convert-jsx`,
+        apiPath(`/api/pages/${pageForValidation.id}/convert-jsx`),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -227,7 +245,7 @@ export function PagesSection() {
         },
       );
 
-      const validateData = await validateRes.json();
+      const validateData = await readJsonResponse(validateRes);
       const conversion = validateData.data ?? validateData;
       const conversionErrors = conversion.errors ?? validateData.errors ?? [];
       const conversionWarnings = conversion.warnings ?? [];
