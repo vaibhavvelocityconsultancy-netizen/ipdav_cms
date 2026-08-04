@@ -16,7 +16,7 @@ import { Container, BarChart3, Facebook, BadgeDollarSign } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useToast } from "@/src/ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { api } from "@/src/lib/axios";
 
 export default function AnalyticsSettingsPage() {
   const queryClient = useQueryClient();
@@ -40,7 +40,7 @@ export default function AnalyticsSettingsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["analytics-settings"],
     queryFn: async () => {
-      const res = await axios.get("/api/analytics");
+      const res = await api.get("/api/analytics");
       return res.data.data;
     },
     staleTime: 1000 * 60 * 5,
@@ -66,7 +66,7 @@ export default function AnalyticsSettingsPage() {
   }, [data]);
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const res = await axios.put("/api/analytics", form);
+      const res = await api.put("/api/analytics", form);
       return res.data;
     },
 

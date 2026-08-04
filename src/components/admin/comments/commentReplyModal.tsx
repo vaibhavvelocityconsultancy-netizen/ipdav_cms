@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import axios from "axios";
+import { api } from "@/src/lib/axios";
 
 type CommentStatus = "PENDING" | "APPROVED" | "SPAM" | "TRASH";
 
@@ -33,9 +33,7 @@ export default function CommentReplyModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(
-    e: React.FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (!content.trim()) return;
@@ -44,19 +42,13 @@ export default function CommentReplyModal({
       setLoading(true);
       setError("");
 
-      await axios.post(
-        `/api/comments/${comment.id}/reply`,
-        {
-          content,
-        }
-      );
+      await api.post(`/api/comments/${comment.id}/reply`, {
+        content,
+      });
 
       onSuccess();
     } catch (err: any) {
-      setError(
-        err?.response?.data?.error ||
-          "Failed to post reply"
-      );
+      setError(err?.response?.data?.error || "Failed to post reply");
     } finally {
       setLoading(false);
     }
@@ -75,30 +67,19 @@ export default function CommentReplyModal({
             {comment.authorName} wrote:
           </p>
 
-          <p className="text-sm text-gray-700">
-            {comment.content}
-          </p>
+          <p className="text-sm text-gray-700">{comment.content}</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <textarea
             rows={5}
             value={content}
-            onChange={(e) =>
-              setContent(e.target.value)
-            }
+            onChange={(e) => setContent(e.target.value)}
             placeholder="Write your reply..."
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          {error && (
-            <p className="text-red-500 text-sm">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <div className="flex justify-end gap-3">
             <button
@@ -114,9 +95,7 @@ export default function CommentReplyModal({
               disabled={loading || !content.trim()}
               className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading
-                ? "Posting..."
-                : "Post Reply"}
+              {loading ? "Posting..." : "Post Reply"}
             </button>
           </div>
         </form>

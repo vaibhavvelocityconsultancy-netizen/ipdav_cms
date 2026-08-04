@@ -1,19 +1,17 @@
 // src/lib/apiMutations.ts
 
-
-
 // src/lib/apiMutations.ts
 
 function getBaseUrl() {
   if (typeof window === "undefined") {
     return (
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "http://localhost:3000"
+      "https://ipdav.com/newweb"
     );
   }
   try {
     const url = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+      process.env.NEXT_PUBLIC_SITE_URL || "https://ipdav.com/newweb",
     );
     return url.pathname.replace(/\/$/, "");
   } catch {
@@ -21,11 +19,7 @@ function getBaseUrl() {
   }
 }
 
-export async function mutationRequest(
-  url: string,
-  method: string,
-  body?: any
-) {
+export async function mutationRequest(url: string, method: string, body?: any) {
   const isFormData = body instanceof FormData;
   const fullUrl = url.startsWith("http") ? url : `${getBaseUrl()}${url}`;
 
@@ -41,7 +35,11 @@ export async function mutationRequest(
   try {
     data = JSON.parse(text);
   } catch {
-    console.error("Non-JSON response:", { url: fullUrl, status: res.status, text });
+    console.error("Non-JSON response:", {
+      url: fullUrl,
+      status: res.status,
+      text,
+    });
     throw new Error(`Server returned HTML (${res.status})`);
   }
 

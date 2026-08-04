@@ -1,13 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-// import axios from "@/lib/axios";
+import { api } from "@/src/lib/axios";
 
 // GET
 export function useBreadcrumbSettings() {
   return useQuery({
     queryKey: ["breadcrumb-settings"],
     queryFn: async () => {
-      const { data } = await axios.get("/api/breadcramps");
+      const { data } = await api.get("/api/breadcramps");
       return data.data;
     },
   });
@@ -19,7 +18,7 @@ export function useUpdateBreadcrumbSettings() {
 
   return useMutation({
     mutationFn: async (payload: any) => {
-      const { data } = await axios.put("/api/breadcramps", payload);
+      const { data } = await api.put("/api/breadcramps", payload);
       return data.data;
     },
 

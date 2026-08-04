@@ -1,7 +1,31 @@
 import axios from "axios";
 
+function getApiBaseUrl() {
+  if (typeof window !== "undefined") {
+    try {
+      const url = new URL(
+        process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
+      );
+      return url.pathname.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
+  }
+
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    try {
+      const url = new URL(process.env.NEXT_PUBLIC_SITE_URL);
+      return url.pathname.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
+  }
+
+  return "";
+}
+
 export const api = axios.create({
-  baseURL: "/api",
+  baseURL: getApiBaseUrl() || undefined,
   headers: {
     "Content-Type": "application/json",
   },

@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
       (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : undefined) ||
-      "https://ipdav-cms.vercel.app/";
+      "https://ipdav.com/newweb";
     const faviconUrl = settings?.favicon
       ? `${settings.favicon}?v=${settings.updatedAt}`
       : undefined;

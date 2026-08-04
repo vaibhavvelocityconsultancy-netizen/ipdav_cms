@@ -5,13 +5,13 @@ function getBaseUrl() {
   if (typeof window === "undefined") {
     return (
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "http://localhost:3000"
+      "https://ipdav.com/newweb"
     );
   }
   // Client-side: relative URL works fine
   try {
     const url = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+      process.env.NEXT_PUBLIC_SITE_URL || "https://ipdav.com/newweb",
     );
     return url.pathname.replace(/\/$/, ""); // "/newweb" or ""
   } catch {

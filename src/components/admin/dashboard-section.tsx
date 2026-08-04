@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/src/lib/axios";
 
 interface DashboardData {
   stats: {
@@ -53,7 +53,7 @@ export function DashboardSection() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
-      const response = await axios.get("/api/dashboard");
+      const response = await api.get("/api/dashboard");
       return response.data.data;
     },
     staleTime: 1000 * 60 * 10, // 10 minutes
@@ -154,24 +154,40 @@ export function DashboardSection() {
 
   // Combine REAL recent pages and posts
   const recentActivity = [
-    ...dashboardData.recentPages.map((page) => ({
-      id: `page-${page.id}`,
-      action: page.status === "published" ? "Published page" : "Updated page",
-      title: page.title,
-      slug: page.slug,
-      time: formatRelativeTime(page.updatedAt),
-      status: page.status,
-      type: "page",
-    })),
-    ...dashboardData.recentPosts.map((post) => ({
-      id: `post-${post.id}`,
-      action: post.status === "PUBLISHED" ? "Published post" : "Updated post",
-      title: post.title,
-      slug: post.slug,
-      time: formatRelativeTime(post.updatedAt),
-      status: post.status.toLowerCase(),
-      type: "post",
-    })),
+    ...dashboardData.recentPages.map(
+      (page: {
+        id: number;
+        title: string;
+        slug: string;
+        status: string;
+        updatedAt: string;
+      }) => ({
+        id: `page-${page.id}`,
+        action: page.status === "published" ? "Published page" : "Updated page",
+        title: page.title,
+        slug: page.slug,
+        time: formatRelativeTime(page.updatedAt),
+        status: page.status,
+        type: "page",
+      }),
+    ),
+    ...dashboardData.recentPosts.map(
+      (post: {
+        id: string;
+        title: string;
+        slug: string;
+        status: string;
+        updatedAt: string;
+      }) => ({
+        id: `post-${post.id}`,
+        action: post.status === "PUBLISHED" ? "Published post" : "Updated post",
+        title: post.title,
+        slug: post.slug,
+        time: formatRelativeTime(post.updatedAt),
+        status: post.status.toLowerCase(),
+        type: "post",
+      }),
+    ),
   ].sort((a, b) => {
     // Sort by most recent
     const aDate = new Date(
