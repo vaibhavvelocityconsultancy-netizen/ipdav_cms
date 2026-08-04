@@ -1,5 +1,4 @@
 // src/app/lib/services/paypal.service.js
-import fetch from "node-fetch"; // or global fetch if Node 18+
 
 const PAYPAL_BASE =
   process.env.PAYPAL_MODE === "live"

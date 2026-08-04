@@ -22,27 +22,27 @@ export type OrderNotePayload = {
 
 export const orderService = {
   async getAll(params?: OrderListParams) {
-    const res = await api.get("/ecommerce/orders", { params });
+    const res = await api.get("/api/ecommerce/orders", { params });
     return res.data;
   },
 
   async getById(id: string) {
-    const res = await api.get(`/ecommerce/orders/${id}`);
+    const res = await api.get(`/api/ecommerce/orders/${id}`);
     return res.data;
   },
 
   async update(id: string, data: OrderUpdatePayload) {
-    const res = await api.patch(`/ecommerce/orders/${id}`, data);
+    const res = await api.patch(`/api/ecommerce/orders/${id}`, data);
     return res.data;
   },
 
   async addNote(id: string, data: OrderNotePayload) {
-    const res = await api.post(`/ecommerce/orders/${id}/notes`, data);
+    const res = await api.post(`/api/ecommerce/orders/${id}/notes`, data);
     return res.data;
   },
 
   async delete(id: string) {
-    const res = await api.delete(`/ecommerce/orders/${id}`);
+    const res = await api.delete(`/api/ecommerce/orders/${id}`);
     return res.data;
   },
 };

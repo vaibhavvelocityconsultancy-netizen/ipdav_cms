@@ -49,10 +49,10 @@ export default function LoginPage() {
 
       if (redirect) {
         window.location.replace(redirect);
-      } else if (role === "SUPER_ADMIN" || role === "ADMIN") {
-        window.location.replace("/admin");
+      } else if (role === "SUPER_ADMIN" || rolfe === "ADMIN") {
+        window.location.replace("/newweb/admin");
       } else {
-        window.location.replace("/dashboard");
+        window.location.replace("/newweb/dashboard");
       }
     } catch (error: any) {
       const message =

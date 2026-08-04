@@ -2,12 +2,7 @@ import "server-only";
 
 import sanitizeHtml from "sanitize-html";
 import * as cheerio from "cheerio";
-import HTMLtoJSX from "htmltojsx";
 import { parse } from "@babel/parser";
-
-const converter = new HTMLtoJSX({
-  createClass: false,
-});
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -250,8 +245,146 @@ function normalize(html: string): {
 
 // ── Step 3: Convert HTML → JSX ────────────────────────────
 
+const jsxAttributeMap: Record<string, string> = {
+  class: "className",
+  for: "htmlFor",
+  tabindex: "tabIndex",
+  readonly: "readOnly",
+  maxlength: "maxLength",
+  minlength: "minLength",
+  colspan: "colSpan",
+  rowspan: "rowSpan",
+  cellpadding: "cellPadding",
+  cellspacing: "cellSpacing",
+  frameborder: "frameBorder",
+  allowfullscreen: "allowFullScreen",
+  autoplay: "autoPlay",
+  playsinline: "playsInline",
+};
+
+const booleanAttributes = new Set([
+  "allowFullScreen",
+  "async",
+  "autoFocus",
+  "autoPlay",
+  "checked",
+  "controls",
+  "default",
+  "defer",
+  "disabled",
+  "hidden",
+  "loop",
+  "multiple",
+  "muted",
+  "open",
+  "playsInline",
+  "readOnly",
+  "required",
+  "reversed",
+  "selected",
+]);
+
+const voidTags = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
+function escapeJsxText(text: string): string {
+  return text.replaceAll("{", "&#123;").replaceAll("}", "&#125;");
+}
+
+function escapeAttribute(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+}
+
+function toReactStyle(style: string): string {
+  const properties = style
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const separator = part.indexOf(":");
+      if (separator === -1) return null;
+
+      const key = part
+        .slice(0, separator)
+        .trim()
+        .replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
+      const value = part.slice(separator + 1).trim();
+
+      if (!key || !value) return null;
+      return `${key}: ${JSON.stringify(value)}`;
+    })
+    .filter(Boolean);
+
+  return properties.length > 0 ? `{{ ${properties.join(", ")} }}` : "{{}}";
+}
+
+function renderAttributes(attributes: Record<string, string> = {}): string {
+  return Object.entries(attributes)
+    .map(([rawName, rawValue]) => {
+      const name = jsxAttributeMap[rawName] ?? rawName;
+
+      if (name === "style") {
+        return `style=${toReactStyle(rawValue)}`;
+      }
+
+      if (/^on[A-Z]/.test(name) && /^\{[a-zA-Z0-9_]+\}$/.test(rawValue)) {
+        return `${name}={${rawValue.slice(1, -1)}}`;
+      }
+
+      if (booleanAttributes.has(name) && (rawValue === "" || rawValue === rawName)) {
+        return name;
+      }
+
+      return `${name}="${escapeAttribute(rawValue)}"`;
+    })
+    .join(" ");
+}
+
+function renderNode(node: any): string {
+  if (node.type === "text") {
+    return escapeJsxText(node.data ?? "");
+  }
+
+  if (node.type === "comment") {
+    return "";
+  }
+
+  if (node.type !== "tag" && node.type !== "script" && node.type !== "style") {
+    return (node.children ?? []).map(renderNode).join("");
+  }
+
+  const tagName = node.name;
+  const attributes = renderAttributes(node.attribs);
+  const openTag = attributes ? `<${tagName} ${attributes}` : `<${tagName}`;
+
+  if (voidTags.has(tagName)) {
+    return `${openTag} />`;
+  }
+
+  const children = (node.children ?? []).map(renderNode).join("");
+  return `${openTag}>${children}</${tagName}>`;
+}
+
 function convertToJsx(html: string): string {
-  return converter.convert(html);
+  const $ = cheerio.load(html, {
+    decodeEntities: false,
+  });
+
+  return $.root().children().toArray().map(renderNode).join("\n");
 }
 
 // ── Step 4: Wrap in TSX Component ─────────────────────────
