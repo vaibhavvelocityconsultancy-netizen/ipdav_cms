@@ -7,6 +7,21 @@
 //
 // Use the form slug from your CMS form record. Both syntaxes work the same.
 
+function getApiBaseUrl() {
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
+  if (!siteUrl) return "";
+
+  try {
+    const url = new URL(siteUrl);
+    return url.pathname.replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
@@ -465,6 +480,8 @@ export async function injectForms(
   baseUrl = "",
 ): Promise<{ html: string; hasForms: boolean }> {
   const slugs = resolveFormSlugs(html);
+  console.log("Detected slugs:", slugs);
+
   if (slugs.length === 0) return { html, hasForms: false };
 
   const forms = await fetchFormsBySlug(slugs, baseUrl);

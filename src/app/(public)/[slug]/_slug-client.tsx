@@ -101,6 +101,9 @@ export default function PreviewPage() {
     const page = pageData.data;
     const run = async () => {
       const { html, hasForms } = await injectForms(page.html);
+      console.log("Original HTML:", page.html);
+      console.log("Processed HTML:", html);
+      console.log("Has forms:", hasForms);
       const htmlWithBreadcrumb = injectBreadcrumb(
         html,
         [{ label: page.title || "Page", href: `/${page.slug ?? ""}` }],
