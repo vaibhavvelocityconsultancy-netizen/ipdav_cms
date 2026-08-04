@@ -9,14 +9,7 @@ function getBaseUrl() {
     );
   }
   // Client-side: relative URL works fine
-  try {
-    const url = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-    );
-    return url.pathname.replace(/\/$/, ""); // "/newweb" or ""
-  } catch {
-    return "";
-  }
+  return "";
 }
 
 const fetcher = async (url: string) => {
@@ -147,6 +140,7 @@ export const fetchers = {
   ecomDashboard: () => fetcher("/api/ecommerce/dashboard"),
   publicPlans: () => fetcher("/api/public/plans"),
 
+
   // customers
   customersList: (params?: {
     search?: string;
@@ -169,5 +163,5 @@ export const fetchers = {
   fileCategoriesPublic: () => fetcher("/api/public/file-category"),
   fileCategories: () => fetcher("/api/file-category"),
   fileCategory: (id: string) => fetcher(`/api/file-category/${id}`),
-  fileById: (id: string) => fetcher(`/api/files/${id}`),
+fileById: (id: string) => fetcher(`/api/files/${id}`),
 };

@@ -1,4 +1,3 @@
-import "@/src/lib/fetch-patch"; // must be first import — patches fetch before anything else runs
 import type { Metadata } from "next";
 import { Space_Mono } from "next/font/google";
 import { ThemeProvider } from "@/src/components/theme-provider";

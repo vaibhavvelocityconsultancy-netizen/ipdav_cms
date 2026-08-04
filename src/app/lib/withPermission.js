@@ -5,6 +5,13 @@ import { canManageUser } from "./permissions";
 import { ensurePermissionsSeeded } from "./startup";
 import { cookies } from "next/headers";
 
+function resolveTenantId(payload) {
+  const rawTenantId = payload?.tenantId ?? process.env.TENANT_ID ?? "1";
+  const parsedTenantId = Number(rawTenantId);
+
+  return Number.isFinite(parsedTenantId) ? parsedTenantId : 1;
+}
+
 // ── Get session or throw 401 ──────────────────────────────
 
 export async function requireAuth() {
@@ -22,7 +29,7 @@ export async function requireAuth() {
       email: payload.email,
       name: payload.name,
       role: payload.role,
-      tenantId: Number(payload.tenantId),
+      tenantId: resolveTenantId(payload),
     },
   };
 }

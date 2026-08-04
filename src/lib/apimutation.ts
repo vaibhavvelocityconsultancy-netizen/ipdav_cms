@@ -1,47 +1,39 @@
 // src/lib/apiMutations.ts
 
-
-
-// src/lib/apiMutations.ts
-
-function getBaseUrl() {
-  if (typeof window === "undefined") {
-    return (
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "http://localhost:3000"
-    );
-  }
-  try {
-    const url = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-    );
-    return url.pathname.replace(/\/$/, "");
-  } catch {
-    return "";
-  }
-}
-
 export async function mutationRequest(
   url: string,
   method: string,
   body?: any
 ) {
   const isFormData = body instanceof FormData;
-  const fullUrl = url.startsWith("http") ? url : `${getBaseUrl()}${url}`;
 
-  const res = await fetch(fullUrl, {
+  const res = await fetch(url, {
     method,
-    headers: isFormData ? undefined : { "Content-Type": "application/json" },
-    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
+    headers: isFormData
+      ? undefined
+      : {
+          "Content-Type": "application/json",
+        },
+    body: body
+      ? isFormData
+        ? body
+        : JSON.stringify(body)
+      : undefined,
   });
 
   const text = await res.text();
+
   let data;
 
   try {
     data = JSON.parse(text);
   } catch {
-    console.error("Non-JSON response:", { url: fullUrl, status: res.status, text });
+    console.error("Non-JSON response:", {
+      url,
+      status: res.status,
+      text,
+    });
+
     throw new Error(`Server returned HTML (${res.status})`);
   }
 
@@ -51,6 +43,7 @@ export async function mutationRequest(
 
   return data;
 }
+
 
 export const apiMutations = {
   create: (data: any) => mutationRequest("/api/courses", "POST", data),
@@ -81,16 +74,16 @@ export const apiMutations = {
   togglePublish: (id: string) =>
     mutationRequest(`/api/course-content/${id}/publish`, "PATCH"),
 
-  // createCoursePrice: async (data: any) => {
-  //   const res = await fetch("/api/pricing", {
-  //     // adjust to your actual pricing endpoint
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify(data), // includes courseContentId now
-  //   });
-  //   if (!res.ok) throw new Error("Failed to create pricing card");
-  //   return res.json();
-  // },
+  createCoursePrice: async (data: any) => {
+    const res = await fetch("/api/pricing", {
+      // adjust to your actual pricing endpoint
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data), // includes courseContentId now
+    });
+    if (!res.ok) throw new Error("Failed to create pricing card");
+    return res.json();
+  },
 
   updateGlobalCss: (css: string) =>
     mutationRequest("/api/setting/global-css", "PUT", { css }),
