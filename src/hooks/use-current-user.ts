@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { authApi } from "@/src/lib/auth";
 
 export type CurrentUser = {
   id?: string;
@@ -15,16 +16,15 @@ export function useCurrentUser() {
   const query = useQuery<CurrentUser | null>({
     queryKey: ["me"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/me", {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        return null;
+      try {
+        const res = await authApi.me();
+        return res.data?.user ?? null;
+      } catch (error: any) {
+        if (error?.response?.status === 401) {
+          return null;
+        }
+        throw error;
       }
-
-      const data = await res.json();
-      return data.user ?? null;
     },
     retry: false,
     staleTime: 1000 * 60 * 5,
