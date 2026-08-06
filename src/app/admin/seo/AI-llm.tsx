@@ -17,6 +17,7 @@ import { Label } from "@/src/ui/label";
 import { Switch } from "@/src/ui/switch";
 import { useToast } from "@/src/ui/use-toast";
 import { getApiBaseUrl } from "@/src/lib/axios";
+import { appUrl } from "@/src/lib/base-path";
 
 type AICrawlSettings = {
   enableMarkdownGeneration: boolean;
@@ -455,7 +456,7 @@ function ContentSection({
                 className="flex items-center gap-1"
               >
                 <a
-                  href={`/${item.slug}.md`}
+                  href={appUrl(`/${item.slug}.md`)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
