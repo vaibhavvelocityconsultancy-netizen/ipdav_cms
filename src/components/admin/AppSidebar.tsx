@@ -465,7 +465,7 @@ export function Sidebar({ userRole }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      await fetch(apiPath("/api/auth/logout"), {
         method: "POST",
         credentials: "include",
       });
