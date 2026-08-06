@@ -47,6 +47,8 @@ function formatDate(date: string | null) {
   return `${day}/${month}/${year}`;
 }
 
+import { getBaseUrl } from "@/src/lib/config";
+
 export default function AdminUsersPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
@@ -54,7 +56,7 @@ export default function AdminUsersPage() {
     queryKey: ["admin-users"],
 
     queryFn: async () => {
-      const res = await fetch("/api/subscription-user");
+      const res = await fetch(`${getBaseUrl()}/api/subscription-user`);
       const json = await res.json();
       return json.data;
     },

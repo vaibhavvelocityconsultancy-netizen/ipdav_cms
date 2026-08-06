@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, CircleX, Loader2, Send } from "lucide-react";
 
@@ -13,13 +14,13 @@ interface EmailTemplate {
 }
 
 async function fetchSettings() {
-  const res = await fetch("/api/emails/settings");
+  const res = await fetch(`${getBaseUrl()}/api/emails/settings`);
   if (!res.ok) throw new Error("Failed to load settings");
   return res.json();
 }
 
 async function saveSettings(data) {
-  const res = await fetch("/api/emails/settings", {
+  const res = await fetch(`${getBaseUrl()}/api/emails/settings`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -29,7 +30,7 @@ async function saveSettings(data) {
 }
 
 async function sendTest(testEmail) {
-  const res = await fetch("/api/emails/settings/tests", {
+  const res = await fetch(`${getBaseUrl()}/api/emails/settings/tests`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ testEmail }),

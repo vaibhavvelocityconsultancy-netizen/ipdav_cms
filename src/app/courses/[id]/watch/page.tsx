@@ -11,6 +11,7 @@ import {
   BookOpen,
   Clock,
 } from "lucide-react";
+import { getBaseUrl } from "@/src/lib/config";
 
 // ── URL converter ─────────────────────────────────────────────
 function toEmbedUrl(url: string): string | null {
@@ -50,7 +51,7 @@ export default function WatchPage() {
   // Check enrollment
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/enrollments/check/${id}`)
+    fetch(`${getBaseUrl()}/api/enrollments/check/${id}`)
       .then((r) => r.json())
       .then((d) => {
         if (!d.data?.enrolled) {
@@ -65,7 +66,8 @@ export default function WatchPage() {
   // Fetch course detail (has curriculum)
   const { data, isLoading } = useSWR(
     !checking && id ? `course-detail-${id}` : null,
-    () => fetch(`/api/courses/${id}/detail`).then((r) => r.json()),
+    () =>
+      fetch(`${getBaseUrl()}/api/courses/${id}/detail`).then((r) => r.json()),
   );
 
   const course = data?.data;

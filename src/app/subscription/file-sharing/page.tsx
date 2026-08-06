@@ -9,6 +9,7 @@ import { TrialExpiryPopup } from "@/src/components/subscription/TrialExpiryPopup
 import { useSubscription } from "@/src/hooks/use-subscription";
 import { fetchers } from "@/src/lib/fetchers";
 import { apiMutations } from "@/src/lib/apimutation";
+import { getBaseUrl } from "@/src/lib/config";
 
 const ALL_TAB = "__all__";
 const UNCATEGORIZED_TAB = "__uncategorized__";
@@ -53,7 +54,7 @@ export default function FilesPage() {
     queryKey: ["shared-files"],
     enabled: !subscriptionLoading && !!hasAccess,
     queryFn: async () => {
-      const res = await fetch("/api/files");
+      const res = await fetch(`${getBaseUrl()}/api/files`);
       const json = await res.json();
       return json.data as any[];
     },

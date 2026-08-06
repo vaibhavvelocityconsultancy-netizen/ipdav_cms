@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { getBaseUrl } from "@/src/lib/config";
 import { Button } from "@/src/ui/button";
 import { Loader2, Download, ArrowLeft, Copy, Check } from "lucide-react";
 import { useState } from "react";
@@ -26,10 +27,14 @@ export default function PreviewPage() {
   const [copied, setCopied] = useState(false);
 
   // Fetch content
-  const { data: content, isLoading, error } = useQuery({
+  const {
+    data: content,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["ai-crawl-content", id],
     queryFn: async () => {
-      const res = await fetch(`/api/ai-crawl-content/${id}`);
+      const res = await fetch(`${getBaseUrl()}/api/ai-crawl-content/${id}`);
       if (!res.ok) throw new Error("Failed to fetch content");
       const json = await res.json();
       return json.data as AICrawlContentDetail;
@@ -93,7 +98,11 @@ export default function PreviewPage() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/admin">
-              <Button variant="ghost" size="sm" className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1"
+              >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>

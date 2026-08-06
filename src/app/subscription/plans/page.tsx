@@ -566,7 +566,7 @@ export default function PlansPage() {
     setIsCancelling(true);
 
     try {
-      const response = await fetch("/api/subscription/cancel", {
+      const response = await fetch(`${getBaseUrl()}/api/subscription/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

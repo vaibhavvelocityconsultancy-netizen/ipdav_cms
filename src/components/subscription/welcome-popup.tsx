@@ -4,6 +4,7 @@
 import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 
 interface WelcomePopupProps {
   show: boolean;
@@ -20,7 +21,10 @@ export function WelcomePopup({ show, onTrialStarted }: WelcomePopupProps) {
   async function handleStartTrial() {
     setLoading(true);
     try {
-      const res = await fetch("/api/subscription/start-default-trial", { method: "POST" });
+      const res = await fetch(
+        `${getBaseUrl()}/api/subscription/start-default-trial`,
+        { method: "POST" },
+      );
       const data = await res.json();
       if (data.success) {
         setDismissed(true);
@@ -65,4 +69,4 @@ export function WelcomePopup({ show, onTrialStarted }: WelcomePopupProps) {
       </div>
     </div>
   );
-}   
+}

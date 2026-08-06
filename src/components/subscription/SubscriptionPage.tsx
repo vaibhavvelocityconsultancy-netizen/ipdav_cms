@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { SubscriptionCard } from "./SubscriptionCard";
 import { useRouter } from "next/navigation";
@@ -58,7 +59,7 @@ export default function MySubscriptionPage() {
     async function load() {
       try {
         const [subRes, plansRes] = await Promise.all([
-          fetch("/api/subscription"),
+          fetch(`${getBaseUrl()}/api/subscription`),
           fetch("/api/plans/public"),
         ]);
 
@@ -144,7 +145,7 @@ export default function MySubscriptionPage() {
                 });
 
                 // Refresh subscription data
-                const subRes = await fetch("/api/subscription");
+                const subRes = await fetch(`${getBaseUrl()}/api/subscription`);
                 if (subRes.ok) {
                   const subData = await subRes.json();
                   setSubscription(subData?.data ?? subData ?? null);

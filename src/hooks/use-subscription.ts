@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AccessData } from "@/src/app/subscription/util";
+import { getBaseUrl } from "@/src/lib/config";
 
 /**
  * ═════════════════════════════════════════════════════════════════════
@@ -21,7 +22,7 @@ export function useSubscription() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["subscription"],
     queryFn: async () => {
-      const res = await fetch("/api/subscription", {
+      const res = await fetch(`${getBaseUrl()}/api/subscription`, {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) {

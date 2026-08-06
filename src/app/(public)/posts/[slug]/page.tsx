@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
+import { getBaseUrl } from "@/src/lib/config";
 import {
   DEFAULT_BREADCRUMB_SETTINGS,
   injectBreadcrumb,
@@ -161,7 +162,7 @@ export default function PublicPostPage() {
   // ── fetch comments ──
   const fetchComments = useCallback(async (postId: string) => {
     try {
-      const res = await fetch(`/api/posts/${postId}/comments`);
+      const res = await fetch(`${getBaseUrl()}/api/posts/${postId}/comments`);
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
       setComments(list);
@@ -220,7 +221,7 @@ export default function PublicPostPage() {
     setFormStatus({ type: null, msg: "" });
 
     try {
-      const res = await fetch(`/api/posts/${post.id}/comments`, {
+      const res = await fetch(`${getBaseUrl()}/api/posts/${post.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -271,7 +272,10 @@ export default function PublicPostPage() {
     return renderBreadcrumbHtml(
       [
         { label: "Posts", href: "newweb/posts" },
-        { label: post?.title || "Post", href: `newweb/posts/${post?.slug ?? ""}` },
+        {
+          label: post?.title || "Post",
+          href: `newweb/posts/${post?.slug ?? ""}`,
+        },
       ],
       breadcrumbSettings ?? DEFAULT_BREADCRUMB_SETTINGS,
     );
@@ -446,7 +450,7 @@ export default function PublicPostPage() {
           {/* categories */}
           {post.categories && post.categories.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
-              {post.categories.map((c : any) => (
+              {post.categories.map((c: any) => (
                 <a
                   key={c.id}
                   href={`/posts?category=${c.slug}`}
@@ -495,7 +499,7 @@ export default function PublicPostPage() {
           {/* tags */}
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-gray-200">
-              {post.tags.map((t : any) => (
+              {post.tags.map((t: any) => (
                 <a
                   key={t.id}
                   href={`/posts?tag=${t.slug}`}

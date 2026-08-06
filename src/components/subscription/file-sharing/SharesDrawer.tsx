@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { getBaseUrl } from "@/src/lib/config";
 
 export default function SharesDrawer({
   fileId,
@@ -12,7 +13,7 @@ export default function SharesDrawer({
   const { data: shares, isLoading } = useQuery({
     queryKey: ["file-shares", fileId],
     queryFn: async () => {
-      const res = await fetch(`/api/files/${fileId}/shares`);
+      const res = await fetch(`${getBaseUrl()}/api/files/${fileId}/shares`);
       const json = await res.json();
       return json.data;
     },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 
 export default function ShareModal({
   fileIds,
@@ -37,7 +38,7 @@ export default function ShareModal({
     setError("");
 
     try {
-      const res = await fetch(`/api/files/share`, {
+      const res = await fetch(`${getBaseUrl()}/api/files/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

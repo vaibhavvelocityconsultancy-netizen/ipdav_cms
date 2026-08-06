@@ -1,5 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { getBaseUrl } from "@/src/lib/config";
 import { Download, Eye } from "lucide-react";
 import { Badge } from "@/src/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/ui/tabs";
@@ -80,7 +81,9 @@ export default function UserDetailsModal({
   const { data, isLoading } = useQuery<UserDetails>({
     queryKey: ["admin-user-details", userId],
     queryFn: async () => {
-      const res = await fetch(`/api/subscription-user/${userId}/`);
+      const res = await fetch(
+        `${getBaseUrl()}/api/subscription-user/${userId}/`,
+      );
       const json = await res.json();
       return json.data;
     },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Editor from "@monaco-editor/react";
@@ -23,10 +24,8 @@ interface SaveTemplateParams {
   bodyHtml: string;
 }
 
-async function fetchTemplate(
-  id: string
-): Promise<EmailTemplateResponse> {
-  const res = await fetch(`/api/emails/templates/${id}`);
+async function fetchTemplate(id: string): Promise<EmailTemplateResponse> {
+  const res = await fetch(`${getBaseUrl()}/api/emails/templates/${id}`);
 
   if (!res.ok) {
     throw new Error("Failed to load");
@@ -40,7 +39,7 @@ async function saveTemplate({
   subject,
   bodyHtml,
 }: SaveTemplateParams): Promise<EmailTemplate> {
-  const res = await fetch(`/api/emails/templates/${id}`, {
+  const res = await fetch(`${getBaseUrl()}/api/emails/templates/${id}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -127,9 +126,7 @@ export default function EditTemplatePage() {
         </div>
       )}
 
-      <label className="mb-1 block text-sm font-medium">
-        Subject
-      </label>
+      <label className="mb-1 block text-sm font-medium">Subject</label>
 
       <input
         value={subject}
@@ -139,17 +136,13 @@ export default function EditTemplatePage() {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium">
-            HTML Body
-          </label>
+          <label className="mb-1 block text-sm font-medium">HTML Body</label>
 
           <Editor
             height="500px"
             language="html"
             value={bodyHtml}
-            onChange={(value: string | undefined) =>
-              setBodyHtml(value ?? "")
-            }
+            onChange={(value: string | undefined) => setBodyHtml(value ?? "")}
             options={{
               minimap: {
                 enabled: false,
@@ -160,9 +153,7 @@ export default function EditTemplatePage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium">
-            Preview
-          </label>
+          <label className="mb-1 block text-sm font-medium">Preview</label>
 
           <iframe
             srcDoc={bodyHtml}

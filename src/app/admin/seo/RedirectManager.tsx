@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/src/ui/use-toast";
 // import { toast } from 'sonner';
+import { getBaseUrl } from "@/src/lib/config";
 
 interface Redirect {
   id: string;
@@ -82,7 +83,7 @@ export function RedirectManager() {
   const { data: analyticsData } = useQuery({
     queryKey: ["404-analytics"],
     queryFn: async () => {
-      const res = await fetch("/api/logs/404/analytics");
+      const res = await fetch(`${getBaseUrl()}/api/logs/404/analytics`);
       const data = await res.json();
       return data.data;
     },
@@ -98,7 +99,7 @@ export function RedirectManager() {
       if (filters.isAutoDetected !== "all")
         params.append("isAutoDetected", filters.isAutoDetected);
 
-      const res = await fetch(`/api/redirects?${params}`);
+      const res = await fetch(`${getBaseUrl()}/api/redirects?${params}`);
       const data = await res.json();
       return data.data || [];
     },
@@ -108,7 +109,9 @@ export function RedirectManager() {
   const { data: logsData } = useQuery({
     queryKey: ["404-logs"],
     queryFn: async () => {
-      const res = await fetch(`/api/redirects/404s?isResolved=false`);
+      const res = await fetch(
+        `${getBaseUrl()}/api/redirects/404s?isResolved=false`,
+      );
       const data = await res.json();
       return data.data || [];
     },
@@ -118,7 +121,9 @@ export function RedirectManager() {
   const mutation = useMutation({
     mutationFn: async () => {
       const method = editingId ? "PUT" : "POST";
-      const url = editingId ? `/api/redirects/${editingId}` : "/api/redirects";
+      const url = editingId
+        ? `${getBaseUrl()}/api/redirects/${editingId}`
+        : `${getBaseUrl()}/api/redirects`;
 
       const res = await fetch(url, {
         method,
@@ -153,7 +158,9 @@ export function RedirectManager() {
   // Delete redirect
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/redirects/${id}`, { method: "DELETE" });
+      const res = await fetch(`${getBaseUrl()}/api/redirects/${id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Failed to delete");
       return res.json();
     },
@@ -172,7 +179,7 @@ export function RedirectManager() {
   // Export redirects
   const handleExport = async () => {
     try {
-      const response = await fetch("/api/redirects/export");
+      const response = await fetch(`${getBaseUrl()}/api/redirects/export`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -204,7 +211,7 @@ export function RedirectManager() {
           };
         });
 
-      const res = await fetch("/api/redirects/import", {
+      const res = await fetch(`${getBaseUrl()}/api/redirects/import`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ redirects }),

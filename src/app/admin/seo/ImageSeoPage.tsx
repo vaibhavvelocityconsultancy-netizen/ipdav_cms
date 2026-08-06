@@ -1,15 +1,16 @@
 // app/admin/[tenantSlug]/image-seo/page.tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/src/ui/button';
-import { Switch } from '@/src/ui/switch';
+import { useEffect, useState } from "react";
+import { Button } from "@/src/ui/button";
+import { Switch } from "@/src/ui/switch";
+import { getBaseUrl } from "@/src/lib/config";
 
-export default function ImageSeoPage({ params  }) {
+export default function ImageSeoPage({ params }) {
   const [settings, setSettings] = useState(null);
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('settings'); // 'settings' | 'media' | 'batch'
+  const [tab, setTab] = useState("settings"); // 'settings' | 'media' | 'batch'
 
   useEffect(() => {
     fetchSettings();
@@ -17,23 +18,31 @@ export default function ImageSeoPage({ params  }) {
   }, [params.tenantSlug]);
 
   async function fetchSettings() {
-    const res = await fetch(`/api/admin/image-seo/settings?tenant=${params.tenantSlug}`);
+    const res = await fetch(
+      `${getBaseUrl()}/api/admin/image-seo/settings?tenant=${params.tenantSlug}`,
+    );
     const data = await res.json();
     setSettings(data);
   }
 
   async function fetchMedia() {
-    const res = await fetch(`/api/admin/image-seo/media?tenant=${params.tenantSlug}`);
+    const res = await fetch(
+      `${getBaseUrl()}/api/admin/image-seo/media?tenant=${params.tenantSlug}`,
+    );
     const data = await res.json();
     setMedia(data);
     setLoading(false);
   }
 
   async function updateSettings(updates) {
-    const res = await fetch(`/api/admin/image-seo/settings`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...settings, ...updates, tenantSlug: params.tenantSlug }),
+    const res = await fetch(`${getBaseUrl()}/api/admin/image-seo/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...settings,
+        ...updates,
+        tenantSlug: params.tenantSlug,
+      }),
     });
     const updated = await res.json();
     setSettings(updated);
@@ -47,14 +56,14 @@ export default function ImageSeoPage({ params  }) {
 
       {/* Tabs */}
       <div className="flex gap-4 mb-6 border-b">
-        {['settings', 'media', 'batch'].map(tabName => (
+        {["settings", "media", "batch"].map((tabName) => (
           <button
             key={tabName}
             onClick={() => setTab(tabName)}
             className={`px-4 py-2 font-medium ${
               tab === tabName
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500'
+                ? "border-b-2 border-blue-500 text-blue-600"
+                : "text-gray-500"
             }`}
           >
             {tabName.charAt(0).toUpperCase() + tabName.slice(1)}
@@ -63,10 +72,12 @@ export default function ImageSeoPage({ params  }) {
       </div>
 
       {/* SETTINGS TAB */}
-      {tab === 'settings' && (
+      {tab === "settings" && (
         <div className="space-y-6 max-w-2xl">
           <div className="bg-white p-6 rounded-lg border">
-            <h2 className="text-xl font-semibold mb-4">Auto Generation Settings</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Auto Generation Settings
+            </h2>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -80,7 +91,9 @@ export default function ImageSeoPage({ params  }) {
               </div>
 
               <div className="flex items-center justify-between">
-                <label className="font-medium">Use Page Title as Fallback</label>
+                <label className="font-medium">
+                  Use Page Title as Fallback
+                </label>
                 <Switch
                   checked={settings?.usePageTitle}
                   onCheckedChange={(checked) =>
@@ -114,11 +127,12 @@ export default function ImageSeoPage({ params  }) {
       )}
 
       {/* MEDIA TAB - View all media with alt/title */}
-      {tab === 'media' && (
+      {tab === "media" && (
         <div className="space-y-4">
           <div className="mb-4">
             <p className="text-sm text-gray-600">
-              Total media: {media.length} | Missing alt: {media.filter(m => !m.altText).length}
+              Total media: {media.length} | Missing alt:{" "}
+              {media.filter((m) => !m.altText).length}
             </p>
           </div>
 
@@ -137,12 +151,16 @@ export default function ImageSeoPage({ params  }) {
                 {media.map((m) => (
                   <tr key={m.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-2">
-                      <img src={m.url} alt="" className="w-10 h-10 object-cover" />
+                      <img
+                        src={m.url}
+                        alt=""
+                        className="w-10 h-10 object-cover"
+                      />
                     </td>
                     <td className="px-4 py-2">
                       <input
                         type="text"
-                        defaultValue={m.altText || ''}
+                        defaultValue={m.altText || ""}
                         className="w-full px-2 py-1 border rounded"
                         placeholder="Add alt text..."
                         onBlur={(e) => updateMediaAlt(m.id, e.target.value)}
@@ -151,19 +169,21 @@ export default function ImageSeoPage({ params  }) {
                     <td className="px-4 py-2">
                       <input
                         type="text"
-                        defaultValue={m.title || ''}
+                        defaultValue={m.title || ""}
                         className="w-full px-2 py-1 border rounded"
                         placeholder="Add title..."
                         onBlur={(e) => updateMediaTitle(m.id, e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        m.altText && m.title
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {m.altText && m.title ? '✓ Complete' : '⚠ Incomplete'}
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          m.altText && m.title
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {m.altText && m.title ? "✓ Complete" : "⚠ Incomplete"}
                       </span>
                     </td>
                   </tr>
@@ -175,13 +195,14 @@ export default function ImageSeoPage({ params  }) {
       )}
 
       {/* BATCH TAB - Regenerate missing alt/title */}
-      {tab === 'batch' && (
+      {tab === "batch" && (
         <div className="bg-white p-6 rounded-lg border max-w-2xl">
           <h2 className="text-xl font-semibold mb-4">Batch Operations</h2>
 
           <div className="space-y-4">
             <p className="text-gray-600">
-              Found {media.filter(m => !m.altText).length} images without alt text
+              Found {media.filter((m) => !m.altText).length} images without alt
+              text
             </p>
 
             <Button
@@ -191,10 +212,7 @@ export default function ImageSeoPage({ params  }) {
               Generate Missing Alt Text
             </Button>
 
-            <Button
-              onClick={() => regenerateAllAltText()}
-              variant="outline"
-            >
+            <Button onClick={() => regenerateAllAltText()} variant="outline">
               Regenerate All Alt Text
             </Button>
           </div>
@@ -204,48 +222,55 @@ export default function ImageSeoPage({ params  }) {
   );
 
   async function updateMediaAlt(mediaId, altText) {
-    await fetch(`/api/admin/image-seo/media/${mediaId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+    await fetch(`${getBaseUrl()}/api/admin/image-seo/media/${mediaId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ altText }),
     });
     fetchMedia();
   }
 
   async function updateMediaTitle(mediaId, title) {
-    await fetch(`/api/admin/image-seo/media/${mediaId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+    await fetch(`${getBaseUrl()}/api/admin/image-seo/media/${mediaId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
     fetchMedia();
   }
 
   async function generateMissingAltText() {
-    const res = await fetch(`/api/admin/image-seo/batch-generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        tenantSlug: params.tenantSlug,
-        type: 'missing' 
-      }),
-    });
+    const res = await fetch(
+      `${getBaseUrl()}/api/admin/image-seo/batch-generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantSlug: params.tenantSlug,
+          type: "missing",
+        }),
+      },
+    );
     const result = await res.json();
     alert(`Generated alt text for ${result.count} images`);
     fetchMedia();
   }
 
   async function regenerateAllAltText() {
-    if (!confirm('This will regenerate alt text for ALL images. Continue?')) return;
-    
-    const res = await fetch(`/api/admin/image-seo/batch-generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        tenantSlug: params.tenantSlug,
-        type: 'all' 
-      }),
-    });
+    if (!confirm("This will regenerate alt text for ALL images. Continue?"))
+      return;
+
+    const res = await fetch(
+      `${getBaseUrl()}/api/admin/image-seo/batch-generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantSlug: params.tenantSlug,
+          type: "all",
+        }),
+      },
+    );
     const result = await res.json();
     alert(`Regenerated alt text for ${result.count} images`);
     fetchMedia();

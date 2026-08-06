@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/src/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { getBaseUrl } from "@/src/lib/config";
 
 type FileCategoryOption = {
   id: string;
@@ -80,7 +81,7 @@ export default function UploadFilePage() {
       formData.append("description", longDescription);
       formData.append("isShareable", String(isShareable));
 
-      const res = await fetch("/api/files", {
+      const res = await fetch(getBaseUrl("/api/files"), {
         method: "POST",
         body: formData,
       });
