@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma.js";
+  import { prisma } from "../../prisma.js";
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -131,28 +131,28 @@ async function getTagUrls(tenantId) {
 }
 
 // Get Courses
-async function getCourseUrls(tenantId) {
-  const courses = await prisma.course.findMany({
-    where: {
-      tenantId,
-      isPublished: true,
-      sitemapEnabled: true,
-    },
-    select: {
-      slug: true,
-      updatedAt: true,
-      sitemapPriority: true,
-      sitemapChangeFreq: true,
-    },
-  });
+// async function getCourseUrls(tenantId) {
+//   const courses = await prisma.course.findMany({
+//     where: {
+//       tenantId,
+//       isPublished: true,
+//       sitemapEnabled: true,
+//     },
+//     select: {
+//       slug: true,
+//       updatedAt: true,
+//       sitemapPriority: true,
+//       sitemapChangeFreq: true,
+//     },
+//   });
 
-  return courses.map((course) => ({
-    url: `/courses/${course.slug}`,
-    lastModified: course.updatedAt,
-    priority: Number(course.sitemapPriority),
-    changeFreq: course.sitemapChangeFreq.toLowerCase(),
-  }));
-}
+//   return courses.map((course) => ({
+//     url: `/courses/${course.slug}`,
+//     lastModified: course.updatedAt,
+//     priority: Number(course.sitemapPriority),
+//     changeFreq: course.sitemapChangeFreq.toLowerCase(),
+//   }));
+// }
 
 // Generate XML for single sitemap
 function generateSitemapXml(siteUrl, urls) {
@@ -260,9 +260,9 @@ export async function getCoursesSitemap(tenantId) {
 
   const settings = await getSiteSettings(resolvedTenantId);
   if (!settings?.sitemapEnabled) throw new Error("Sitemap is disabled");
-  if (!settings.includeCourses) throw new Error("Courses not included in sitemap");
+  // if (!settings.includeCourses) throw new Error("Courses not included in sitemap");
 
-  const urls = await getCourseUrls(resolvedTenantId);
+  // const urls = await getCourseUrls(resolvedTenantId);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
   return generateSitemapXml(siteUrl, urls);
@@ -316,14 +316,14 @@ export async function getSitemapIndex(tenantId) {
     if (tags) sitemaps.push({ type: "tags", lastmod: tags.updatedAt });
   }
 
-  if (settings.includeCourses) {
-    const courses = await prisma.course.findFirst({
-      where: { tenantId: resolvedTenantId, isPublished: true },
-      orderBy: { updatedAt: "desc" },
-      select: { updatedAt: true },
-    });
-    if (courses) sitemaps.push({ type: "courses", lastmod: courses.updatedAt });
-  }
+  // if (settings.includeCourses) {
+  //   const courses = await prisma.course.findFirst({
+  //     where: { tenantId: resolvedTenantId, isPublished: true },
+  //     orderBy: { updatedAt: "desc" },
+  //     select: { updatedAt: true },
+  //   });
+  //   if (courses) sitemaps.push({ type: "courses", lastmod: courses.updatedAt });
+  // }
 
   return generateSitemapIndex(siteUrl, sitemaps);
 }
@@ -343,7 +343,7 @@ export async function getSitemapSettings(tenantId) {
       includePosts: true,
       includeCategories: true,
       includeTags: true,
-      includeCourses: true,
+      // includeCourses: true,
       sitemapLastGeneratedAt: true,
       sitemapCustomUrl: true,
     },
@@ -361,14 +361,14 @@ export async function updateSitemapSettings(data, tenantId) {
       includePosts: data.includePosts,
       includeCategories: data.includeCategories,
       includeTags: data.includeTags,
-      includeCourses: data.includeCourses,
+      // includeCourses: data.includeCourses,
       sitemapCustomUrl: data.sitemapCustomUrl,
     },
   });
 }
 
 export async function getSitemapStats(tenantId) {
-  const [pages, posts, categories, tags, courses, settings] = await Promise.all([
+  const [pages, posts, categories, tags, settings] = await Promise.all([
     prisma.page.count({
       where: {
         tenantId,
@@ -395,13 +395,7 @@ export async function getSitemapStats(tenantId) {
         sitemapEnabled: true,
       },
     }),
-    prisma.course.count({
-      where: {
-        tenantId,
-        isPublished: true,
-        sitemapEnabled: true,
-      },
-    }),
+    
     prisma.sitesettings.findUnique({
       where: { tenantId },
       select: {
@@ -411,12 +405,12 @@ export async function getSitemapStats(tenantId) {
   ]);
 
   return {
-    totalUrls: pages + posts + categories + tags + courses,
+    totalUrls: pages + posts + categories + tags,
     pages,
     posts,
     categories,
     tags,
-    courses,
+    
     lastGenerated: settings?.sitemapLastGeneratedAt,
   };
 }
@@ -442,9 +436,9 @@ export async function getSitemapPreview(tenantId) {
     urls.push(...(await getTagUrls(tenantId)));
   }
 
-  if (settings.includeCourses) {
-    urls.push(...(await getCourseUrls(tenantId)));
-  }
+  // if (settings.includeCourses) {
+  //   urls.push(...(await getCourseUrls(tenantId)));
+  // }
 
   return urls.slice(0, 15);
 }
@@ -458,7 +452,7 @@ export async function regenerateSitemap(tenantId) {
     getPostsSitemap(tenantId).catch(() => {}),
     getCategoriesSitemap(tenantId).catch(() => {}),
     getTagsSitemap(tenantId).catch(() => {}),
-    getCoursesSitemap(tenantId).catch(() => {}),
+    // getCoursesSitemap(tenantId).catch(() => {}),
   ]);
 
   await prisma.sitesettings.updateMany({
