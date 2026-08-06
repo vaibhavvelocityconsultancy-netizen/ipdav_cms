@@ -177,7 +177,15 @@ export const fetchers = {
     fetcher(`/api/customers/${userId}`),
 
   // fiie categories
-  fileCategoriesPublic: () => fetcher("/api/public/file-category"),
+  fileCategoriesPublic: async () => {
+    const url = resolveAppUrl("/api/public/file-category", undefined);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Failed to fetch ${url}: ${res.status}`);
+    }
+    return res.json();
+  },
   fileCategories: () => fetcher("/api/file-category"),
   fileCategory: (id: string) => fetcher(`/api/file-category/${id}`),
   fileById: (id: string) => fetcher(`/api/files/${id}`),

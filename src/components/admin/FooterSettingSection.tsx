@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, Loader2, ExternalLink, ImageIcon } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  Loader2,
+  ExternalLink,
+  ImageIcon,
+} from "lucide-react";
 import { MediaPickerModal } from "../media-manager/MediaPicker";
+import { getBaseUrl } from "@/src/lib/config";
 
 const SOCIAL_PLATFORMS = [
   { value: "facebook", label: "Facebook", icon: "f" },
@@ -54,7 +62,7 @@ export function FooterSettingsSection() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch("/api/footer-setting/");
+        const res = await fetch(`${getBaseUrl()}/api/footer-setting/`);
         const data = await res.json();
         if (data.success && data.data) {
           setSettings({ ...DEFAULT_SETTINGS, ...data.data.footer });
@@ -75,7 +83,7 @@ export function FooterSettingsSection() {
     setError(null);
     setSuccess(false);
     try {
-      const res = await fetch("/api/footer-setting", {
+      const res = await fetch(`${getBaseUrl()}/api/footer-setting`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "footer", value: settings }),
@@ -103,7 +111,11 @@ export function FooterSettingsSection() {
     }));
   };
 
-  const updateSocialLink = (index: number, field: keyof SocialLink, value: string) => {
+  const updateSocialLink = (
+    index: number,
+    field: keyof SocialLink,
+    value: string,
+  ) => {
     setSettings((prev) => {
       const updated = [...prev.socialLinks];
       updated[index] = { ...updated[index], [field]: value };
@@ -355,7 +367,9 @@ export function FooterSettingsSection() {
                       className="min-w-0 flex-1 text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
                     />
                     <button
-                      onClick={() => setMediaTarget({ type: "socialIcon", index })}
+                      onClick={() =>
+                        setMediaTarget({ type: "socialIcon", index })
+                      }
                       className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted border border-border rounded-lg transition-colors"
                     >
                       <ImageIcon size={14} />
@@ -391,7 +405,6 @@ export function FooterSettingsSection() {
             </div>
           )}
         </div>
-
       </div>
 
       <MediaPickerModal
@@ -410,4 +423,3 @@ export function FooterSettingsSection() {
     </div>
   );
 }
-

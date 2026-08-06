@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { getBaseUrl } from "@/src/lib/config";
 
 type SharedFileMeta = { title: string; category: string };
 type UnlockedFile = {
@@ -15,9 +16,10 @@ type UnlockedFile = {
 };
 
 export default function PasswordGate({ token }: { token: string }) {
-  const [meta, setMeta] = useState<{ fileCount: number; files: SharedFileMeta[] } | null>(
-    null
-  );
+  const [meta, setMeta] = useState<{
+    fileCount: number;
+    files: SharedFileMeta[];
+  } | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,7 +34,7 @@ export default function PasswordGate({ token }: { token: string }) {
   const [zipDownloading, setZipDownloading] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/shared/${token}`)
+    fetch(`${getBaseUrl()}/api/shared/${token}`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -43,13 +45,14 @@ export default function PasswordGate({ token }: { token: string }) {
 
   const isSpreadsheet = (mimeType: string) =>
     mimeType === "application/vnd.ms-excel" ||
-    mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    const res = await fetch(`/api/shared/${token}/verify`, {
+    const res = await fetch(`${getBaseUrl()}/api/shared/${token}/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
@@ -69,7 +72,9 @@ export default function PasswordGate({ token }: { token: string }) {
       const arrayBuffer = await fileRes.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, {
+        header: 1,
+      }) as any[][];
       setSheetCache((prev) => ({ ...prev, [file.itemId]: rows }));
     } catch {
       setSheetCache((prev) => ({ ...prev, [file.itemId]: [] }));
@@ -87,13 +92,13 @@ export default function PasswordGate({ token }: { token: string }) {
   }
 
   function handleDownload(fileId: string) {
-    window.location.href = `/api/shared/${token}/download/${fileId}`;
+    window.location.href = `${getBaseUrl()}/api/shared/${token}/download/${fileId}`;
   }
 
   async function handleDownloadAll() {
     setZipDownloading(true);
     try {
-      window.location.href = `/api/shared/${token}/download-zip`;
+      window.location.href = `${getBaseUrl()}/api/shared/${token}/download-zip`;
     } finally {
       setZipDownloading(false);
     }
@@ -152,7 +157,10 @@ export default function PasswordGate({ token }: { token: string }) {
             const sheetRows = sheetCache[file.itemId];
 
             return (
-              <div key={file.itemId} className="border rounded-lg overflow-hidden">
+              <div
+                key={file.itemId}
+                className="border rounded-lg overflow-hidden"
+              >
                 <div className="flex items-center justify-between p-3 bg-gray-50">
                   <button
                     onClick={() => togglePreview(file)}
@@ -174,7 +182,11 @@ export default function PasswordGate({ token }: { token: string }) {
                 {isExpanded && (
                   <div className="bg-white">
                     {isImage && (
-                      <img src={file.fileUrl} alt={file.title} className="w-full h-auto" />
+                      <img
+                        src={file.fileUrl}
+                        alt={file.title}
+                        className="w-full h-auto"
+                      />
                     )}
                     {isPdf && (
                       <iframe
@@ -183,9 +195,15 @@ export default function PasswordGate({ token }: { token: string }) {
                         title={file.title}
                       />
                     )}
-                    {isVideo && <video src={file.fileUrl} controls className="w-full" />}
+                    {isVideo && (
+                      <video src={file.fileUrl} controls className="w-full" />
+                    )}
                     {isAudio && (
-                      <audio src={file.fileUrl} controls className="w-full p-4" />
+                      <audio
+                        src={file.fileUrl}
+                        controls
+                        className="w-full p-4"
+                      />
                     )}
 
                     {isSheet && (
@@ -200,7 +218,9 @@ export default function PasswordGate({ token }: { token: string }) {
                               {sheetRows.map((row, i) => (
                                 <tr
                                   key={i}
-                                  className={i === 0 ? "bg-gray-100 font-medium" : ""}
+                                  className={
+                                    i === 0 ? "bg-gray-100 font-medium" : ""
+                                  }
                                 >
                                   {row.map((cell, j) => (
                                     <td
@@ -238,9 +258,14 @@ export default function PasswordGate({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={handleUnlock} className="max-w-sm mx-auto mt-20 border rounded-lg p-6">
+    <form
+      onSubmit={handleUnlock}
+      className="max-w-sm mx-auto mt-20 border rounded-lg p-6"
+    >
       <h2 className="font-semibold mb-1">
-        {meta.fileCount > 1 ? `${meta.fileCount} files shared with you` : meta.files[0]?.title}
+        {meta.fileCount > 1
+          ? `${meta.fileCount} files shared with you`
+          : meta.files[0]?.title}
       </h2>
       {meta.fileCount > 1 && (
         <ul className="text-sm text-gray-500 mb-3 list-disc pl-4">
@@ -250,7 +275,8 @@ export default function PasswordGate({ token }: { token: string }) {
         </ul>
       )}
       <p className="text-sm text-gray-500 mb-4">
-        {meta.fileCount > 1 ? "These files are" : "This file is"} password protected
+        {meta.fileCount > 1 ? "These files are" : "This file is"} password
+        protected
       </p>
       <input
         type="password"
@@ -260,7 +286,10 @@ export default function PasswordGate({ token }: { token: string }) {
         className="border rounded w-full p-2"
       />
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-      <button type="submit" className="bg-gray-900 text-white w-full mt-3 py-2 rounded">
+      <button
+        type="submit"
+        className="bg-gray-900 text-white w-full mt-3 py-2 rounded"
+      >
         Unlock
       </button>
     </form>

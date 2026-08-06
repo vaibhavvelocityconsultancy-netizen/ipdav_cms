@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { getBaseUrl } from "@/src/lib/config";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileText, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -53,7 +54,7 @@ export default function LlmsPage() {
     queryKey: ["public-llms", slug],
     enabled: Boolean(slug),
     queryFn: async () => {
-      const res = await fetch(`/api/public/llms/${slug}`);
+      const res = await fetch(`${getBaseUrl()}/api/public/llms/${slug}`);
       if (!res.ok) throw new Error("Not found");
       return res.text();
     },
@@ -132,106 +133,115 @@ export default function LlmsPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <Card className="rounded-lg border-slate-200 shadow-sm">
-        <CardContent className="pt-8">
-          <div className="prose prose-slate max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({ ...props }) => (
-                  <h1
-                    className="mb-4 mt-0 scroll-mt-20 text-3xl font-semibold tracking-normal text-slate-950"
-                    {...props}
-                  />
-                ),
-                h2: ({ ...props }) => (
-                  <h2
-                    className="mb-3 mt-7 scroll-mt-20 text-2xl font-semibold tracking-normal text-slate-900"
-                    {...props}
-                  />
-                ),
-                h3: ({ ...props }) => (
-                  <h3
-                    className="mb-2 mt-5 scroll-mt-20 text-xl font-semibold tracking-normal text-slate-900"
-                    {...props}
-                  />
-                ),
-                p: ({ ...props }) => (
-                  <p className="mb-4 text-base leading-8 text-slate-700" {...props} />
-                ),
-                strong: ({ ...props }) => (
-                  <strong className="font-bold" {...props} />
-                ),
-                em: ({ ...props }) => <em className="italic" {...props} />,
-                code: ({ inline, ...props }) =>
-                  inline ? (
-                    <code
-                      className="rounded bg-gray-100 px-2 py-1 font-mono text-sm text-red-600"
-                      {...props}
-                    />
-                  ) : (
-                    <code
-                      className="mb-4 block overflow-x-auto rounded bg-gray-900 p-4 font-mono text-sm text-gray-100"
+          <CardContent className="pt-8">
+            <div className="prose prose-slate max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ ...props }) => (
+                    <h1
+                      className="mb-4 mt-0 scroll-mt-20 text-3xl font-semibold tracking-normal text-slate-950"
                       {...props}
                     />
                   ),
-                pre: ({ ...props }) => (
-                  <pre
-                    className="mb-4 overflow-x-auto rounded bg-gray-900 p-4 text-gray-100"
-                    {...props}
-                  />
-                ),
-                ul: ({ ...props }) => (
-                  <ul className="mb-4 ml-4 list-disc space-y-2" {...props} />
-                ),
-                ol: ({ ...props }) => (
-                  <ol className="mb-4 ml-4 list-decimal space-y-2" {...props} />
-                ),
-                li: ({ ...props }) => <li className="mb-2" {...props} />,
-                blockquote: ({ ...props }) => (
-                  <blockquote
-                    className="my-4 border-l-4 border-gray-400 bg-gray-50 py-2 pl-4 italic text-gray-700"
-                    {...props}
-                  />
-                ),
-                a: ({ ...props }) => (
-                  <a
-                    className="text-blue-700 hover:text-blue-900 hover:underline"
-                    {...props}
-                  />
-                ),
-                hr: ({ ...props }) => (
-                  <hr className="my-8 border-gray-300" {...props} />
-                ),
-                table: ({ ...props }) => (
-                  <div className="mb-4 overflow-x-auto">
-                    <table
-                      className="w-full border-collapse border border-gray-300"
+                  h2: ({ ...props }) => (
+                    <h2
+                      className="mb-3 mt-7 scroll-mt-20 text-2xl font-semibold tracking-normal text-slate-900"
                       {...props}
                     />
-                  </div>
-                ),
-                thead: ({ ...props }) => (
-                  <thead className="bg-gray-200" {...props} />
-                ),
-                tbody: ({ ...props }) => <tbody {...props} />,
-                tr: ({ ...props }) => (
-                  <tr className="border-b border-gray-300" {...props} />
-                ),
-                td: ({ ...props }) => (
-                  <td className="border border-gray-300 px-4 py-2" {...props} />
-                ),
-                th: ({ ...props }) => (
-                  <th
-                    className="border border-gray-300 px-4 py-2 text-left font-bold"
-                    {...props}
-                  />
-                ),
-              }}
-            >
-              {body}
-            </ReactMarkdown>
-          </div>
-        </CardContent>
+                  ),
+                  h3: ({ ...props }) => (
+                    <h3
+                      className="mb-2 mt-5 scroll-mt-20 text-xl font-semibold tracking-normal text-slate-900"
+                      {...props}
+                    />
+                  ),
+                  p: ({ ...props }) => (
+                    <p
+                      className="mb-4 text-base leading-8 text-slate-700"
+                      {...props}
+                    />
+                  ),
+                  strong: ({ ...props }) => (
+                    <strong className="font-bold" {...props} />
+                  ),
+                  em: ({ ...props }) => <em className="italic" {...props} />,
+                  code: ({ inline, ...props }) =>
+                    inline ? (
+                      <code
+                        className="rounded bg-gray-100 px-2 py-1 font-mono text-sm text-red-600"
+                        {...props}
+                      />
+                    ) : (
+                      <code
+                        className="mb-4 block overflow-x-auto rounded bg-gray-900 p-4 font-mono text-sm text-gray-100"
+                        {...props}
+                      />
+                    ),
+                  pre: ({ ...props }) => (
+                    <pre
+                      className="mb-4 overflow-x-auto rounded bg-gray-900 p-4 text-gray-100"
+                      {...props}
+                    />
+                  ),
+                  ul: ({ ...props }) => (
+                    <ul className="mb-4 ml-4 list-disc space-y-2" {...props} />
+                  ),
+                  ol: ({ ...props }) => (
+                    <ol
+                      className="mb-4 ml-4 list-decimal space-y-2"
+                      {...props}
+                    />
+                  ),
+                  li: ({ ...props }) => <li className="mb-2" {...props} />,
+                  blockquote: ({ ...props }) => (
+                    <blockquote
+                      className="my-4 border-l-4 border-gray-400 bg-gray-50 py-2 pl-4 italic text-gray-700"
+                      {...props}
+                    />
+                  ),
+                  a: ({ ...props }) => (
+                    <a
+                      className="text-blue-700 hover:text-blue-900 hover:underline"
+                      {...props}
+                    />
+                  ),
+                  hr: ({ ...props }) => (
+                    <hr className="my-8 border-gray-300" {...props} />
+                  ),
+                  table: ({ ...props }) => (
+                    <div className="mb-4 overflow-x-auto">
+                      <table
+                        className="w-full border-collapse border border-gray-300"
+                        {...props}
+                      />
+                    </div>
+                  ),
+                  thead: ({ ...props }) => (
+                    <thead className="bg-gray-200" {...props} />
+                  ),
+                  tbody: ({ ...props }) => <tbody {...props} />,
+                  tr: ({ ...props }) => (
+                    <tr className="border-b border-gray-300" {...props} />
+                  ),
+                  td: ({ ...props }) => (
+                    <td
+                      className="border border-gray-300 px-4 py-2"
+                      {...props}
+                    />
+                  ),
+                  th: ({ ...props }) => (
+                    <th
+                      className="border border-gray-300 px-4 py-2 text-left font-bold"
+                      {...props}
+                    />
+                  ),
+                }}
+              >
+                {body}
+              </ReactMarkdown>
+            </div>
+          </CardContent>
         </Card>
       </main>
     </div>

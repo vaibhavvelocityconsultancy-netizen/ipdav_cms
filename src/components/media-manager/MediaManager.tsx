@@ -8,6 +8,7 @@ import { MediaFilter, MediaToolbar } from "./MediaToolbar";
 import { MediaPreview } from "./MediaPreview";
 import { DeleteConfirm } from "./DeleteConfirm";
 import { Button } from "@/src/ui/button";
+import { getBaseUrl } from "@/src/lib/config";
 
 export interface MediaItem {
   id: number;
@@ -66,7 +67,9 @@ export function MediaManager() {
         if (filter.sortBy) params.append("sortBy", filter.sortBy);
         if (filter.sortOrder) params.append("sortOrder", filter.sortOrder);
 
-        const res = await fetch(`/api/media?${params.toString()}`);
+        const res = await fetch(
+          `${getBaseUrl()}/api/media?${params.toString()}`,
+        );
         const data = await res.json();
 
         if (data.success) {
@@ -225,9 +228,12 @@ export function MediaManager() {
     try {
       setIsDeleting(true);
 
-      const response = await fetch(`/api/media/${deleteItem.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${getBaseUrl()}/api/media/${deleteItem.id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       const data = await response.json();
 
@@ -261,7 +267,7 @@ export function MediaManager() {
     if (ids.length === 0) return;
 
     try {
-      const response = await fetch(`/api/media/bulk-delete`, {
+      const response = await fetch(`${getBaseUrl()}/api/media/bulk-delete`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -293,7 +299,7 @@ export function MediaManager() {
   };
   const handleUpdate = async (item: MediaItem, updates: Partial<MediaItem>) => {
     try {
-      const response = await fetch(`/api/media/${item.id}`, {
+      const response = await fetch(`${getBaseUrl()}/api/media/${item.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -396,4 +402,3 @@ export function MediaManager() {
     </div>
   );
 }
-

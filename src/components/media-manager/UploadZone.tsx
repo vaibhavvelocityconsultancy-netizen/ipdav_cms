@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useCallback } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import { Upload, FileUp, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { Progress } from "@/src/ui/progress";
 import { cn } from "@/src/lib/utils";
@@ -30,7 +31,7 @@ export function UploadZone({ onUploadComplete }: UploadZoneProps) {
     }, 200);
 
     try {
-      const response = await fetch("/api/media/upload", {
+      const response = await fetch(`${getBaseUrl()}/api/media/upload`, {
         method: "POST",
         body: formData,
       });

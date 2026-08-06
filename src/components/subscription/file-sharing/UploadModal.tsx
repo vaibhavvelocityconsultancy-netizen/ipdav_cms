@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import { useRouter } from "next/navigation";
 
 type FileCategoryOption = {
@@ -25,11 +26,12 @@ export default function UploadFilePage() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const res = await fetch("/api/public/file-category", {
+        const res = await fetch(`${getBaseUrl()}/api/public/file-category`, {
           cache: "no-store",
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.message || "Failed to load categories");
+        if (!res.ok)
+          throw new Error(json.message || "Failed to load categories");
 
         const items = Array.isArray(json?.data) ? json.data : [];
         setCategories(items);
@@ -62,7 +64,7 @@ export default function UploadFilePage() {
       formData.append("longDescription", longDescription);
       formData.append("isShareable", String(isShareable));
 
-      const res = await fetch("/api/files", {
+      const res = await fetch(`${getBaseUrl()}/api/files`, {
         method: "POST",
         body: formData,
       });
@@ -94,7 +96,9 @@ export default function UploadFilePage() {
       >
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-slate-700">Title</label>
+          <label className="block text-sm font-medium text-slate-700">
+            Title
+          </label>
           <input
             type="text"
             placeholder="Title"
@@ -107,7 +111,9 @@ export default function UploadFilePage() {
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-medium text-slate-700">Category</label>
+          <label className="block text-sm font-medium text-slate-700">
+            Category
+          </label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -141,7 +147,9 @@ export default function UploadFilePage() {
             maxLength={140}
             className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-slate-400"
           />
-          <p className="mt-1 text-xs text-slate-400">{shortDescription.length}/140</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {shortDescription.length}/140
+          </p>
         </div>
 
         {/* Long description */}
@@ -185,7 +193,9 @@ export default function UploadFilePage() {
 
         {/* File */}
         <div>
-          <label className="block text-sm font-medium text-slate-700">File</label>
+          <label className="block text-sm font-medium text-slate-700">
+            File
+          </label>
           <input
             type="file"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}

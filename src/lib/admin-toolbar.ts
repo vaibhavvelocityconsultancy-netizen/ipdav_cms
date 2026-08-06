@@ -4,11 +4,14 @@ interface AdminToolbarOptions {
   editUrl?: string;
 }
 
+import { getBaseUrl } from "@/src/lib/config";
+
 export function buildAdminToolbarHtml({
   pageId,
   siteName,
   editUrl,
 }: AdminToolbarOptions) {
+  const baseUrl = getBaseUrl ? getBaseUrl() : "";
   const resolvedEditUrl =
     editUrl || (pageId ? `/admin/pages/${pageId}` : "/admin");
   const safeSiteName = siteName || "Site";
@@ -78,7 +81,7 @@ export function buildAdminToolbarHtml({
     panel.setAttribute("aria-hidden", "false");
     setStatus("Loading...");
     try {
-      var data = await fetch("/api/setting/global-css", { credentials: "include" }).then((res) => res.json());
+      var data = await fetch("${baseUrl}/api/setting/global-css", { credentials: "include" }).then((res) => res.json());
       editor.value = data && data.data ? data.data.css || "" : "";
       setStatus("");
       editor.focus();
@@ -91,7 +94,7 @@ export function buildAdminToolbarHtml({
     if (!editor) return;
     setStatus("Saving...");
     try {
-      var data = await fetch("/api/setting/global-css", {
+      var data = await fetch("${baseUrl}/api/setting/global-css", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ css: editor.value }),
@@ -111,7 +114,7 @@ export function buildAdminToolbarHtml({
     document.body.classList.remove("cms-admin-toolbar-visible");
     if (panel) panel.classList.remove("cms-admin-css-panel-open");
     try {
-      await fetch("/api/setting/admin-toolbar", {
+      await fetch("${baseUrl}/api/setting/admin-toolbar", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ showAdminToolbar: false }),

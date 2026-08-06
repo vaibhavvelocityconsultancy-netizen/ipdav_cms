@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { UserPlus, Loader2, Trash2, X, Shield, Pencil } from "lucide-react";
+import { getBaseUrl } from "@/src/lib/config";
 import { ALL_ROLES, ROLE_LABELS, ROLE_COLORS } from "@/src/app/lib/permissions";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 // import { DataTable, Column } from "@/src/components/DataTabl
@@ -75,7 +76,9 @@ function UserFormModal({
 
     try {
       const res = await fetch(
-        isEditMode ? `/api/users/${editingUser.id}` : "/api/users",
+        isEditMode
+          ? `${getBaseUrl()}/api/users/${editingUser.id}`
+          : `${getBaseUrl()}/api/users`,
         {
           method: isEditMode ? "PATCH" : "POST",
 
@@ -273,7 +276,7 @@ export function UserForm() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/users");
+      const res = await fetch(`${getBaseUrl()}/api/users`);
       const data = await res.json();
       setUsers(data.data ?? []);
     } catch {
@@ -291,7 +294,9 @@ export function UserForm() {
     if (!confirm("Are you sure you want to delete this user?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      const res = await fetch(`${getBaseUrl()}/api/users/${id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         setError("Failed to delete user");
         return;
@@ -309,7 +314,7 @@ export function UserForm() {
   async function handleRoleChange(id: number, newRole: string) {
     setUpdatingRoleId(id);
     try {
-      const res = await fetch(`/api/users/${id}/role`, {
+      const res = await fetch(`${getBaseUrl()}/api/users/${id}/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),

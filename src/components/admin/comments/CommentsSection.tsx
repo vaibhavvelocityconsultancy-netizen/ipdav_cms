@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import CommentRow from "./CommentRow";
 import CommentReplyModal from "./commentReplyModal";
 
@@ -61,7 +62,7 @@ export default function CommentsSection() {
   const [bulkAction, setBulkAction] = useState<string>("");
 
   const fetchCounts = useCallback(async () => {
-    const res = await fetch("/api/comments/counts");
+    const res = await fetch(`${getBaseUrl()}/api/comments/counts`);
     const data: CommentCounts = await res.json();
     setCounts(data.data);
   }, []);
@@ -74,7 +75,7 @@ export default function CommentsSection() {
       perPage: "20",
       ...(search && { search }),
     });
-    const res = await fetch(`/api/comments?${params}`);
+    const res = await fetch(`${getBaseUrl()}/api/comments?${params}`);
     const data: CommentsResponse = await res.json();
     setComments(data.data.comments ?? []);
     setTotalPages(data.data.totalPages ?? 1);
@@ -92,7 +93,7 @@ export default function CommentsSection() {
   // ── Actions ──────────────────────────────────────────────
 
   async function handleStatusChange(id: string, status: string): Promise<void> {
-    await fetch(`/api/comments/${id}`, {
+    await fetch(`${getBaseUrl()}/api/comments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -103,7 +104,7 @@ export default function CommentsSection() {
 
   async function handleDelete(id: string): Promise<void> {
     if (!confirm("Permanently delete this comment?")) return;
-    await fetch(`/api/comments/${id}`, { method: "DELETE" });
+    await fetch(`${getBaseUrl()}/api/comments/${id}`, { method: "DELETE" });
     fetchComments();
     fetchCounts();
   }
@@ -116,7 +117,7 @@ export default function CommentsSection() {
     )
       return;
 
-    await fetch("/api/comments/bulk", {
+    await fetch(`${getBaseUrl()}/api/comments/bulk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: selected, action: bulkAction }),

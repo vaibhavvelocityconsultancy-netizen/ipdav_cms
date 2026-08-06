@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 
 interface SocialLink {
   platform: string;
@@ -62,8 +63,8 @@ export function useFooter(): UseFooterReturn {
     const fetchAll = async () => {
       try {
         const [settingsRes, menusRes] = await Promise.all([
-          fetch("/api/footer-setting/"),
-          fetch("/api/menus"),
+          fetch(`${getBaseUrl()}/api/footer-setting/`),
+          fetch(`${getBaseUrl()}/api/menus`),
         ]);
 
         const settingsData = await settingsRes.json();
@@ -75,7 +76,7 @@ export function useFooter(): UseFooterReturn {
 
         if (menusData.success && menusData.data) {
           const footerCols = menusData.data.filter(
-            (m: Menu) => m.location === "footer"
+            (m: Menu) => m.location === "footer",
           );
           setFooterMenus(footerCols);
         }
@@ -91,4 +92,3 @@ export function useFooter(): UseFooterReturn {
 
   return { settings, footerMenus, loading };
 }
-

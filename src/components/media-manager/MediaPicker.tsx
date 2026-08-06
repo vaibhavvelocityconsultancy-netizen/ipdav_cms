@@ -9,6 +9,7 @@ import {
 } from "@/src/ui/dialog";
 import { UploadCloud } from "lucide-react";
 import { Button } from "@/src/ui/button";
+import { getBaseUrl } from "@/src/lib/config";
 
 interface MediaItem {
   id: string;
@@ -29,7 +30,7 @@ export function MediaPickerModal({
   const [tab, setTab] = useState<"LIBRARY" | "UPLOAD">("LIBRARY");
   const inputRef = useRef<HTMLInputElement>(null);
   async function fetchMedia() {
-    const res = await fetch("/api/media");
+    const res = await fetch(`${getBaseUrl()}/api/media`);
     const data = await res.json();
 
     setMedia(data.data.items);
@@ -49,7 +50,7 @@ export function MediaPickerModal({
       const formData = new FormData();
       formData.append("files", file); // ← singular "file" not "files"
 
-      await fetch("/api/media/upload", {
+      await fetch(`${getBaseUrl()}/api/media/upload`, {
         method: "POST",
         body: formData,
       });

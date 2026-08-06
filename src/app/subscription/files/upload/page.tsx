@@ -40,7 +40,7 @@ export default function UploadFilePage() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const res = await fetch("/api/public/file-category", {
+        const res = await fetch(`${getBaseUrl()}/api/public/file-category`, {
           cache: "no-store",
         });
         const json = await res.json();
@@ -81,7 +81,7 @@ export default function UploadFilePage() {
       formData.append("description", longDescription);
       formData.append("isShareable", String(isShareable));
 
-      const res = await fetch(getBaseUrl("/api/files"), {
+      const res = await fetch(`${getBaseUrl()}/api/files`, {
         method: "POST",
         body: formData,
       });

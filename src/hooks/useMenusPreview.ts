@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 
 export interface PreviewMenuItem {
   id: string;
@@ -34,7 +35,7 @@ export function useMenusPreview() {
   useEffect(() => {
     const fetchMenus = async () => {
       try {
-        const response = await fetch("/api/menus");
+        const response = await fetch(`${getBaseUrl()}/api/menus`);
         const data = await response.json();
 
         if (data.success && data.data) {
