@@ -1,20 +1,41 @@
 # AI & LLM Content Index
 
-**Generated:** 2026-07-27T06:41:52.660Z
+**Generated:** 2026-08-06T10:23:10.682Z
 **Site:** http://localhost:3000
 
 ---
 
-## Pages (3)
+## Pages (10)
 
-- **About** (Updated: 2026-07-24)
+- **Contact Us** (Updated: 2026-08-06)
+  http://localhost:3000/contact-us
+
+- **FAQ** (Updated: 2026-08-06)
+  http://localhost:3000/faq
+
+- **Pricing and package** (Updated: 2026-08-06)
+  http://localhost:3000/pricing-and-package
+
+- **Resources** (Updated: 2026-08-06)
+  http://localhost:3000/resources
+
+- **Patents & Trademark** (Updated: 2026-08-06)
+  http://localhost:3000/patents-trademark
+
+- **Partnership** (Updated: 2026-08-06)
+  http://localhost:3000/partnership
+
+- **Product and Services** (Updated: 2026-08-06)
+  http://localhost:3000/product-and-services
+
+- **About ** (Updated: 2026-08-06)
   http://localhost:3000/about
 
-- **Home** (Updated: 2026-07-24)
-  http://localhost:3000
+- **iPDAV** (Updated: 2026-08-06)
+  http://localhost:3000/ipdav
 
-- **Contact ** (Updated: 2026-07-23)
-  http://localhost:3000/contact
+- **New Page** (Updated: 2026-08-04)
+  http://localhost:3000/new-page
 
 ---
 
@@ -26,7 +47,7 @@
 
 ## Summary
 
-- Total Pages: 3
+- Total Pages: 10
 - Total Posts: 0
-- Total Items: 3
+- Total Items: 10
 - Site: http://localhost:3000

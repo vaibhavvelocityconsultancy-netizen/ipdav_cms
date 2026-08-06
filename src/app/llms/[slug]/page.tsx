@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { getBaseUrl } from "@/src/lib/config";
+import { appUrl } from "@/src/lib/base-path";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileText, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -81,7 +82,7 @@ export default function LlmsPage() {
   }
 
   const { body, metadata } = parseMarkdownData(content);
-  const rawUrl = `/${slug}.md`;
+  const rawUrl = appUrl(`/${slug}.md`);
   const metaTitle = metadata.metaTitle || metadata.title || slug;
   const metaDescription = metadata.metaDescription || "";
   const canonicalUrl = metadata.url || rawUrl;

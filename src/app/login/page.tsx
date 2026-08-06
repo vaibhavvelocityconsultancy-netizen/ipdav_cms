@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { authApi } from "@/src/lib/auth";
 import { fetchers } from "@/src/lib/fetchers";
+import { appUrl } from "@/src/lib/base-path";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,9 +51,9 @@ export default function LoginPage() {
       if (redirect) {
         window.location.replace(redirect);
       } else if (role === "SUPER_ADMIN" || role === "ADMIN") {
-        window.location.replace("/newweb/admin");
+        window.location.replace(appUrl("/admin"));
       } else {
-        window.location.replace("/newweb/dashboard");
+        window.location.replace(appUrl("/dashboard"));
       }
     } catch (error: any) {
       const message =

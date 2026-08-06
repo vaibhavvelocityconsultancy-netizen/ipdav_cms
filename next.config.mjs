@@ -19,6 +19,15 @@ const nextConfig = {
   basePath: basePath,
   assetPrefix: basePath || undefined,
 
+  async rewrites() {
+    return [
+      {
+        source: "/:slug(.+).md",
+        destination: "/api/public/llms/:slug",
+      },
+    ];
+  },
+
   typescript: {
     ignoreBuildErrors: true,
   },

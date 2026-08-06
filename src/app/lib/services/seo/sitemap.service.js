@@ -1,8 +1,18 @@
-  import { prisma } from "../../prisma.js";
+import { prisma } from "../../prisma.js";
 
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
+
+function getBasePath() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) return "";
+  try {
+    return new URL(siteUrl).pathname.replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
 
 export async function clearSitemapCache(tenantId) {
   await prisma.sitesettings.updateMany({
@@ -156,6 +166,7 @@ async function getTagUrls(tenantId) {
 
 // Generate XML for single sitemap
 function generateSitemapXml(siteUrl, urls) {
+  const basePath = getBasePath();
   const xml = urls
     .map(
       (item) => `
@@ -169,7 +180,7 @@ function generateSitemapXml(siteUrl, urls) {
     .join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<?xml-stylesheet type="text/xsl" href="${basePath}/sitemap.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${xml}
 </urlset>`;
@@ -177,6 +188,7 @@ ${xml}
 
 // Generate Sitemap Index (lists all sitemaps)
 function generateSitemapIndex(siteUrl, sitemaps) {
+  const basePath = getBasePath();
   const xml = sitemaps
     .map(
       (sitemap) => `
@@ -188,7 +200,7 @@ function generateSitemapIndex(siteUrl, sitemaps) {
     .join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<?xml-stylesheet type="text/xsl" href="${basePath}/sitemap.xsl"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${xml}
 </sitemapindex>`;
@@ -232,7 +244,8 @@ export async function getCategoriesSitemap(tenantId) {
 
   const settings = await getSiteSettings(resolvedTenantId);
   if (!settings?.sitemapEnabled) throw new Error("Sitemap is disabled");
-  if (!settings.includeCategories) throw new Error("Categories not included in sitemap");
+  if (!settings.includeCategories)
+    throw new Error("Categories not included in sitemap");
 
   const urls = await getCategoryUrls(resolvedTenantId);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -304,7 +317,8 @@ export async function getSitemapIndex(tenantId) {
       orderBy: { updatedAt: "desc" },
       select: { updatedAt: true },
     });
-    if (categories) sitemaps.push({ type: "category", lastmod: categories.updatedAt });
+    if (categories)
+      sitemaps.push({ type: "category", lastmod: categories.updatedAt });
   }
 
   if (settings.includeTags) {
@@ -395,7 +409,7 @@ export async function getSitemapStats(tenantId) {
         sitemapEnabled: true,
       },
     }),
-    
+
     prisma.sitesettings.findUnique({
       where: { tenantId },
       select: {
@@ -410,7 +424,7 @@ export async function getSitemapStats(tenantId) {
     posts,
     categories,
     tags,
-    
+
     lastGenerated: settings?.sitemapLastGeneratedAt,
   };
 }
