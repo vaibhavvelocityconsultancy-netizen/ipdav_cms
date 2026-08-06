@@ -1,23 +1,7 @@
 // src/lib/fetchers.ts
 
 import { resolveAppUrl } from "./base-path";
-
-function getBaseUrl() {
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) {
-    try {
-      return new URL(siteUrl).origin;
-    } catch {
-      return "";
-    }
-  }
-
-  return "";
-}
+import { getBaseUrl } from "./config";
 
 type QueryParams = Record<string, string | number | boolean | null | undefined>;
 
@@ -37,7 +21,11 @@ const fetcher = async (url: string) => {
   const baseUrl = getBaseUrl();
   const fullUrl = url.startsWith("http")
     ? url
-    : resolveAppUrl(url, baseUrl || undefined);
+    : // If baseUrl contains an origin (e.g. https://ipdav.com/newweb) use it,
+      // otherwise resolve relative to detected app base path.
+      baseUrl
+      ? `${baseUrl}${url}`
+      : resolveAppUrl(url, undefined);
   const res = await fetch(fullUrl, {
     cache: "no-store",
   });

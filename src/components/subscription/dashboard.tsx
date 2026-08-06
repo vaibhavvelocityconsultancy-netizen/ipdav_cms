@@ -94,8 +94,10 @@ interface DashboardResponse {
   success: boolean;
 }
 
+import { getBaseUrl } from "@/src/lib/config";
+
 const fetchDashboardData = async (): Promise<DashboardResponse> => {
-  const response = await fetch("/api/subscriber-dashbaord", {
+  const response = await fetch(`${getBaseUrl()}/api/subscriber-dashbaord`, {
     headers: {
       "Content-Type": "application/json",
     },

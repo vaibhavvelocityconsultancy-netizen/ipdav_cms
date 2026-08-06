@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import {
   User,
@@ -102,7 +103,7 @@ export function ProfileSection() {
   async function fetchAppPasswords() {
     try {
       setLoadingAppPasswords(true);
-      const res = await fetch("/api/users/me/app-passwords");
+      const res = await fetch(`${getBaseUrl()}/api/users/me/app-passwords`);
       const data = await res.json();
       setAppPasswords(data.data ?? []);
     } catch {
@@ -119,7 +120,7 @@ export function ProfileSection() {
     setProfileError("");
     setProfileSuccess("");
     try {
-      const res = await fetch(`/api/users/${user.id}`, {
+      const res = await fetch(`${getBaseUrl()}/api/users/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: profile.name }),
@@ -150,7 +151,7 @@ export function ProfileSection() {
     setPasswordError("");
     setPasswordSuccess("");
     try {
-      const res = await fetch(`/api/users/${user.id}`, {
+      const res = await fetch(`${getBaseUrl()}/api/users/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: newPassword }),
@@ -181,7 +182,7 @@ export function ProfileSection() {
     setAppPassError("");
     setGeneratedPassword(null);
     try {
-      const res = await fetch("/api/users/me/app-passwords", {
+      const res = await fetch(`${getBaseUrl()}/api/users/me/app-passwords`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newAppPassName.trim() }),
@@ -212,9 +213,12 @@ export function ProfileSection() {
       return;
     setDeletingAppPassId(id);
     try {
-      const res = await fetch(`/api/users/me/app-passwords/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${getBaseUrl()}/api/users/me/app-passwords/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (!res.ok) {
         setAppPassError("Failed to revoke");
         return;

@@ -49,6 +49,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { authApi } from "@/src/lib/auth";
 import { getApiBaseUrl } from "@/src/lib/axios";
+import { getBaseUrl } from "@/src/lib/config";
 import { useModuleFlags } from "@/src/lib/ecom/useModuleFlags";
 import {
   Sidebar as UISidebar,
@@ -69,7 +70,7 @@ import {
   useSidebar,
 } from "@/src/ui/sidebar";
 
-const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+const apiPath = (path: string) => `${getBaseUrl()}${path}`;
 
 interface NavItem {
   id: string;

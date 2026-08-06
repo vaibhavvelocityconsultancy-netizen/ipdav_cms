@@ -40,10 +40,12 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  import { getBaseUrl } from "@/src/lib/config";
+
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/payment/history");
+      const res = await fetch(`${getBaseUrl()}/api/payment/history`);
       const data = await res.json();
       setPayments(data.data ?? []);
     } catch (e: any) {

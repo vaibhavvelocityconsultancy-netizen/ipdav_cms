@@ -66,8 +66,10 @@ interface PlansResponse {
 }
 
 // API function
+import { getBaseUrl } from "@/src/lib/config";
+
 const fetchPlans = async (): Promise<PlansResponse> => {
-  const response = await fetch("/api/plans/all-plans", {
+  const response = await fetch(`${getBaseUrl()}/api/plans/all-plans`, {
     headers: {
       "Content-Type": "application/json",
     },
@@ -439,7 +441,7 @@ const PlanCard = ({
         {isTrialing && (
           <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-600 text-center">
-              ⏳ Trial ends in {currentPlanStatus?.daysRemaining || 0} days. 
+              ⏳ Trial ends in {currentPlanStatus?.daysRemaining || 0} days.
               Upgrade now to continue!
             </p>
           </div>
@@ -539,7 +541,10 @@ export default function PlansPage() {
     alert("This plan has no pricing configured. Please contact support.");
   };
 
-  const navigateToCheckout = (planId: number, billingCycle: "MONTHLY" | "YEARLY") => {
+  const navigateToCheckout = (
+    planId: number,
+    billingCycle: "MONTHLY" | "YEARLY",
+  ) => {
     setSelectedPlanId(planId);
     setIsSubscribing(true);
 
@@ -577,7 +582,7 @@ export default function PlansPage() {
 
       // Refetch plans to update the UI
       await refetch();
-      
+
       // Show success message
       alert("Your subscription has been cancelled successfully.");
     } catch (error) {
@@ -592,7 +597,10 @@ export default function PlansPage() {
     }
   };
 
-  const handleBillingSelect = (plan: Plan, billingCycle: "MONTHLY" | "YEARLY") => {
+  const handleBillingSelect = (
+    plan: Plan,
+    billingCycle: "MONTHLY" | "YEARLY",
+  ) => {
     setShowBillingModal(null);
     navigateToCheckout(plan.id, billingCycle);
   };
