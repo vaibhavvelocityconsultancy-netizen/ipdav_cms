@@ -52,18 +52,36 @@ export async function exportAll() {
 
   payload.settings = await exportSettings(tenantId);
 
-  const [categories, tags, posts] = await Promise.all([
-    prisma.category.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.tag.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" } }),
-    prisma.post.findMany({
-      where: { tenantId },
-      include: { category: true, tag: true },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  const [categories, tags, posts, forms, collections, media] =
+    await Promise.all([
+      prisma.category.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.tag.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.post.findMany({
+        where: { tenantId },
+        include: { category: true, tag: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.form.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.collection.findMany({
+        where: { tenantId },
+        include: { user: { select: { email: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.media.findMany({
+        where: { tenantId },
+        include: { collection: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
   payload.categories = categories.map(({ parentId, ...category }) => ({
     ...stripRecord(category),
     parentSlug: categories.find((item) => item.id === parentId)?.slug ?? null,
@@ -73,6 +91,17 @@ export async function exportAll() {
     ...stripRecord(post),
     categorySlugs: category.map((item) => item.slug),
     tagSlugs: tag.map((item) => item.slug),
+  }));
+  payload.forms = forms.map(stripRecord);
+  payload.collections = collections.map(
+    ({ id, createdAt, updatedAt, tenantId: _, user, ...collection }) => ({
+      ...collection,
+      userEmail: user?.email ?? null,
+    }),
+  );
+  payload.media = media.map(({ collection, ...item }) => ({
+    ...stripRecord(item),
+    collectionName: collection?.name ?? null,
   }));
 
   const plans = await prisma.plan.findMany({
@@ -124,6 +153,8 @@ async function exportSettings(tenantId) {
 
   return {
     site: site && stripRecord(site),
+    globalCss: site?.globalCss ?? null,
+    globalJs: site?.globalJs ?? null,
     tracking: tracking && stripRecord(tracking),
     analytics: analytics && stripRecord(analytics),
     aiCrawl: aiCrawl && stripRecord(aiCrawl),
@@ -220,6 +251,9 @@ export async function importAll(payload, strategy = "skip") {
     categories: { created: 0, skipped: 0, overwritten: 0, errors: [] },
     tags: { created: 0, skipped: 0, overwritten: 0, errors: [] },
     posts: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    forms: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    collections: { created: 0, skipped: 0, overwritten: 0, errors: [] },
+    media: { created: 0, skipped: 0, overwritten: 0, errors: [] },
     plans: { created: 0, skipped: 0, overwritten: 0, errors: [] },
     subscribers: { created: 0, skipped: 0, overwritten: 0, errors: [] },
   };
@@ -238,6 +272,25 @@ export async function importAll(payload, strategy = "skip") {
     await importTaxonomy(payload.tags, "tag", strategy, report.tags, tenantId);
   if (payload.posts?.length)
     await importPosts(payload.posts, strategy, report.posts, tenantId);
+  if (payload.forms?.length)
+    await importForms(payload.forms, strategy, report.forms, tenantId);
+  const collectionMap = payload.collections?.length
+    ? await importCollections(
+        payload.collections,
+        strategy,
+        report.collections,
+        tenantId,
+        session.user.id,
+      )
+    : new Map();
+  if (payload.media?.length)
+    await importMedia(
+      payload.media,
+      strategy,
+      report.media,
+      tenantId,
+      collectionMap,
+    );
   if (payload.plans?.length)
     await importPlans(payload.plans, strategy, report.plans, tenantId);
   if (payload.planSettings)
@@ -296,6 +349,10 @@ async function importSettings(settings, report, tenantId) {
     if (!settings[key]) continue;
     try {
       const data = { ...settings[key], tenantId };
+      if (key === "site") {
+        data.globalCss = settings.globalCss ?? settings[key]?.globalCss ?? null;
+        data.globalJs = settings.globalJs ?? settings[key]?.globalJs ?? null;
+      }
       delete data.homepagePageId;
       delete data.postsPageId;
       delete data.coursesPageId;
@@ -645,6 +702,163 @@ async function importPages(pages, strategy, report, tenantId) {
   }
 }
 
+// ─── Form Importer ───────────────────────────────────────
+async function importForms(forms, strategy, report, tenantId) {
+  for (const form of forms) {
+    try {
+      const existing = await prisma.form.findFirst({
+        where: { slug: form.slug, tenantId },
+      });
+
+      if (existing) {
+        if (strategy === "skip") {
+          report.skipped++;
+          continue;
+        }
+
+        if (strategy === "overwrite") {
+          await prisma.form.update({
+            where: { id: existing.id },
+            data: {
+              title: form.title,
+              slug: form.slug,
+              fields: form.fields,
+              submitButtonLabel: form.submitButtonLabel,
+              confirmationType: form.confirmationType,
+              confirmationMessage: form.confirmationMessage,
+              redirectUrl: form.redirectUrl,
+              emails: form.emails,
+              status: form.status,
+            },
+          });
+          report.overwritten++;
+          continue;
+        }
+
+        if (strategy === "rename") {
+          form.slug = await findFreeSlug(form.slug, "form", tenantId);
+        }
+      }
+
+      await prisma.form.create({ data: { ...form, tenantId } });
+      report.created++;
+    } catch (err) {
+      report.errors.push({ slug: form.slug, error: err.message });
+    }
+  }
+}
+
+// ─── Collection Importer ────────────────────────────────
+async function importCollections(
+  collections,
+  strategy,
+  report,
+  tenantId,
+  fallbackUserId,
+) {
+  const imported = new Map();
+
+  for (const item of collections) {
+    try {
+      const targetUserId = await resolveImportUserId(
+        item.userEmail,
+        tenantId,
+        fallbackUserId,
+      );
+      const existing = await prisma.collection.findFirst({
+        where: { tenantId, name: item.name, userId: targetUserId },
+      });
+
+      const data = {
+        name: item.name,
+        description: item.description ?? null,
+        tenantId,
+        userId: targetUserId,
+      };
+
+      if (existing && strategy === "skip") {
+        imported.set(item.name, existing.id);
+        report.skipped++;
+        continue;
+      }
+      if (existing && strategy === "overwrite") {
+        const updated = await prisma.collection.update({
+          where: { id: existing.id },
+          data,
+        });
+        imported.set(item.name, updated.id);
+        report.overwritten++;
+        continue;
+      }
+      if (existing) {
+        data.name = `${item.name} (${Date.now()})`;
+      }
+      const created = await prisma.collection.create({ data });
+      imported.set(item.name, created.id);
+      report.created++;
+    } catch (err) {
+      report.errors.push({ name: item.name, error: err.message });
+    }
+  }
+
+  return imported;
+}
+
+// ─── Media Importer ─────────────────────────────────────
+async function importMedia(media, strategy, report, tenantId, collectionMap) {
+  for (const item of media) {
+    try {
+      const existing = await prisma.media.findFirst({
+        where: { tenantId, fileName: item.fileName },
+      });
+
+      const collectionId = item.collectionName
+        ? (collectionMap.get(item.collectionName) ?? null)
+        : null;
+
+      const data = {
+        fileName: item.fileName,
+        originalName: item.originalName,
+        url: item.url,
+        publicId: item.publicId ?? null,
+        mimeType: item.mimeType,
+        size: item.size,
+        width: item.width ?? null,
+        height: item.height ?? null,
+        altText: item.altText ?? null,
+        title: item.title ?? null,
+        caption: item.caption ?? null,
+        description: item.description ?? null,
+        tenantId,
+        collectionId,
+      };
+
+      if (existing) {
+        if (strategy === "skip") {
+          report.skipped++;
+          continue;
+        }
+        if (strategy === "overwrite") {
+          await prisma.media.update({
+            where: { id: existing.id },
+            data,
+          });
+          report.overwritten++;
+          continue;
+        }
+        if (strategy === "rename") {
+          data.fileName = await findFreeFileName(item.fileName, tenantId);
+        }
+      }
+
+      await prisma.media.create({ data });
+      report.created++;
+    } catch (err) {
+      report.errors.push({ fileName: item.fileName, error: err.message });
+    }
+  }
+}
+
 // ─── Menu Importer ────────────────────────────────────────
 // Menus don't have slugs in your schema, so we match by name instead.
 // Items are stored as a nested tree in the export file,
@@ -719,6 +933,17 @@ async function insertMenuItems(items, menuId, parentId) {
 // Used when strategy is 'rename'. Tries slug-1, slug-2 etc.
 // until it finds one that doesn't exist in the DB
 
+async function resolveImportUserId(userEmail, tenantId, fallbackUserId) {
+  if (!userEmail) return fallbackUserId;
+
+  const user = await prisma.user.findFirst({
+    where: { email: userEmail, tenantId },
+    select: { id: true },
+  });
+
+  return user?.id ?? fallbackUserId;
+}
+
 async function findFreeSlug(baseSlug, type, tenantId) {
   let counter = 1;
   let candidate = `${baseSlug}-${counter}`;
@@ -733,7 +958,11 @@ async function findFreeSlug(baseSlug, type, tenantId) {
             ? prisma.plan
             : type === "category"
               ? prisma.category
-              : prisma.tag;
+              : type === "fileCategory"
+                ? prisma.fileCategory
+                : type === "form"
+                  ? prisma.form
+                  : prisma.tag;
     const exists = await model.findFirst({
       where: { slug: candidate, tenantId },
     });
@@ -741,5 +970,27 @@ async function findFreeSlug(baseSlug, type, tenantId) {
     if (!exists) return candidate;
     counter++;
     candidate = `${baseSlug}-${counter}`;
+  }
+}
+
+async function findFreeFileName(baseFileName, tenantId) {
+  const extension = baseFileName.includes(".")
+    ? baseFileName.slice(baseFileName.lastIndexOf("."))
+    : "";
+  const nameWithoutExtension = extension
+    ? baseFileName.slice(0, baseFileName.lastIndexOf("."))
+    : baseFileName;
+
+  let counter = 1;
+  let candidate = `${nameWithoutExtension}-${counter}${extension}`;
+
+  while (true) {
+    const exists = await prisma.media.findFirst({
+      where: { fileName: candidate, tenantId },
+    });
+
+    if (!exists) return candidate;
+    counter++;
+    candidate = `${nameWithoutExtension}-${counter}${extension}`;
   }
 }
