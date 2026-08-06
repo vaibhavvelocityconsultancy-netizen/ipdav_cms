@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown, Eye, Clock, Calendar } from "lucide-react";
 import { Page } from "../Cms";
+import { appUrl } from "@/src/lib/base-path";
 
 interface PublishPanelProps {
   page: Page;
@@ -50,7 +51,7 @@ export function PublishPanel({
               {isSaving ? "Saving..." : "Save Draft"}
             </button>
             <button
-              onClick={() => window.open(`/${page.slug}`, "_blank")}
+              onClick={() => window.open(appUrl(`/${page.slug}`), "_blank")}
               className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
             >
               <Eye size={14} />

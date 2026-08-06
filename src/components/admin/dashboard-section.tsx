@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/src/lib/axios";
+import { appUrl } from "@/src/lib/base-path";
 
 interface DashboardData {
   stats: {
@@ -527,7 +528,7 @@ export function DashboardSection() {
                   transition={{ delay: 0.6 + idx * 0.1 }}
                   className="p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
                   onClick={() =>
-                    (window.location.href = `/admin/${activity.type}s/${activity.id}`)
+                    (window.location.href = appUrl(`/admin/${activity.type}s/${activity.slug}`))
                   }
                 >
                   <div className="flex items-start justify-between">

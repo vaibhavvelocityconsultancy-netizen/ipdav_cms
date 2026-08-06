@@ -26,6 +26,19 @@ export function getAppBasePath() {
   return "";
 }
 
+export function appUrl(path: string) {
+  const basePath = getAppBasePath();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (!basePath) return normalizedPath;
+
+  if (normalizedPath.startsWith(`${basePath}/`) || normalizedPath === basePath) {
+    return normalizedPath; // already prefixed, avoid double-prefix
+  }
+
+  return `${basePath}${normalizedPath}`;
+}
+
 export function resolveAppUrl(path: string, fallbackOrigin = "") {
   const basePath = getAppBasePath();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;

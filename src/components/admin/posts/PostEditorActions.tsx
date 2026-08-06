@@ -13,6 +13,7 @@ import {
 import { apiMutations } from "@/src/lib/apimutation";
 import { fetchers } from "@/src/lib/fetchers";
 import { Post } from "./Post.type";
+import { appUrl } from "@/src/lib/base-path";
 
 interface Category {
   id: string;
@@ -382,7 +383,7 @@ export function PostEditorActions({
 
       {/* Preview */}
       <button
-        onClick={() => window.open(`/posts/${post.slug}`, "_blank")}
+        onClick={() => window.open(appUrl(`/posts/${post.slug}`), "_blank")}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground border border-border rounded-md hover:text-foreground hover:bg-muted transition-colors"
       >
         <Eye size={13} />

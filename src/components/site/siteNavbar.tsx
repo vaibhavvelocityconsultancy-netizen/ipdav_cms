@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
+import { appUrl } from "@/src/lib/base-path";
 
 export default function SiteNavbar({ settings, headerMenu }: any) {
   const queryClient = useQueryClient();
@@ -57,7 +58,7 @@ export default function SiteNavbar({ settings, headerMenu }: any) {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchValue.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchValue)}`;
+      window.location.href = appUrl(`/search?q=${encodeURIComponent(searchValue)}`);
     }
   };
 

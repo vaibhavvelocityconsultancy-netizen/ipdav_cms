@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { cn } from "@/src/lib/utils";
 import { toast } from "@/src/ui/use-toast";
 import { getApiBaseUrl } from "@/src/lib/axios";
+import { appUrl } from "@/src/lib/base-path";
 
 // Types
 interface SitemapSettings {
@@ -236,13 +237,8 @@ export default function SitemapSettingsPage() {
   // Get sitemap URL
   const getSitemapUrl = () => {
     return (
-      settingsData?.sitemapCustomUrl || `${window.location.origin}/sitemap.xml`
+      settingsData?.sitemapCustomUrl || appUrl("/sitemap.xml")
     );
-  };
-
-  // Get domain
-  const getDomain = () => {
-    return window.location.origin;
   };
 
   // Validate settings

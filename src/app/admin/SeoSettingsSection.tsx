@@ -17,6 +17,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
+import { appUrl } from "@/src/lib/base-path";
 
 const AI_CRAWLER_RULES = [
   {
@@ -448,7 +449,7 @@ Sitemap: ${siteUrl}/sitemap.xml
   };
 
   const handleOpenLive = () => {
-    window.open("/robots.txt", "_blank");
+    window.open(appUrl("/robots.txt"), "_blank");
   };
 
   const formatDate = (dateString: string | null) => {
