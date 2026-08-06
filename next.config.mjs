@@ -10,6 +10,15 @@ const nextConfig = {
   experimental: {
     proxyClientMaxBodySize: "100mb",
   },
+
+  webpack(config) {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+    };
+
+    return config;
+  },
 };
 
 export default nextConfig;
