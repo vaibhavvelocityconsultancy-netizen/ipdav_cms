@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 
 type Payment = {
   id: string;
@@ -39,8 +40,6 @@ export function BillingPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  import { getBaseUrl } from "@/src/lib/config";
 
   const fetchPayments = useCallback(async () => {
     try {
