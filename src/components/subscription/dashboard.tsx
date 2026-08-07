@@ -56,6 +56,7 @@ interface RecentFile {
   id: number;
   name?: string;
   fileName?: string;
+  originalName?: string;
   size?: string;
   uploadedAt?: string;
   createdAt?: string;
@@ -66,7 +67,9 @@ interface RecentShare {
   id: number;
   email?: string;
   recipientEmail?: string;
+  sharedWith?: string;
   files?: number;
+  filesCount?: number;
   viewed?: boolean;
   downloaded?: boolean;
   created?: string;
@@ -118,6 +121,8 @@ const CountdownTimer = ({
   targetDate: string;
   label: string;
 }) => {
+  const targetDateObj = new Date(targetDate);
+  const isValidTargetDate = !Number.isNaN(targetDateObj.getTime());
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -128,8 +133,13 @@ const CountdownTimer = ({
 
   useEffect(() => {
     const calculateTimeLeft = () => {
+      if (!isValidTargetDate) {
+        setIsExpired(false);
+        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      }
+
       const now = new Date().getTime();
-      const target = new Date(targetDate).getTime();
+      const target = targetDateObj.getTime();
       const difference = target - now;
 
       if (difference <= 0) {
@@ -171,45 +181,61 @@ const CountdownTimer = ({
     return <div className="text-red-600 font-medium">{label} has expired</div>;
   }
 
+  const formattedTargetDate = isValidTargetDate
+    ? targetDateObj.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <div className="text-center">
-          <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-            <span className="text-xl font-bold text-gray-800">
-              {String(timeLeft.days).padStart(2, "0")}
-            </span>
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className="text-center">
+            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
+              <span className="text-xl font-bold text-gray-800">
+                {String(timeLeft.days).padStart(2, "0")}
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-0.5">Days</div>
           </div>
-          <div className="text-[10px] text-gray-500 mt-0.5">Days</div>
-        </div>
-        <span className="text-gray-400 font-light">:</span>
-        <div className="text-center">
-          <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-            <span className="text-xl font-bold text-gray-800">
-              {String(timeLeft.hours).padStart(2, "0")}
-            </span>
+          <span className="text-gray-400 font-light">:</span>
+          <div className="text-center">
+            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
+              <span className="text-xl font-bold text-gray-800">
+                {String(timeLeft.hours).padStart(2, "0")}
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-0.5">Hrs</div>
           </div>
-          <div className="text-[10px] text-gray-500 mt-0.5">Hrs</div>
-        </div>
-        <span className="text-gray-400 font-light">:</span>
-        <div className="text-center">
-          <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-            <span className="text-xl font-bold text-gray-800">
-              {String(timeLeft.minutes).padStart(2, "0")}
-            </span>
+          <span className="text-gray-400 font-light">:</span>
+          <div className="text-center">
+            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
+              <span className="text-xl font-bold text-gray-800">
+                {String(timeLeft.minutes).padStart(2, "0")}
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-0.5">Min</div>
           </div>
-          <div className="text-[10px] text-gray-500 mt-0.5">Min</div>
-        </div>
-        <span className="text-gray-400 font-light">:</span>
-        <div className="text-center">
-          <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-            <span className="text-xl font-bold text-gray-800">
-              {String(timeLeft.seconds).padStart(2, "0")}
-            </span>
+          <span className="text-gray-400 font-light">:</span>
+          <div className="text-center">
+            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
+              <span className="text-xl font-bold text-gray-800">
+                {String(timeLeft.seconds).padStart(2, "0")}
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-0.5">Sec</div>
           </div>
-          <div className="text-[10px] text-gray-500 mt-0.5">Sec</div>
         </div>
       </div>
+      {formattedTargetDate && (
+        <div className="text-xs text-gray-500">
+          {label === "Trial ends in" ? "Ends on" : "Renews on"}{" "}
+          {formattedTargetDate}
+        </div>
+      )}
     </div>
   );
 };

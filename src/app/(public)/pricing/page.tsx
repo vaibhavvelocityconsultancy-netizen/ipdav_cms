@@ -65,7 +65,10 @@ export default function PricingPlansPage() {
     });
   }, [allPlans, showToggle, selectedCycle]);
 
-  function handleSelectPlan(planId: number, billingCycle: "MONTHLY" | "YEARLY") {
+  function handleSelectPlan(
+    planId: number,
+    billingCycle: "MONTHLY" | "YEARLY",
+  ) {
     if (userLoading) return;
     const checkoutUrl = `/checkout?plan=${planId}&billingCycle=${billingCycle}`;
     if (!currentUser) {
@@ -75,7 +78,10 @@ export default function PricingPlansPage() {
     router.push(checkoutUrl);
   }
 
-  function getPlanPrice(plan: Plan, cycle: "MONTHLY" | "YEARLY"): number | null {
+  function getPlanPrice(
+    plan: Plan,
+    cycle: "MONTHLY" | "YEARLY",
+  ): number | null {
     if (cycle === "MONTHLY") {
       return plan.allowMonthly ? plan.monthlyPrice : null;
     } else {
