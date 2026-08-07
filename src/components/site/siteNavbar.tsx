@@ -1,16 +1,17 @@
+// new design page
 "use client";
- 
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
- 
+
 import { useCurrentUser } from "@/src/hooks/use-current-user";
- 
+
 type SiteSettings = {
   logo?: string;
   siteName?: string;
 };
- 
+
 type MenuItem = {
   id: string;
   label: string;
@@ -20,116 +21,128 @@ type MenuItem = {
   parentId?: string | null;
   children?: MenuItem[];
 };
- 
+
 type HeaderMenu = {
   menuitem?: MenuItem[];
   menuitems?: MenuItem[];
   items?: MenuItem[];
 };
- 
+
 type SiteNavbarProps = {
   settings?: SiteSettings;
   headerMenu?: HeaderMenu;
 };
- 
+
 function getMenuItems(menu?: HeaderMenu): MenuItem[] {
   return menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
 }
- 
+
 function buildMenuTree(items: MenuItem[]): MenuItem[] {
   const itemMap = new Map<string, MenuItem>();
   const rootItems: MenuItem[] = [];
- 
+
   items.forEach((item) => {
     itemMap.set(item.id, {
       ...item,
       children: [],
     });
   });
- 
+
   items.forEach((item) => {
     const currentItem = itemMap.get(item.id);
- 
+
     if (!currentItem) {
       return;
     }
- 
+
     if (item.parentId && itemMap.has(item.parentId)) {
       itemMap.get(item.parentId)?.children?.push(currentItem);
       return;
     }
- 
+
     rootItems.push(currentItem);
   });
- 
+
   return rootItems;
 }
- 
+
 function getMenuItemHref(item: MenuItem): string {
   if (item.type === "page" && item.slug) {
     return `/${item.slug.replace(/^\/+/, "")}`;
   }
- 
+
   return item.url || "#";
 }
- 
+
 function isActivePage(pathname: string, href: string): boolean {
   if (!href || href === "#") {
     return false;
   }
- 
+
   if (href === "/") {
     return pathname === "/";
   }
- 
+
   return pathname === href || pathname.startsWith(`${href}/`);
 }
- 
-export default function SiteNavbar({
-  settings,
-  headerMenu,
-}: SiteNavbarProps) {
+
+export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
   const pathname = usePathname();
   const { user } = useCurrentUser();
- 
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [openMobileSubmenus, setOpenMobileSubmenus] = useState<Set<string>>(
     new Set(),
   );
- 
+
   const dashboardUrl =
     user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
       ? "/admin"
       : "/dashboard";
- 
+
   const menuItems = useMemo(
     () => buildMenuTree(getMenuItems(headerMenu)),
     [headerMenu],
   );
- 
+
+  const finalMenuItems = useMemo(() => {
+    if (menuItems.length === 0) return menuItems;
+
+    return [
+      ...menuItems,
+      {
+        id: "pricing-static",
+        label: "Pricing",
+        type: "custom",
+        url: "/pricing",
+        children: [],
+      },
+    ];
+  }, [menuItems]);
+
   const logo = settings?.logo;
   const siteName = settings?.siteName || "iPDAV";
- 
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsSearchOpen(false);
     setOpenMobileSubmenus(new Set());
   }, [pathname]);
- 
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
- 
+
     if (isMobileMenuOpen) {
       document.body.style.overflow = "hidden";
     }
- 
+
     return () => {
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileMenuOpen]);
- 
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -137,70 +150,70 @@ export default function SiteNavbar({
         setIsSearchOpen(false);
       }
     };
- 
+
     window.addEventListener("keydown", handleEscape);
- 
+
     return () => {
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
- 
+
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
- 
+
     const query = searchValue.trim();
- 
+
     if (!query) {
       return;
     }
- 
+
     setIsSearchOpen(false);
     setIsMobileMenuOpen(false);
     window.location.assign(`/search?q=${encodeURIComponent(query)}`);
   };
- 
+
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
- 
+
   const toggleMobileSubmenu = (itemId: string) => {
     setOpenMobileSubmenus((previousItems) => {
       const nextItems = new Set(previousItems);
- 
+
       if (nextItems.has(itemId)) {
         nextItems.delete(itemId);
       } else {
         nextItems.add(itemId);
       }
- 
+
       return nextItems;
     });
   };
- 
+
   const renderDesktopMenuItems = (items: MenuItem[]): React.ReactNode =>
     items.map((item) => {
       const href = getMenuItemHref(item);
       const hasChildren = Boolean(item.children?.length);
       const active = isActivePage(pathname, href);
- 
+
       return (
         <div key={item.id} className="group relative nav-item">
           <Link href={href} aria-current={active ? "page" : undefined}>
             {item.label}
- 
+
             {hasChildren ? (
               <span className="ml-1 text-xs opacity-70" aria-hidden="true">
                 ▾
               </span>
             ) : null}
           </Link>
- 
+
           {hasChildren ? (
             <div className="invisible absolute left-0 top-full z-50 min-w-56 translate-y-2 border border-white/10 bg-[#0f1b2b] py-2 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               {item.children?.map((child) => {
                 const childHref = getMenuItemHref(child);
                 const childActive = isActivePage(pathname, childHref);
- 
+
                 return (
                   <Link
                     key={child.id}
@@ -217,7 +230,7 @@ export default function SiteNavbar({
         </div>
       );
     });
- 
+
   const renderMobileMenuItems = (
     items: MenuItem[],
     level = 0,
@@ -227,7 +240,7 @@ export default function SiteNavbar({
       const hasChildren = Boolean(item.children?.length);
       const isOpen = openMobileSubmenus.has(item.id);
       const active = isActivePage(pathname, href);
- 
+
       return (
         <div
           key={item.id}
@@ -248,7 +261,7 @@ export default function SiteNavbar({
             >
               {item.label}
             </Link>
- 
+
             {hasChildren ? (
               <button
                 type="button"
@@ -276,7 +289,7 @@ export default function SiteNavbar({
               </button>
             ) : null}
           </div>
- 
+
           {hasChildren && isOpen ? (
             <div className="border-t border-black/5 bg-black/[0.025]">
               {renderMobileMenuItems(item.children || [], level + 1)}
@@ -285,7 +298,7 @@ export default function SiteNavbar({
         </div>
       );
     });
- 
+
   return (
     <>
       <header id="site-navbar" className="site-header bg-navy txt-white">
@@ -300,14 +313,14 @@ export default function SiteNavbar({
                 </span>
               )}
             </Link>
- 
+
             <div className="top-actions flex items-center">
               {!user ? (
                 <>
                   <Link className="login-link" href="/login">
                     Log In
                   </Link>
- 
+
                   <Link className="signup-link" href="/register">
                     Sign Up
                   </Link>
@@ -317,9 +330,9 @@ export default function SiteNavbar({
                   Dashboard
                 </Link>
               )}
- 
+
               <span className="top-separator" aria-hidden="true" />
- 
+
               <button
                 type="button"
                 className="search-button"
@@ -330,7 +343,7 @@ export default function SiteNavbar({
                 <span />
               </button>
             </div>
- 
+
             <button
               type="button"
               className="mobile-menu-button"
@@ -343,7 +356,7 @@ export default function SiteNavbar({
               <span />
               <span />
             </button>
- 
+
             {isSearchOpen ? (
               <form
                 onSubmit={handleSearchSubmit}
@@ -352,7 +365,7 @@ export default function SiteNavbar({
                 <label className="sr-only" htmlFor="desktop-site-search">
                   Search
                 </label>
- 
+
                 <input
                   id="desktop-site-search"
                   type="search"
@@ -362,7 +375,7 @@ export default function SiteNavbar({
                   className="min-w-0 flex-1 px-4 py-3 text-sm text-[#152539] outline-none"
                   autoFocus
                 />
- 
+
                 <button
                   type="submit"
                   className="bg-[#152539] px-5 text-sm font-medium text-white"
@@ -372,15 +385,21 @@ export default function SiteNavbar({
               </form>
             ) : null}
           </div>
- 
+
           <nav className="main-nav" aria-label="Primary navigation">
             <div className="hidden w-full items-center justify-between lg:flex">
-              {renderDesktopMenuItems(menuItems)}
+              {finalMenuItems.length > 0 ? (
+                renderMobileMenuItems(finalMenuItems)
+              ) : (
+                <p className="py-6 text-sm text-[#152539]/70">
+                  No items have been added to the selected header menu.
+                </p>
+              )}{" "}
             </div>
           </nav>
         </div>
       </header>
- 
+
       <div
         className={`fixed inset-0 z-[90] bg-black/55 transition-opacity duration-300 lg:hidden ${
           isMobileMenuOpen
@@ -390,7 +409,7 @@ export default function SiteNavbar({
         aria-hidden="true"
         onClick={closeMobileMenu}
       />
- 
+
       <aside
         id="mobile-navigation"
         className={`fixed inset-y-0 left-0 z-[100] flex w-[86%] max-w-[360px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
@@ -417,7 +436,7 @@ export default function SiteNavbar({
               </span>
             )}
           </Link>
- 
+
           <button
             type="button"
             className="relative flex h-11 w-11 items-center justify-center text-[#152539]"
@@ -428,7 +447,7 @@ export default function SiteNavbar({
             <span className="absolute h-0.5 w-6 -rotate-45 bg-current" />
           </button>
         </div>
- 
+
         <nav
           className="flex-1 overflow-y-auto px-6 py-1"
           aria-label="Mobile navigation"
@@ -441,7 +460,7 @@ export default function SiteNavbar({
             </p>
           )}
         </nav>
- 
+
         <div className="border-t border-black/10 px-6 py-5">
           {!user ? (
             <div className="flex items-center gap-6">
@@ -452,7 +471,7 @@ export default function SiteNavbar({
               >
                 Log In
               </Link>
- 
+
               <Link
                 href="/register"
                 className="font-medium text-[#15830b]"
@@ -475,4 +494,3 @@ export default function SiteNavbar({
     </>
   );
 }
- 
