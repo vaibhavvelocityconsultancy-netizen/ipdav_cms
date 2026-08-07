@@ -130,13 +130,7 @@ export const POST = asyncHandler(async (req) => {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const uploadDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "subscriber-files",
-    `tenant-${user.tenantId}`,
-  );
+  const uploadDir = getSubscriberUploadDir(user.tenantId);
 
   await fs.mkdir(uploadDir, { recursive: true });
 
@@ -151,9 +145,17 @@ export const POST = asyncHandler(async (req) => {
 
   const filePath = path.join(uploadDir, fileName);
 
-  // const bytes = await file.arrayBuffer();
+  console.log("UPLOAD DIR:", uploadDir);
+  console.log("FILE PATH:", filePath);
 
   await fs.writeFile(filePath, buffer);
+
+  const exists = await fs
+    .access(filePath)
+    .then(() => true)
+    .catch(() => false);
+
+  console.log("FILE EXISTS:", exists);
   const created = await prisma.uploadedFile.create({
     data: {
       title,
@@ -164,7 +166,7 @@ export const POST = asyncHandler(async (req) => {
       categoryId, // 🔧 FIXED — was `category`, now matches the schema field
       fileName: fileName,
       originalName: file.name,
-      url: `/uploads/subscriber-files/tenant-${user.tenantId}/${fileName}`,
+      url: getSubscriberFileUrl(user.tenantId, fileName),
       mimeType: file.type,
       size: file.size,
       uploadedBy: Number(user.id),
