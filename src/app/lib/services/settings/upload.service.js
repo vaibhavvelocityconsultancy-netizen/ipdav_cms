@@ -8,14 +8,19 @@ import {
 } from "../../utils/uploadconfig";
 
 export async function uploadFile(file) {
+  console.log("=== uploadFile() called ===");
+
   const { session } = await requirePermission("media_upload");
   const tenantId = session.user.tenantId;
+
+  console.log("Tenant:", tenantId);
 
   if (!file) {
     throw new Error("No file provided");
   }
 
   const uploadDir = getSubscriberUploadDir(tenantId);
+  console.log("Upload dir:", uploadDir);
 
   await fs.mkdir(uploadDir, { recursive: true });
 
@@ -27,13 +32,23 @@ export async function uploadFile(file) {
     .toLowerCase();
 
   const fileName = `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
-
   const filePath = path.join(uploadDir, fileName);
+
+  console.log("File path:", filePath);
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
   await fs.writeFile(filePath, buffer);
+
+  console.log("File written");
+
+  const exists = await fs
+    .access(filePath)
+    .then(() => true)
+    .catch(() => false);
+
+  console.log("Exists:", exists);
 
   return {
     url: getSubscriberFileUrl(tenantId, fileName),
