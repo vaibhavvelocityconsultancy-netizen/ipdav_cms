@@ -5,6 +5,7 @@ import Link from "next/link"; // ← ADD THIS
 import ShareModal from "./ShareModal";
 import SharesDrawer from "./SharesDrawer";
 import { Eye, Pencil, Trash } from "lucide-react";
+import { appUrl } from "@/src/lib/base-path";
 
 type FileCardProps = {
   file: any;
@@ -114,7 +115,7 @@ export default function FileCard({
           </Link>
 
           <a
-            href={file.url}
+            href={appUrl(file.url)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
