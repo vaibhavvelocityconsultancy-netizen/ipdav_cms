@@ -9,6 +9,7 @@ import { MediaItem } from "./MediaManager";
 import { Column, DataTable } from "@/src/ui/data-table";
 import { toast } from "@/src/hooks/use-toast";
 import { resolveAppUrl } from "@/src/lib/base-path";
+import { getBaseUrl } from "@/src/lib/config";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -64,7 +65,7 @@ export function MediaCard({
       <div className="aspect-square bg-muted/30 relative overflow-hidden">
         {isImage && !imageError ? (
           <Image
-            src={item.url}
+            src={`${getBaseUrl()}/api/media/${item.id}`}
             alt={item.originalName}
             fill
             className="object-cover transition-transform group-hover:scale-105"
