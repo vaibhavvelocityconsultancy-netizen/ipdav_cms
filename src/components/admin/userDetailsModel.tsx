@@ -4,6 +4,7 @@ import { getBaseUrl } from "@/src/lib/config";
 import { Download, Eye } from "lucide-react";
 import { Badge } from "@/src/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/ui/tabs";
+import { appUrl } from "@/src/lib/base-path";
 
 interface ShareRecord {
   shareId: string;
@@ -68,7 +69,7 @@ function formatFileSize(bytes: number): string {
 }
 
 function getDownloadUrl(url: string): string {
-  return url.replace("/raw/upload/", "/raw/upload/fl_attachment/");
+  return appUrl(url);
 }
 
 export default function UserDetailsModal({
@@ -274,7 +275,7 @@ export default function UserDetailsModal({
                                 </Badge>
                               )}
                               <a
-                                href={file.url}
+                                href={appUrl(file.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label={`View ${file.title}`}
@@ -284,7 +285,7 @@ export default function UserDetailsModal({
                                 <Eye className="h-4 w-4" />
                               </a>
                               <a
-                                href={getDownloadUrl(file.url)}
+                                href={appUrl(file.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 download={file.originalName}
