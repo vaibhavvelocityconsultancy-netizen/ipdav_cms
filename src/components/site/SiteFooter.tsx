@@ -1,219 +1,391 @@
 "use client";
-
-import { useEffect } from "react";
+ 
 import Link from "next/link";
-
-function hexToRgba(hex: string, alpha: number) {
-  const clean = hex?.replace("#", "") || "ffffff";
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function scopeCss(raw: string, scopeSelector = "#site-footer") {
-  if (!raw) return "";
-  return raw.replace(/([^{}]+)\{/g, (_match, selector) => {
-    const scoped = selector.split(",").map((s: string) => `${scopeSelector} ${s.trim()}`).join(", ");
-    return `${scoped} {`;
-  });
-}
-
-function buildFooterTree(items: any[]): any[] {
-  const map = new Map<number, any>();
-  items.forEach((item) => map.set(item.id, { ...item, children: [] }));
-  const roots: any[] = [];
-  items.forEach((item) => {
-    const node = map.get(item.id);
-    if (item.parentId && map.has(item.parentId)) {
-      map.get(item.parentId).children.push(node);
-    } else {
-      roots.push(node);
+import { useEffect, useMemo } from "react";
+ 
+type MediaValue =
+  | string
+  | {
+      url?: string;
+      src?: string;
+      fileUrl?: string;
+      secureUrl?: string;
+      secure_url?: string;
     }
+  | null;
+ 
+type FooterMenuItem = {
+  id: string | number;
+  label: string;
+  type?: string;
+  slug?: string;
+  url?: string;
+  parentId?: string | number | null;
+  children?: FooterMenuItem[];
+};
+ 
+type FooterMenu = {
+  id?: string | number;
+  title?: string;
+  name?: string;
+  label?: string;
+  slug?: string;
+  menuitem?: FooterMenuItem[];
+  menuitems?: FooterMenuItem[];
+  items?: FooterMenuItem[];
+};
+ 
+type SocialLink = {
+  platform?: string;
+  url?: string;
+  link?: string;
+  icon?: MediaValue;
+  iconUrl?: string;
+};
+ 
+type FooterContent = {
+  footerLogo?: MediaValue;
+  logo?: MediaValue;
+  footerBrandTitle?: string | null;
+  brandTitle?: string | null;
+  footerDescription?: string | null;
+  description?: string | null;
+  footerAddress?: string | null;
+  contactAddress?: string | null;
+  footerEmail?: string | null;
+  contactEmail?: string | null;
+  footerCopyright?: string | null;
+  copyrightText?: string | null;
+  socialLinks?: SocialLink[];
+  socials?: SocialLink[];
+  loginLabel?: string;
+  loginUrl?: string;
+  secondaryAuthLabel?: string;
+  secondaryAuthUrl?: string;
+};
+ 
+type FooterConfig = {
+  customCss?: string;
+};
+ 
+type SiteFooterProps = {
+  footer?: FooterContent;
+  footerMenus?: FooterMenu[];
+  config?: FooterConfig;
+};
+ 
+function scopeCss(rawCss: string, scopeSelector = "#site-footer") {
+  if (!rawCss) return "";
+ 
+  return rawCss.replace(/([^{}]+)\{/g, (match, selector) => {
+    const trimmedSelector = selector.trim();
+ 
+    if (
+      trimmedSelector.startsWith("@") ||
+      trimmedSelector.includes("from") ||
+      trimmedSelector.includes("to") ||
+      /^\d+%$/.test(trimmedSelector)
+    ) {
+      return match;
+    }
+ 
+    const scopedSelector = selector
+      .split(",")
+      .map((item: string) => `${scopeSelector} ${item.trim()}`)
+      .join(", ");
+ 
+    return `${scopedSelector} {`;
   });
-  return roots;
 }
-
-export default function SiteFooter({ footer, footerMenus, config }: any) {
-  const cfg = {
-    bgColor: config?.bgColor ?? "#0B0F1A",
-    borderColor: config?.borderColor ?? "#ffffff",
-    borderOpacity: (config?.borderOpacity ?? 8) / 100,
-    headingColor: config?.headingColor ?? "#ffffff",
-    textColor: config?.textColor ?? "#cbd5e1",
-    mutedTextColor: config?.mutedTextColor ?? "#94a3b8",
-    bottomTextColor: config?.bottomTextColor ?? "#64748b",
-    accentColor: config?.accentColor ?? "#22d3ee",
-    accentHoverColor: config?.accentHoverColor ?? "#67e8f9",
-    ctaTextColor: config?.ctaTextColor ?? "#0f172a",
-    eyebrowText: config?.eyebrowText ?? "Let's Start a Conversation",
-    headline: config?.headline ?? "Ready to grow your business?",
-    showCta: config?.showCta ?? true,
-    customCss: config?.customCss ?? "",
-  };
-
+ 
+function cleanText(value?: string | null) {
+  if (!value) return "";
+ 
+  const cleaned = value.trim();
+ 
+  if (
+    !cleaned ||
+    cleaned.toLowerCase() === "null" ||
+    cleaned.toLowerCase() === "undefined"
+  ) {
+    return "";
+  }
+ 
+  return cleaned;
+}
+ 
+function getMediaUrl(value?: MediaValue, fallback?: string) {
+  if (typeof value === "string") {
+    return cleanText(value) || fallback || "";
+  }
+ 
+  if (value && typeof value === "object") {
+    return (
+      cleanText(value.url) ||
+      cleanText(value.src) ||
+      cleanText(value.fileUrl) ||
+      cleanText(value.secureUrl) ||
+      cleanText(value.secure_url) ||
+      fallback ||
+      ""
+    );
+  }
+ 
+  return fallback || "";
+}
+ 
+function getMenuItems(menu?: FooterMenu): FooterMenuItem[] {
+  return menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
+}
+ 
+function buildFooterTree(items: FooterMenuItem[]): FooterMenuItem[] {
+  const itemMap = new Map<string, FooterMenuItem>();
+  const rootItems: FooterMenuItem[] = [];
+ 
+  items.forEach((item) => {
+    itemMap.set(String(item.id), { ...item, children: [] });
+  });
+ 
+  items.forEach((item) => {
+    const currentItem = itemMap.get(String(item.id));
+ 
+    if (!currentItem) return;
+ 
+    if (item.parentId !== null && item.parentId !== undefined) {
+      const parentItem = itemMap.get(String(item.parentId));
+ 
+      if (parentItem) {
+        parentItem.children?.push(currentItem);
+        return;
+      }
+    }
+ 
+    rootItems.push(currentItem);
+  });
+ 
+  return rootItems;
+}
+ 
+function getMenuItemHref(item: FooterMenuItem): string {
+  if (item.type === "page" && item.slug) {
+    return `/${item.slug.replace(/^\/+/, "")}`;
+  }
+ 
+  return item.url || "#";
+}
+ 
+function formatMenuTitle(menu?: FooterMenu): string {
+  const rawTitle =
+    menu?.title ||
+    menu?.label ||
+    menu?.name ||
+    menu?.slug ||
+    "Quick Links";
+ 
+  const cleanTitle = rawTitle
+    .replace(/^footer[-_\s]*/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+ 
+  return cleanTitle
+    ? cleanTitle.replace(/\b\w/g, (character) => character.toUpperCase())
+    : "Quick Links";
+}
+ 
+function getCopyrightText(
+  rawCopyright: string,
+  brandName: string,
+) {
+  const currentYear = new Date().getFullYear();
+  const safeBrandName = cleanText(brandName) || "iPDAV";
+ 
+  if (!rawCopyright) {
+    return `© ${currentYear} ${safeBrandName}. All Rights Reserved.`;
+  }
+ 
+  let copyright = rawCopyright
+    .replace(/Â©/g, "©")
+    .replace(/\{year\}/gi, String(currentYear))
+    .replace(/\{brand\}/gi, safeBrandName)
+    .replace(/\bnull\b/gi, safeBrandName)
+    .replace(/\bundefined\b/gi, safeBrandName)
+    .replace(/\b(?:19|20)\d{2}\b/g, String(currentYear))
+    .trim();
+ 
+  if (!copyright.includes("©")) {
+    copyright = `© ${currentYear} ${copyright}`;
+  }
+ 
+  return copyright;
+}
+ 
+function renderMenuItems(items: FooterMenuItem[], level = 0) {
+  return items.map((item) => {
+    const href = getMenuItemHref(item);
+    const hasChildren = Boolean(item.children?.length);
+ 
+    return (
+      <li
+        key={item.id}
+        className={level > 0 ? "footer-submenu-item" : undefined}
+      >
+        <Link href={href}>{item.label}</Link>
+ 
+        {hasChildren ? (
+          <ul className="footer-submenu">
+            {renderMenuItems(item.children || [], level + 1)}
+          </ul>
+        ) : null}
+      </li>
+    );
+  });
+}
+ 
+function renderAddressLines(address: string) {
+  return address.split(/\r?\n/).map((line, index) => (
+    <span className="footer-address-line" key={`${line}-${index}`}>
+      {line}
+    </span>
+  ));
+}
+ 
+export default function SiteFooter({
+  footer,
+  footerMenus = [],
+  config,
+}: SiteFooterProps) {
   useEffect(() => {
-    if (!cfg.customCss) return;
-    const style = document.createElement("style");
-    style.id = "footer-custom-css";
-    style.textContent = scopeCss(cfg.customCss);
-    document.head.appendChild(style);
-    return () => { document.getElementById("footer-custom-css")?.remove(); };
-  }, [cfg.customCss]);
-
-  const borderStyle = { borderColor: hexToRgba(cfg.borderColor, cfg.borderOpacity) };
-
-  const getMenuItems = (menu: any): any[] =>
-    menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
-
+    if (!config?.customCss) return;
+ 
+    const styleElement = document.createElement("style");
+    styleElement.id = "footer-custom-css";
+    styleElement.textContent = scopeCss(config.customCss);
+    document.head.appendChild(styleElement);
+ 
+    return () => {
+      document.getElementById("footer-custom-css")?.remove();
+    };
+  }, [config?.customCss]);
+ 
+  const quickLinksMenu = footerMenus[0];
+ 
+  const quickLinks = useMemo(
+    () => buildFooterTree(getMenuItems(quickLinksMenu)),
+    [quickLinksMenu],
+  );
+ 
+  const logoUrl = getMediaUrl(footer?.footerLogo ?? footer?.logo);
+  const brandTitle =
+    cleanText(footer?.footerBrandTitle) ||
+    cleanText(footer?.brandTitle) ||
+    "iPDAV";
+  const description =
+    cleanText(footer?.footerDescription) ||
+    cleanText(footer?.description);
+  const address =
+    cleanText(footer?.footerAddress) ||
+    cleanText(footer?.contactAddress);
+  const email =
+    cleanText(footer?.footerEmail) ||
+    cleanText(footer?.contactEmail);
+  const rawCopyright =
+    cleanText(footer?.footerCopyright) ||
+    cleanText(footer?.copyrightText);
+ 
+  const socialLinks = (footer?.socialLinks || footer?.socials || [])
+    .map((socialLink) => ({
+      ...socialLink,
+      href: cleanText(socialLink.url) || cleanText(socialLink.link),
+      iconUrl:
+        getMediaUrl(socialLink.icon) || cleanText(socialLink.iconUrl),
+    }))
+    .filter((socialLink) => socialLink.href && socialLink.iconUrl);
+ 
+  const copyrightText = getCopyrightText(
+    rawCopyright,
+    brandTitle,
+  );
+ 
   return (
-    <footer
-      id="site-footer"
-      className="border-t"
-      style={{ backgroundColor: cfg.bgColor, color: cfg.textColor, ...borderStyle }}
-    >
-      <div className="mx-auto max-w-7xl px-4 py-10 lg:px-6">
-
-        {cfg.showCta && (
-          <div className="mb-10 flex flex-col justify-between gap-6 border-b pb-8 lg:flex-row lg:items-center" style={borderStyle}>
-            <div>
-              <p className="text-sm font-bold uppercase tracking-wide" style={{ color: cfg.accentHoverColor }}>
-                {cfg.eyebrowText}
-              </p>
-              <h2 className="mt-2 text-3xl font-extrabold md:text-4xl" style={{ color: cfg.headingColor }}>
-                {cfg.headline}
-              </h2>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={`mailto:${footer.footerEmail}`}
-                className="rounded-full px-5 py-3 text-sm font-bold transition-colors"
-                style={{ backgroundColor: cfg.accentColor, color: cfg.ctaTextColor }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = cfg.accentHoverColor)}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = cfg.accentColor)}
-              >
-                Email Us
-              </a>
-              {["WhatsApp", "LinkedIn", "Book Meeting"].map((label) => (
+    <footer id="site-footer" className="site-footer bg-navy txt-white">
+      <div className="site-container footer-grid grid">
+        <div className="footer-about">
+          {logoUrl ? (
+            <Link
+              href="/"
+              className="footer-brand"
+              aria-label={`${brandTitle} home`}
+            >
+              <img src={logoUrl} alt={brandTitle} />
+            </Link>
+          ) : (
+            <h2 className="footer-brand-title">{brandTitle}</h2>
+          )}
+ 
+          {description ? <p>{description}</p> : null}
+ 
+          <div className="footer-auth flex">
+            <Link href={footer?.loginUrl || "/login"}>
+              {footer?.loginLabel || "Log In"}
+            </Link>
+ 
+            <Link href={footer?.secondaryAuthUrl || "/register"}>
+              {footer?.secondaryAuthLabel || "Sign In"}
+            </Link>
+          </div>
+        </div>
+ 
+        <div className="footer-contact">
+          <h2>Contact Us</h2>
+ 
+          {address ? (
+            <address>{renderAddressLines(address)}</address>
+          ) : null}
+ 
+          {email ? (
+            <a href={`mailto:${email}`}>{email}</a>
+          ) : null}
+ 
+          {socialLinks.length > 0 ? (
+            <div className="social-links flex" aria-label="Social media">
+              {socialLinks.map((socialLink, index) => (
                 <a
-                  key={label}
-                  href="#"
-                  className="rounded-full border px-5 py-3 text-sm font-bold transition-colors hover:bg-white/5"
-                  style={{ borderColor: hexToRgba(cfg.borderColor, cfg.borderOpacity * 1.25), color: cfg.textColor }}
+                  key={`${socialLink.platform || "social"}-${index}`}
+                  href={socialLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={socialLink.platform || "Social media"}
                 >
-                  {label}
+                  <img
+                    src={socialLink.iconUrl}
+                    alt=""
+                    aria-hidden="true"
+                  />
                 </a>
               ))}
             </div>
-          </div>
-        )}
-
-        <div className="grid gap-10 lg:grid-cols-4">
-          <div className="lg:col-span-2">
-            {footer.footerLogo && (
-              <img src={footer.footerLogo} alt={footer.footerBrandTitle} className="h-8 w-auto brightness-0 invert" />
-            )}
-            <p className="mt-5 max-w-md text-sm leading-6" style={{ color: cfg.mutedTextColor }}>
-              {footer.footerDescription}
-            </p>
-            {footer.socialLinks?.length > 0 && (
-              <div className="mt-6 flex gap-3">
-                {footer.socialLinks.filter((l: any) => l.url).map((l: any, i: number) => (
-                  <a
-                    key={i}
-                    href={l.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border transition-colors overflow-hidden"
-                    style={{ borderColor: hexToRgba(cfg.borderColor, cfg.borderOpacity * 1.25), color: cfg.textColor }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = cfg.accentColor;
-                      e.currentTarget.style.color = cfg.ctaTextColor;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = cfg.textColor;
-                    }}
-                  >
-                    {l.icon
-                      ? <img src={l.icon} alt={l.platform} className="h-4 w-4 object-contain brightness-0 invert" />
-                      : <span className="text-xs font-bold">{l.platform?.charAt(0) || "S"}</span>}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {footerMenus.flatMap((menu: any) => {
-            const items = getMenuItems(menu);
-            const tree = buildFooterTree(items);
-
-            return tree.map((item: any) => {
-              const hasChildren = item.children?.length > 0;
-              const href = item.type === "page" && item.slug ? `/${item.slug}` : item.url || "#";
-
-              if (hasChildren) {
-                return (
-                  <div key={item.id}>
-                    <h3 className="font-extrabold" style={{ color: cfg.headingColor }}>{item.label}</h3>
-                    <ul className="mt-4 space-y-3 text-sm list-none p-0" style={{ color: cfg.mutedTextColor }}>
-                      {item.children.map((child: any) => {
-                        const childHref = child.type === "page" && child.slug ? `/${child.slug}` : child.url || "#";
-                        return (
-                          <li key={child.id}>
-                            <Link
-                              href={childHref}
-                              className="transition-colors"
-                              style={{ color: cfg.mutedTextColor }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = cfg.accentHoverColor)}
-                              onMouseLeave={(e) => (e.currentTarget.style.color = cfg.mutedTextColor)}
-                            >
-                              {child.label}
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={item.id}>
-                  <Link href={href} className="font-extrabold transition-colors" style={{ color: cfg.headingColor }}>
-                    {item.label}
-                  </Link>
-                </div>
-              );
-            });
-          })}
-
-          {(footer.footerAddress || footer.footerEmail) && (
-            <div>
-              <h3 className="font-extrabold" style={{ color: cfg.headingColor }}>Contact</h3>
-              <ul className="mt-4 space-y-3 text-sm list-none p-0" style={{ color: cfg.mutedTextColor }}>
-                {footer.footerAddress && <li>{footer.footerAddress}</li>}
-                {footer.footerEmail && (
-                  <li>
-                    <a href={`mailto:${footer.footerEmail}`} className="transition-colors" style={{ color: cfg.mutedTextColor }}>
-                      {footer.footerEmail}
-                    </a>
-                  </li>
-                )}
+          ) : null}
+        </div>
+ 
+        <div className="footer-links">
+          <h2>{formatMenuTitle(quickLinksMenu)}</h2>
+ 
+          {quickLinks.length > 0 ? (
+            <nav aria-label={formatMenuTitle(quickLinksMenu)}>
+              <ul className="footer-menu">
+                {renderMenuItems(quickLinks)}
               </ul>
-            </div>
+            </nav>
+          ) : (
+            <p className="footer-empty-menu">
+              No footer links have been added.
+            </p>
           )}
         </div>
-
-        <div className="mt-10 flex flex-col justify-between gap-4 border-t pt-6 text-sm md:flex-row" style={{ ...borderStyle, color: cfg.bottomTextColor }}>
-          <p>{footer.footerCopyright}</p>
-          <div className="flex gap-5">
-            <a href="#" className="transition-colors" style={{ color: cfg.bottomTextColor }}>Privacy Policy</a>
-            <a href="#" className="transition-colors" style={{ color: cfg.bottomTextColor }}>Terms</a>
-          </div>
-        </div>
-
       </div>
+ 
+      <div className="copyright">{copyrightText}</div>
     </footer>
   );
 }
+ 

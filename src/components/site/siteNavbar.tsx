@@ -1,308 +1,478 @@
 "use client";
+ 
 import Link from "next/link";
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { fetchers } from "@/src/lib/fetchers";
-import { queryKeys } from "@/src/lib/query-key";
+import { usePathname } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+ 
 import { useCurrentUser } from "@/src/hooks/use-current-user";
-import { appUrl } from "@/src/lib/base-path";
-
-export default function SiteNavbar({ settings, headerMenu }: any) {
-  const queryClient = useQueryClient();
+ 
+type SiteSettings = {
+  logo?: string;
+  siteName?: string;
+};
+ 
+type MenuItem = {
+  id: string;
+  label: string;
+  type?: string;
+  slug?: string;
+  url?: string;
+  parentId?: string | null;
+  children?: MenuItem[];
+};
+ 
+type HeaderMenu = {
+  menuitem?: MenuItem[];
+  menuitems?: MenuItem[];
+  items?: MenuItem[];
+};
+ 
+type SiteNavbarProps = {
+  settings?: SiteSettings;
+  headerMenu?: HeaderMenu;
+};
+ 
+function getMenuItems(menu?: HeaderMenu): MenuItem[] {
+  return menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
+}
+ 
+function buildMenuTree(items: MenuItem[]): MenuItem[] {
+  const itemMap = new Map<string, MenuItem>();
+  const rootItems: MenuItem[] = [];
+ 
+  items.forEach((item) => {
+    itemMap.set(item.id, {
+      ...item,
+      children: [],
+    });
+  });
+ 
+  items.forEach((item) => {
+    const currentItem = itemMap.get(item.id);
+ 
+    if (!currentItem) {
+      return;
+    }
+ 
+    if (item.parentId && itemMap.has(item.parentId)) {
+      itemMap.get(item.parentId)?.children?.push(currentItem);
+      return;
+    }
+ 
+    rootItems.push(currentItem);
+  });
+ 
+  return rootItems;
+}
+ 
+function getMenuItemHref(item: MenuItem): string {
+  if (item.type === "page" && item.slug) {
+    return `/${item.slug.replace(/^\/+/, "")}`;
+  }
+ 
+  return item.url || "#";
+}
+ 
+function isActivePage(pathname: string, href: string): boolean {
+  if (!href || href === "#") {
+    return false;
+  }
+ 
+  if (href === "/") {
+    return pathname === "/";
+  }
+ 
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+ 
+export default function SiteNavbar({
+  settings,
+  headerMenu,
+}: SiteNavbarProps) {
+  const pathname = usePathname();
+  const { user } = useCurrentUser();
+ 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [openMobileSubmenus, setOpenMobileSubmenus] = useState<Set<string>>(
     new Set(),
   );
-  const [searchValue, setSearchValue] = useState("");
-  const { user } = useCurrentUser();
-
+ 
   const dashboardUrl =
     user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
       ? "/admin"
       : "/dashboard";
-
+ 
+  const menuItems = useMemo(
+    () => buildMenuTree(getMenuItems(headerMenu)),
+    [headerMenu],
+  );
+ 
+  const logo = settings?.logo;
+  const siteName = settings?.siteName || "iPDAV";
+ 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsSearchOpen(false);
+    setOpenMobileSubmenus(new Set());
+  }, [pathname]);
+ 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+ 
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    }
+ 
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileMenuOpen]);
+ 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+        setIsSearchOpen(false);
+      }
+    };
+ 
+    window.addEventListener("keydown", handleEscape);
+ 
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+ 
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+ 
+    const query = searchValue.trim();
+ 
+    if (!query) {
+      return;
+    }
+ 
+    setIsSearchOpen(false);
+    setIsMobileMenuOpen(false);
+    window.location.assign(`/search?q=${encodeURIComponent(query)}`);
+  };
+ 
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+ 
   const toggleMobileSubmenu = (itemId: string) => {
-    setOpenMobileSubmenus((prev) => {
-      const newSet = new Set(prev);
-      newSet.has(itemId) ? newSet.delete(itemId) : newSet.add(itemId);
-      return newSet;
+    setOpenMobileSubmenus((previousItems) => {
+      const nextItems = new Set(previousItems);
+ 
+      if (nextItems.has(itemId)) {
+        nextItems.delete(itemId);
+      } else {
+        nextItems.add(itemId);
+      }
+ 
+      return nextItems;
     });
   };
-
-  const prefetchPage = (type: string, slug: string) => {
-    if (type === "page" && slug) {
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.page(slug),
-        queryFn: () => fetchers.publicPageBySlug(slug),
-        staleTime: 1000 * 60 * 5,
-      });
-    }
-  };
-
-  const buildTree = (items: any[]) => {
-    const map = new Map();
-    items.forEach((item) => map.set(item.id, { ...item, children: [] }));
-    const roots: any[] = [];
-    items.forEach((item) => {
-      if (item.parentId)
-        map.get(item.parentId)?.children.push(map.get(item.id));
-      else roots.push(map.get(item.id));
-    });
-    return roots;
-  };
-
-  
-  const getMenuItems = (menu: any): any[] =>
-    menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchValue.trim()) {
-      window.location.href = appUrl(`/search?q=${encodeURIComponent(searchValue)}`);
-    }
-  };
-
-  const renderMenuBarItems = (items: any[]): React.ReactNode =>
+ 
+  const renderDesktopMenuItems = (items: MenuItem[]): React.ReactNode =>
     items.map((item) => {
-      const href =
-        item.type === "page" && item.slug ? `/${item.slug}` : item.url || "#";
-      const hasChildren = item.children?.length > 0;
+      const href = getMenuItemHref(item);
+      const hasChildren = Boolean(item.children?.length);
+      const active = isActivePage(pathname, href);
+ 
       return (
-        <li key={item.id} className="relative group">
-          <Link
-            href={href}
-            className="block text-[15px] font-medium text-white px-6 py-4 transition-colors hover:opacity-80"
-            onMouseEnter={() => prefetchPage(item.type, item.slug)}
-          >
+        <div key={item.id} className="group relative nav-item">
+          <Link href={href} aria-current={active ? "page" : undefined}>
             {item.label}
-            {hasChildren && <span className="ml-1 opacity-70">▾</span>}
+ 
+            {hasChildren ? (
+              <span className="ml-1 text-xs opacity-70" aria-hidden="true">
+                ▾
+              </span>
+            ) : null}
           </Link>
-          {hasChildren && (
-            <ul className="absolute top-full left-0 w-52 bg-[#111827] border border-white/10 rounded-b-md shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              {item.children.map((child: any) => (
-                <li key={child.id}>
+ 
+          {hasChildren ? (
+            <div className="invisible absolute left-0 top-full z-50 min-w-56 translate-y-2 border border-white/10 bg-[#0f1b2b] py-2 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+              {item.children?.map((child) => {
+                const childHref = getMenuItemHref(child);
+                const childActive = isActivePage(pathname, childHref);
+ 
+                return (
                   <Link
-                    href={
-                      child.type === "page" && child.slug
-                        ? `/${child.slug}`
-                        : child.url || "#"
-                    }
-                    className="block text-sm px-4 py-2 text-slate-200 hover:bg-white/5"
+                    key={child.id}
+                    href={childHref}
+                    aria-current={childActive ? "page" : undefined}
+                    className="block whitespace-nowrap px-5 py-2.5 text-[15px] text-white hover:bg-white/10"
                   >
                     {child.label}
                   </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       );
     });
-
-  const renderMobileItems = (items: any[], level = 0): React.ReactNode =>
+ 
+  const renderMobileMenuItems = (
+    items: MenuItem[],
+    level = 0,
+  ): React.ReactNode =>
     items.map((item) => {
-      const href =
-        item.type === "page" && item.slug ? `/${item.slug}` : item.url || "#";
-      const hasChildren = item.children?.length > 0;
+      const href = getMenuItemHref(item);
+      const hasChildren = Boolean(item.children?.length);
       const isOpen = openMobileSubmenus.has(item.id);
+      const active = isActivePage(pathname, href);
+ 
       return (
-        <li
+        <div
           key={item.id}
-          className="w-full border-b border-black/5 last:border-0"
+          className="w-full border-b border-black/5 last:border-b-0"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <Link
               href={href}
-              className={`flex-1 text-sm font-medium py-3 px-4 text-slate-800 ${level > 0 ? "pl-8" : ""}`}
-              onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={active ? "page" : undefined}
+              className={`flex-1 py-4 text-[17px] transition-colors ${
+                level > 0 ? "pl-6 text-[15px]" : ""
+              } ${
+                active
+                  ? "font-medium text-[#ff8000]"
+                  : "font-normal text-[#152539] hover:text-[#ff8000]"
+              }`}
+              onClick={closeMobileMenu}
             >
               {item.label}
             </Link>
-            {hasChildren && (
+ 
+            {hasChildren ? (
               <button
+                type="button"
+                className="flex h-12 w-12 items-center justify-center text-[#152539]"
+                aria-label={`${isOpen ? "Close" : "Open"} ${item.label} submenu`}
+                aria-expanded={isOpen}
                 onClick={() => toggleMobileSubmenu(item.id)}
-                className="px-4 py-3 text-slate-500"
-                style={{
-                  transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                }}
               >
                 <svg
-                  className="w-4 h-4"
+                  className={`h-4 w-4 transition-transform ${
+                    isOpen ? "rotate-180" : ""
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
+                    d="m19 9-7 7-7-7"
                   />
                 </svg>
               </button>
-            )}
+            ) : null}
           </div>
-          {hasChildren && isOpen && (
-            <ul className="bg-black/[0.02]">
-              {renderMobileItems(item.children, level + 1)}
-            </ul>
-          )}
-        </li>
+ 
+          {hasChildren && isOpen ? (
+            <div className="border-t border-black/5 bg-black/[0.025]">
+              {renderMobileMenuItems(item.children || [], level + 1)}
+            </div>
+          ) : null}
+        </div>
       );
     });
-
-  const menuItems = headerMenu ? buildTree(getMenuItems(headerMenu)) : [];
-    // Only add Pricing if there are already other nav items
-const finalMenuItems =
-  menuItems.length > 0
-    ? [
-        ...menuItems,
-        {
-          id: "pricing-static",
-          label: "Pricing",
-          type: "custom",
-          url: "/pricing",
-          children: [],
-        },
-      ]
-    : menuItems;
+ 
   return (
-    <header id="site-navbar" className="m-0 p-0">
-      {/* ROW 1 — white bar: logo / search / login-register */}
-      <div className="bg-white border-b border-black/5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-6">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            {settings?.logo ? (
+    <>
+      <header id="site-navbar" className="site-header bg-navy txt-white">
+        <div className="site-container">
+          <div className="topbar relative flex items-center justify-between">
+            <Link href="/" className="brand" aria-label={`${siteName} home`}>
+              {logo ? (
+                <img src={logo} alt={siteName} />
+              ) : (
+                <span className="text-2xl font-semibold text-[#152539]">
+                  {siteName}
+                </span>
+              )}
+            </Link>
+ 
+            <div className="top-actions flex items-center">
+              {!user ? (
+                <>
+                  <Link className="login-link" href="/login">
+                    Log In
+                  </Link>
+ 
+                  <Link className="signup-link" href="/register">
+                    Sign Up
+                  </Link>
+                </>
+              ) : (
+                <Link className="signup-link" href={dashboardUrl}>
+                  Dashboard
+                </Link>
+              )}
+ 
+              <span className="top-separator" aria-hidden="true" />
+ 
+              <button
+                type="button"
+                className="search-button"
+                aria-label="Open search"
+                aria-expanded={isSearchOpen}
+                onClick={() => setIsSearchOpen((current) => !current)}
+              >
+                <span />
+              </button>
+            </div>
+ 
+            <button
+              type="button"
+              className="mobile-menu-button"
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+ 
+            {isSearchOpen ? (
+              <form
+                onSubmit={handleSearchSubmit}
+                className="absolute right-0 top-[calc(100%+12px)] z-[70] hidden w-[360px] overflow-hidden rounded-md border border-black/10 bg-white shadow-xl md:flex"
+              >
+                <label className="sr-only" htmlFor="desktop-site-search">
+                  Search
+                </label>
+ 
+                <input
+                  id="desktop-site-search"
+                  type="search"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="Search..."
+                  className="min-w-0 flex-1 px-4 py-3 text-sm text-[#152539] outline-none"
+                  autoFocus
+                />
+ 
+                <button
+                  type="submit"
+                  className="bg-[#152539] px-5 text-sm font-medium text-white"
+                >
+                  Search
+                </button>
+              </form>
+            ) : null}
+          </div>
+ 
+          <nav className="main-nav" aria-label="Primary navigation">
+            <div className="hidden w-full items-center justify-between lg:flex">
+              {renderDesktopMenuItems(menuItems)}
+            </div>
+          </nav>
+        </div>
+      </header>
+ 
+      <div
+        className={`fixed inset-0 z-[90] bg-black/55 transition-opacity duration-300 lg:hidden ${
+          isMobileMenuOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+        aria-hidden="true"
+        onClick={closeMobileMenu}
+      />
+ 
+      <aside
+        id="mobile-navigation"
+        className={`fixed inset-y-0 left-0 z-[100] flex w-[86%] max-w-[360px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        aria-hidden={!isMobileMenuOpen}
+      >
+        <div className="flex min-h-[92px] items-center justify-between border-b border-black/5 bg-[#f7f7f7] px-6">
+          <Link
+            href="/"
+            className="block max-w-[190px]"
+            aria-label={`${siteName} home`}
+            onClick={closeMobileMenu}
+          >
+            {logo ? (
               <img
-                src={settings.logo}
-                alt={settings.siteName}
-                className="h-9 w-auto"
+                src={logo}
+                alt={siteName}
+                className="max-h-14 w-auto object-contain"
               />
             ) : (
-              <span className="text-xl font-bold tracking-tight text-slate-900">
-                {settings?.siteName}
+              <span className="text-xl font-semibold text-[#152539]">
+                {siteName}
               </span>
             )}
           </Link>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden md:flex flex-1 max-w-xl"
+ 
+          <button
+            type="button"
+            className="relative flex h-11 w-11 items-center justify-center text-[#152539]"
+            aria-label="Close navigation menu"
+            onClick={closeMobileMenu}
           >
-            <div className="flex w-full rounded-md border border-slate-300 overflow-hidden">
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search for anything..."
-                className="flex-1 px-4 py-2 text-sm outline-none"
-              />
-              <button
-                type="submit"
-                className="px-6 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Search
-              </button>
-            </div>
-          </form>
-
+            <span className="absolute h-0.5 w-6 rotate-45 bg-current" />
+            <span className="absolute h-0.5 w-6 -rotate-45 bg-current" />
+          </button>
+        </div>
+ 
+        <nav
+          className="flex-1 overflow-y-auto px-6 py-1"
+          aria-label="Mobile navigation"
+        >
+          {menuItems.length > 0 ? (
+            renderMobileMenuItems(menuItems)
+          ) : (
+            <p className="py-6 text-sm text-[#152539]/70">
+              No items have been added to the selected header menu.
+            </p>
+          )}
+        </nav>
+ 
+        <div className="border-t border-black/10 px-6 py-5">
           {!user ? (
-            <div className="hidden lg:flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-6">
               <Link
                 href="/login"
-                className="text-sm font-medium text-orange-500 hover:text-orange-600"
+                className="font-medium text-[#c00900]"
+                onClick={closeMobileMenu}
               >
-                Login
+                Log In
               </Link>
-              <span className="text-slate-300">/</span>
+ 
               <Link
                 href="/register"
-                className="text-sm font-medium text-orange-500 hover:text-orange-600"
+                className="font-medium text-[#15830b]"
+                onClick={closeMobileMenu}
               >
-                Register
+                Sign Up
               </Link>
             </div>
           ) : (
             <Link
               href={dashboardUrl}
-              className="hidden lg:block rounded-md px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shrink-0"
+              className="font-medium text-[#152539]"
+              onClick={closeMobileMenu}
             >
               Dashboard
             </Link>
           )}
-
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden inline-flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-md border border-black/10"
-            aria-label="Toggle menu"
-          >
-            <span className="block h-0.5 w-5 bg-slate-800" />
-            <span className="block h-0.5 w-5 bg-slate-800" />
-            <span className="block h-0.5 w-5 bg-slate-800" />
-          </button>
         </div>
-      </div>
-
-      {/* ROW 2 — orange full-width menu bar (desktop only) */}
-      <nav className="hidden lg:block w-full">
-        <div className="max-w-7xl mx-auto bg-orange-500">
-          <ul className="flex items-center gap-2 list-none m-0 p-0 px-6">
-            {renderMenuBarItems(finalMenuItems)}
-          </ul>
-        </div>
-      </nav>
-
-      {/* Mobile drawer */}
-      <div
-        className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 lg:hidden ${
-          isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
-      <div
-        className={`fixed top-0 h-full left-0 right-0 z-50 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="h-full overflow-y-auto">
-          <form
-            onSubmit={handleSearchSubmit}
-            className="p-4 border-b border-black/5"
-          >
-            <div className="flex w-full rounded-md border border-slate-300 overflow-hidden">
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search for anything..."
-                className="flex-1 px-4 py-2 text-sm outline-none"
-              />
-              <button
-                type="submit"
-                className="px-4 text-sm font-semibold text-white bg-blue-600"
-              >
-                Go
-              </button>
-            </div>
-          </form>
-          <nav className="flex flex-col">
-            <ul className="flex flex-col list-none m-0 p-0">
-              {renderMobileItems(finalMenuItems)}
-            </ul>
-          </nav>
-          <div className="flex items-center gap-4 p-4 border-t border-black/5">
-            <Link href="/login" className="text-sm font-medium text-orange-500">
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm font-medium text-orange-500"
-            >
-              Register
-            </Link>
-          </div>
-        </div>
-      </div>
-    </header>
+      </aside>
+    </>
   );
 }
+ 

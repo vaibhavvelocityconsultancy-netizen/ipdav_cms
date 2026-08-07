@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getBaseUrl } from "@/src/lib/config";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
+import { useSubscription } from "@/src/hooks/use-subscription";
 import {
   User,
   Key,
@@ -57,6 +58,7 @@ function SectionCard({
 
 export default function ProfileSection() {
   const { user, refresh } = useCurrentUser();
+  const { access } = useSubscription();
 
   // Profile state
   const [profile, setProfile] = useState({ name: "", email: "" });
@@ -116,6 +118,11 @@ export default function ProfileSection() {
   // ── Save Profile ──────────────────────────────────────
 
   async function handleSaveProfile() {
+    if (!user?.id) {
+      setProfileError("You need to be signed in to update your profile");
+      return;
+    }
+
     setSavingProfile(true);
     setProfileError("");
     setProfileSuccess("");
@@ -143,6 +150,11 @@ export default function ProfileSection() {
   // ── Change Password ───────────────────────────────────
 
   async function handleChangePassword() {
+    if (!user?.id) {
+      setPasswordError("You need to be signed in to update your password");
+      return;
+    }
+
     if (newPassword.length < 8) {
       setPasswordError("Password must be at least 8 characters");
       return;
@@ -241,6 +253,11 @@ export default function ProfileSection() {
     ROLE_COLORS[user?.role as RoleName] ?? "bg-gray-100 text-gray-600";
   const roleLabel = ROLE_LABELS[user?.role as RoleName] ?? user?.role;
   const initials = (user?.name || user?.email || "?")[0]?.toUpperCase();
+  const memberSinceDate = access?.startsAt
+    ? new Date(access.startsAt)
+    : user?.createdAt
+      ? new Date(user.createdAt)
+      : null;
 
   return (
     <div className="p-8 max-w-3xl mx-auto space-y-6">
@@ -385,8 +402,8 @@ export default function ProfileSection() {
               <Calendar size={14} /> Member since
             </span>
             <span className="text-sm text-foreground font-medium">
-              {user?.createdAt
-                ? new Date(user.createdAt).toLocaleDateString("en-US", {
+              {memberSinceDate
+                ? memberSinceDate.toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
                     year: "numeric",
