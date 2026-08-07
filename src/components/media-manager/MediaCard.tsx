@@ -63,14 +63,13 @@ export function MediaCard({
 
       <div className="aspect-square bg-muted/30 relative overflow-hidden">
         {isImage && !imageError ? (
-          <img
+          <Image
             src={item.url}
             alt={item.originalName}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              console.log("FAILED:", e.currentTarget.src);
-              setImageError(true);
-            }}
+            fill
+            className="object-cover transition-transform group-hover:scale-105"
+            onError={() => setImageError(true)}
+            unoptimized
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
