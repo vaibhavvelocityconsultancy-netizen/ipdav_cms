@@ -1,199 +1,219 @@
-# NextCRM Setup Guide
+"use client";
 
-## Prerequisites
+import { useEffect } from "react";
+import Link from "next/link";
 
-Before starting the development server, ensure you have:
+function hexToRgba(hex: string, alpha: number) {
+  const clean = hex?.replace("#", "") || "ffffff";
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
-- **Node.js** (v16 or higher)
-- **MySQL** (running locally or remotely)
-- **npm** or **pnpm** package manager
+function scopeCss(raw: string, scopeSelector = "#site-footer") {
+  if (!raw) return "";
+  return raw.replace(/([^{}]+)\{/g, (_match, selector) => {
+    const scoped = selector.split(",").map((s: string) => `${scopeSelector} ${s.trim()}`).join(", ");
+    return `${scoped} {`;
+  });
+}
 
-## Setup Steps
+function buildFooterTree(items: any[]): any[] {
+  const map = new Map<number, any>();
+  items.forEach((item) => map.set(item.id, { ...item, children: [] }));
+  const roots: any[] = [];
+  items.forEach((item) => {
+    const node = map.get(item.id);
+    if (item.parentId && map.has(item.parentId)) {
+      map.get(item.parentId).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
 
-### 1. Install Dependencies
+export default function SiteFooter({ footer, footerMenus, config }: any) {
+  const cfg = {
+    bgColor: config?.bgColor ?? "#0B0F1A",
+    borderColor: config?.borderColor ?? "#ffffff",
+    borderOpacity: (config?.borderOpacity ?? 8) / 100,
+    headingColor: config?.headingColor ?? "#ffffff",
+    textColor: config?.textColor ?? "#cbd5e1",
+    mutedTextColor: config?.mutedTextColor ?? "#94a3b8",
+    bottomTextColor: config?.bottomTextColor ?? "#64748b",
+    accentColor: config?.accentColor ?? "#22d3ee",
+    accentHoverColor: config?.accentHoverColor ?? "#67e8f9",
+    ctaTextColor: config?.ctaTextColor ?? "#0f172a",
+    eyebrowText: config?.eyebrowText ?? "Let's Start a Conversation",
+    headline: config?.headline ?? "Ready to grow your business?",
+    showCta: config?.showCta ?? true,
+    customCss: config?.customCss ?? "",
+  };
 
-```bash
-npm install
-# or
-pnpm install
-```
+  useEffect(() => {
+    if (!cfg.customCss) return;
+    const style = document.createElement("style");
+    style.id = "footer-custom-css";
+    style.textContent = scopeCss(cfg.customCss);
+    document.head.appendChild(style);
+    return () => { document.getElementById("footer-custom-css")?.remove(); };
+  }, [cfg.customCss]);
 
-### 2. Configure Environment Variables
+  const borderStyle = { borderColor: hexToRgba(cfg.borderColor, cfg.borderOpacity) };
 
-Create or update `.env` file in the root directory with:
+  const getMenuItems = (menu: any): any[] =>
+    menu?.menuitem ?? menu?.menuitems ?? menu?.items ?? [];
 
-```env
-DATABASE_URL="mysql://username:password@localhost:3306/database_name"
-NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
-NEXT_PUBLIC_SITE_URL="http://localhost:3000"
-```
+  return (
+    <footer
+      id="site-footer"
+      className="border-t"
+      style={{ backgroundColor: cfg.bgColor, color: cfg.textColor, ...borderStyle }}
+    >
+      <div className="mx-auto max-w-7xl px-4 py-10 lg:px-6">
 
-### 3. Setup Database
+        {cfg.showCta && (
+          <div className="mb-10 flex flex-col justify-between gap-6 border-b pb-8 lg:flex-row lg:items-center" style={borderStyle}>
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wide" style={{ color: cfg.accentHoverColor }}>
+                {cfg.eyebrowText}
+              </p>
+              <h2 className="mt-2 text-3xl font-extrabold md:text-4xl" style={{ color: cfg.headingColor }}>
+                {cfg.headline}
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={`mailto:${footer.footerEmail}`}
+                className="rounded-full px-5 py-3 text-sm font-bold transition-colors"
+                style={{ backgroundColor: cfg.accentColor, color: cfg.ctaTextColor }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = cfg.accentHoverColor)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = cfg.accentColor)}
+              >
+                Email Us
+              </a>
+              {["WhatsApp", "LinkedIn", "Book Meeting"].map((label) => (
+                <a
+                  key={label}
+                  href="#"
+                  className="rounded-full border px-5 py-3 text-sm font-bold transition-colors hover:bg-white/5"
+                  style={{ borderColor: hexToRgba(cfg.borderColor, cfg.borderOpacity * 1.25), color: cfg.textColor }}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
-```bash
-# Generate Prisma Client
-npx prisma generate
+        <div className="grid gap-10 lg:grid-cols-4">
+          <div className="lg:col-span-2">
+            {footer.footerLogo && (
+              <img src={footer.footerLogo} alt={footer.footerBrandTitle} className="h-8 w-auto brightness-0 invert" />
+            )}
+            <p className="mt-5 max-w-md text-sm leading-6" style={{ color: cfg.mutedTextColor }}>
+              {footer.footerDescription}
+            </p>
+            {footer.socialLinks?.length > 0 && (
+              <div className="mt-6 flex gap-3">
+                {footer.socialLinks.filter((l: any) => l.url).map((l: any, i: number) => (
+                  <a
+                    key={i}
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border transition-colors overflow-hidden"
+                    style={{ borderColor: hexToRgba(cfg.borderColor, cfg.borderOpacity * 1.25), color: cfg.textColor }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = cfg.accentColor;
+                      e.currentTarget.style.color = cfg.ctaTextColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = cfg.textColor;
+                    }}
+                  >
+                    {l.icon
+                      ? <img src={l.icon} alt={l.platform} className="h-4 w-4 object-contain brightness-0 invert" />
+                      : <span className="text-xs font-bold">{l.platform?.charAt(0) || "S"}</span>}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
 
-# Run migrations
-npx prisma migrate dev
-```
+          {footerMenus.flatMap((menu: any) => {
+            const items = getMenuItems(menu);
+            const tree = buildFooterTree(items);
 
-### 4. Start Development Server
+            return tree.map((item: any) => {
+              const hasChildren = item.children?.length > 0;
+              const href = item.type === "page" && item.slug ? `/${item.slug}` : item.url || "#";
 
-```bash
-npm run dev
-# or
-pnpm dev
-```
+              if (hasChildren) {
+                return (
+                  <div key={item.id}>
+                    <h3 className="font-extrabold" style={{ color: cfg.headingColor }}>{item.label}</h3>
+                    <ul className="mt-4 space-y-3 text-sm list-none p-0" style={{ color: cfg.mutedTextColor }}>
+                      {item.children.map((child: any) => {
+                        const childHref = child.type === "page" && child.slug ? `/${child.slug}` : child.url || "#";
+                        return (
+                          <li key={child.id}>
+                            <Link
+                              href={childHref}
+                              className="transition-colors"
+                              style={{ color: cfg.mutedTextColor }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = cfg.accentHoverColor)}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = cfg.mutedTextColor)}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              }
 
-The application will be available at `http://localhost:3000`
+              return (
+                <div key={item.id}>
+                  <Link href={href} className="font-extrabold transition-colors" style={{ color: cfg.headingColor }}>
+                    {item.label}
+                  </Link>
+                </div>
+              );
+            });
+          })}
 
----
+          {(footer.footerAddress || footer.footerEmail) && (
+            <div>
+              <h3 className="font-extrabold" style={{ color: cfg.headingColor }}>Contact</h3>
+              <ul className="mt-4 space-y-3 text-sm list-none p-0" style={{ color: cfg.mutedTextColor }}>
+                {footer.footerAddress && <li>{footer.footerAddress}</li>}
+                {footer.footerEmail && (
+                  <li>
+                    <a href={`mailto:${footer.footerEmail}`} className="transition-colors" style={{ color: cfg.mutedTextColor }}>
+                      {footer.footerEmail}
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
 
-## Default Credentials
+        <div className="mt-10 flex flex-col justify-between gap-4 border-t pt-6 text-sm md:flex-row" style={{ ...borderStyle, color: cfg.bottomTextColor }}>
+          <p>{footer.footerCopyright}</p>
+          <div className="flex gap-5">
+            <a href="#" className="transition-colors" style={{ color: cfg.bottomTextColor }}>Privacy Policy</a>
+            <a href="#" className="transition-colors" style={{ color: cfg.bottomTextColor }}>Terms</a>
+          </div>
+        </div>
 
-- **Login Page**: `http://localhost:3000/login`
-- **Admin Panel**: `http://localhost:3000/admin`
-- **Default User**: Created during migration (check database)
-
----
-
-## API Reference
-
-Here are all API endpoints for both Pages and Menus:
-
-for forms use these snippets :
-
-<div data-form="test-1"></div>
-[form slug="test-1"]
----
-
-## Editors Used
-
-The NextCRM project uses the following editors for content creation:
-
-- **Monaco Editor** (`@monaco-editor/react`): Used for writing and editing HTML and CSS code in pages and posts. Integrated into the content editors for both pages and posts, where you can switch to a "code" tab to edit raw HTML/CSS directly.
-- **TipTap** (`@tiptap/react`): Used for visual editing (WYSIWYG) in pages and posts. Provides a rich text editor interface for content creation.
-
----
-
-### Pages
-
-### Pages
-
-| Method | Endpoint                                 | What it does               |
-| ------ | ---------------------------------------- | -------------------------- |
-| GET    | `/api/pages`                             | Get all pages              |
-| POST   | `/api/pages`                             | Create new page            |
-| GET    | `/api/pages/[id]`                        | Get single page by ID      |
-| PUT    | `/api/pages/[id]`                        | Update page                |
-| PUT    | `/api/pages/[id]` `{action:'publish'}`   | Publish page               |
-| PUT    | `/api/pages/[id]` `{action:'unpublish'}` | Unpublish page             |
-| DELETE | `/api/pages/[id]`                        | Delete page                |
-| GET    | `/api/pages/slug/[slug]`                 | Get published page by slug |
-| POST   | `/api/pages/slug/[slug]/check`           | Check slug availability    |
-
----
-
-### Menus
-
-| Method | Endpoint                         | What it does                    |
-| ------ | -------------------------------- | ------------------------------- |
-| GET    | `/api/menus`                     | Get all menus with items        |
-| POST   | `/api/menus`                     | Create new menu                 |
-| GET    | `/api/menus/[id]`                | Get single menu by ID           |
-| PUT    | `/api/menus/[id]`                | Update menu name/location/items |
-| DELETE | `/api/menus/[id]`                | Delete menu + its items         |
-| GET    | `/api/menus/location/[location]` | Get menu by header or footer    |
-| POST   | `/api/menus/[id]/items`          | Add item to menu                |
-| PUT    | `/api/menus/[id]/items`          | Reorder all items               |
-| PUT    | `/api/menus/[id]/items/[itemId]` | Update single item              |
-| DELETE | `/api/menus/[id]/items/[itemId]` | Delete single item              |
-
----
-
-### Folder Structure
-
-```
-app/api/
-├── pages/
-│   ├── route.js                        GET, POST
-│   ├── [id]/
-│   │   └── route.js                    GET, PUT, DELETE
-│   └── slug/
-│       └── [slug]/
-│           ├── route.js                GET
-│           └── check/
-│               └── route.js            POST
-└── menus/
-    ├── route.js                        GET, POST
-    ├── [id]/
-    │   ├── route.js                    GET, PUT, DELETE
-    │   └── items/
-    │       ├── route.js                POST, PUT
-    │       └── [itemId]/
-    │           └── route.js            PUT, DELETE
-    └── location/
-        └── [location]/
-            └── route.js               GET
-```
-
-Here's every API endpoint:
-
-**Posts**
-
-```
-GET     /api/posts
-POST    /api/posts
-GET     /api/posts/[id]
-PUT     /api/posts/[id]
-DELETE  /api/posts/[id]
-POST    /api/posts/[id]/publish
-POST    /api/posts/[id]/unpublish
-POST    /api/posts/slug/[slug]/check
-```
-
-**Categories**
-
-```
-GET     /api/categories
-POST    /api/categories
-GET     /api/categories/[id]
-PUT     /api/categories/[id]
-DELETE  /api/categories/[id]
-```
-
-**Tags**
-
-```
-GET     /api/tags
-POST    /api/tags
-GET     /api/tags/[id]
-PUT     /api/tags/[id]
-DELETE  /api/tags/[id]
-```
-
-app/api/
-├── posts/
-│ ├── route.js GET (all) POST (create)
-│ ├── [id]/
-│ │ ├── route.js GET PUT DELETE
-│ │ ├── publish/route.js POST
-│ │ └── unpublish/route.js POST
-│ └── slug/[slug]/check/route.js POST (slug availability)
-├── categories/
-│ ├── route.js GET POST
-│ └── [id]/route.js GET PUT DELETE
-└── tags/
-├── route.js GET POST
-└── [id]/route.js GET PUT DELETE
-
-rm -rf ~/https://next-crm-momemtums.vercel.app//standalone_extracted
-mkdir ~/https://next-crm-momemtums.vercel.app//standalone_extracted
-cd ~/https://next-crm-momemtums.vercel.app//standalone_extracted
-unzip -o ~/https://next-crm-momemtums.vercel.app//standalone.zip
-cp ~/https://next-crm-momemtums.vercel.app//.env .env
-touch ~/https://next-crm-momemtums.vercel.app//tmp/restart.txt
-
-grep "\[auth\]" ~/https://next-crm-momemtums.vercel.app//app.log | tail -50
+      </div>
+    </footer>
+  );
+}
