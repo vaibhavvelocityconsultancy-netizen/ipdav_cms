@@ -78,8 +78,19 @@ export async function createMedia(input) {
       `tenant-${tenantId}`,
     );
 
+    console.log("===== UPLOAD DEBUG =====");
+    console.log("cwd:", process.cwd());
+    console.log("tenantDir:", tenantDir);
+    console.log("filePath:", filePath);
+
     await fs.mkdir(tenantDir, { recursive: true });
 
+    console.log("Directory created");
+
+    await fs.writeFile(filePath, buffer);
+
+    console.log("File written");
+    console.log("========================");
     const ext = path.extname(file.name);
 
     const base = path
@@ -92,8 +103,8 @@ export async function createMedia(input) {
 
     await fs.writeFile(filePath, buffer);
     console.log("process.cwd():", process.cwd());
-console.log("Upload directory:", uploadDir);
-console.log("File path:", filePath);
+    // console.log("Upload directory:", uploadDir);
+    console.log("File path:", filePath);
 
     const publicUrl = `/uploads/tenant-${tenantId}/${fileName}`;
 
