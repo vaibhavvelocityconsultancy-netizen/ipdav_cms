@@ -2,7 +2,8 @@ import { PassThrough } from "stream";
 import { ZipArchive } from "archiver";
 import { prisma } from "@/src/app/lib/prisma";
 import { markZipDownloaded } from "@/src/app/lib/file_sharing/file-sharing.service";
-
+import fs from "fs/promises";
+import path from "path";
 export async function GET(request, { params }) {
   const { token } = await params;
 
@@ -37,13 +38,21 @@ export async function GET(request, { params }) {
   (async () => {
     try {
       for (const item of share.files) {
-        const fileRes = await fetch(item.file.url);
-        if (!fileRes.ok || !fileRes.body) continue;
+        try {
+          const relativePath = item.file.url.startsWith("/")
+            ? item.file.url.slice(1)
+            : item.file.url;
 
-        const arrayBuffer = await fileRes.arrayBuffer();
-        archive.append(Buffer.from(arrayBuffer), {
-          name: item.file.originalName,
-        });
+          const filePath = path.join(process.cwd(), "public", relativePath);
+
+          const fileBuffer = await fs.readFile(filePath);
+
+          archive.append(fileBuffer, {
+            name: item.file.originalName,
+          });
+        } catch (err) {
+          console.error(`Failed to read file ${item.file.originalName}:`, err);
+        }
       }
       await archive.finalize();
     } catch (err) {

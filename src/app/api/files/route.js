@@ -1,9 +1,11 @@
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 import { prisma } from "../../lib/prisma";
 import { requireAuth } from "../../lib/withPermission";
 import { ApiError } from "../../lib/utils/ApiError";
 import { ApiResponse } from "../../lib/utils/ApiResponse";
 import { asyncHandler } from "../../lib/utils/asyncHandler";
-import cloudinary from "@/src/lib/cloudinary";
 import { requireActiveSubscription } from "../../lib/utils/subscription-access";
 
 const ALLOWED_TYPES = [
@@ -112,7 +114,8 @@ export const POST = asyncHandler(async (req) => {
 
   // FormData sends everything as strings — "true"/"false" need explicit parsing
   const isShareableRaw = formData.get("isShareable")?.toString();
-  const isShareable = isShareableRaw === undefined ? true : isShareableRaw === "true";
+  const isShareable =
+    isShareableRaw === undefined ? true : isShareableRaw === "true";
 
   // 🔧 NEW — validate categoryId belongs to this tenant, same check we use elsewhere
   if (categoryId) {
@@ -127,28 +130,30 @@ export const POST = asyncHandler(async (req) => {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const uploadResult = await new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        {
-          folder: `subscriber-files/tenant-${user.tenantId}`,
-          resource_type: getResourceType(file.type),
-          access_mode: "public",
-          use_filename: true,
-          unique_filename: true,
-          filename_override: file.name,
-        },
-        (error, result) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(result);
-          }
-        },
-      )
-      .end(buffer);
-  });
+  const uploadDir = path.join(
+    process.cwd(),
+    "public",
+    "uploads",
+    "subscriber-files",
+    `tenant-${user.tenantId}`,
+  );
 
+  await fs.mkdir(uploadDir, { recursive: true });
+
+  const ext = path.extname(file.name);
+
+  const base = path
+    .basename(file.name, ext)
+    .replace(/[^a-zA-Z0-9-_]/g, "-")
+    .toLowerCase();
+
+  const fileName = `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+
+  const filePath = path.join(uploadDir, fileName);
+
+  // const bytes = await file.arrayBuffer();
+
+  await fs.writeFile(filePath, buffer);
   const created = await prisma.uploadedFile.create({
     data: {
       title,
@@ -157,9 +162,9 @@ export const POST = asyncHandler(async (req) => {
       isShareable,
       tags,
       categoryId, // 🔧 FIXED — was `category`, now matches the schema field
-      fileName: uploadResult.public_id,
+      fileName: fileName,
       originalName: file.name,
-      url: uploadResult.secure_url,
+      url: `/uploads/subscriber-files/tenant-${user.tenantId}/${fileName}`,
       mimeType: file.type,
       size: file.size,
       uploadedBy: Number(user.id),

@@ -1,5 +1,7 @@
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 import { requirePermission } from "../../withPermission";
-import cloudinary from "@/src/lib/cloudinary";
 
 export async function uploadFile(file) {
   const { session } = await requirePermission("media_upload");
@@ -9,25 +11,34 @@ export async function uploadFile(file) {
     throw new Error("No file provided");
   }
 
+  const uploadDir = path.join(
+    process.cwd(),
+    "public",
+    "uploads",
+    "media",
+    `tenant-${tenantId}`
+  );
+
+  await fs.mkdir(uploadDir, { recursive: true });
+
+  const ext = path.extname(file.name);
+
+  const base = path
+    .basename(file.name, ext)
+    .replace(/[^a-zA-Z0-9-_]/g, "-")
+    .toLowerCase();
+
+  const fileName = `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+
+  const filePath = path.join(uploadDir, fileName);
+
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const result = await new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        {
-          folder: `cms-media/tenant-${tenantId}`,
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        },
-      )
-      .end(buffer);
-  });
+  await fs.writeFile(filePath, buffer);
 
   return {
-    url: result.secure_url,
-    publicId: result.public_id,
+    url: `/uploads/media/tenant-${tenantId}/${fileName}`,
+    publicId: fileName,
   };
 }

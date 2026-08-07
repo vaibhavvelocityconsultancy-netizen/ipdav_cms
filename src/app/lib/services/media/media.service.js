@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import { ApiError } from "../../utils/ApiError";
 import { requirePermission, requireAuth } from "../../withPermission";
-import cloudinary from "@/src/lib/cloudinary";
+import crypto from "crypto";
 
 // Allowed MIME Types
 const ALLOWED_TYPES = [
@@ -30,19 +30,6 @@ const ALLOWED_TYPES = [
 ];
 
 // Add this helper at the top
-function getResourceType(mimeType) {
-  if (mimeType.startsWith("video/") || mimeType.startsWith("audio/"))
-    return "video";
-  if (
-    mimeType === "application/pdf" ||
-    mimeType === "application/msword" ||
-    mimeType.includes("officedocument") ||
-    mimeType === "application/zip" ||
-    mimeType === "text/plain"
-  )
-    return "raw";
-  return "image";
-}
 
 function generateTitleFromFilename(filename) {
   return filename
@@ -84,38 +71,37 @@ export async function createMedia(input) {
       width = metadata.width ?? null;
       height = metadata.height ?? null;
     }
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            folder: `cms-media/tenant-${tenantId}`,
-            resource_type: getResourceType(file.type),
-            access_mode: "public",
-            use_filename: true,
-            unique_filename: true,
-            filename_override: file.name,
-          },
-          (error, result) => {
-            if (error) {
-              console.error("CLOUDINARY ERROR:", JSON.stringify(error));
-              reject(error);
-            } else {
-              console.log("CLOUDINARY SUCCESS:", result.secure_url);
-              resolve(result);
-            }
-          },
-        )
-        .end(buffer);
-    });
+    const tenantDir = path.join(
+      process.cwd(),
+      "public",
+      "uploads",
+      `tenant-${tenantId}`,
+    );
+
+    await fs.mkdir(tenantDir, { recursive: true });
+
+    const ext = path.extname(file.name);
+
+    const base = path
+      .basename(file.name, ext)
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .toLowerCase();
+
+    const fileName = `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+    const filePath = path.join(tenantDir, fileName);
+
+    await fs.writeFile(filePath, buffer);
+
+    const publicUrl = `/uploads/tenant-${tenantId}/${fileName}`;
 
     const generatedTitle = generateTitleFromFilename(file.name);
 
     const media = await prisma.media.create({
       data: {
-        fileName: uploadResult.public_id,
+        fileName: fileName,
         originalName: file.name,
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
+        url: publicUrl,
+        publicId: fileName,
 
         mimeType: file.type,
         size: file.size,
@@ -241,15 +227,13 @@ export async function updateMedia(id, input) {
 export async function deleteMedia(id) {
   await requirePermission("media_delete");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  // First verify media belongs to current tenant
   const media = await prisma.media.findUnique({
     where: {
       id: Number(id),
-      tenantId: tenantId, // Tenant check
+      tenantId,
     },
   });
 
@@ -257,25 +241,39 @@ export async function deleteMedia(id) {
     throw new ApiError(404, "Media not found");
   }
 
-  // Delete from Cloudinary if publicId exists
   if (media.publicId) {
-    try {
-      // Determine resource type based on mime type
-      const resourceType = getResourceType(media.mimeType || "");
+    const filePath = path.join(
+      process.cwd(),
+      "public",
+      "uploads",
+      `tenant-${tenantId}`,
+      media.publicId,
+    );
 
-      await cloudinary.uploader.destroy(media.publicId, {
-        resource_type: resourceType,
-      });
-    } catch (cloudinaryError) {
-      console.error("Cloudinary deletion error:", cloudinaryError);
-      // Don't throw - continue with database deletion even if Cloudinary fails
+    console.log("========== DELETE DEBUG ==========");
+    console.log("process.cwd():", process.cwd());
+    console.log("tenantId:", tenantId);
+    console.log("publicId:", media.publicId);
+    console.log("filePath:", filePath);
+
+    try {
+      await fs.access(filePath);
+      console.log("✅ File exists");
+
+      await fs.unlink(filePath);
+      console.log("✅ File deleted successfully");
+    } catch (err) {
+      console.error("❌ File delete failed");
+      console.error(err);
     }
+
+    console.log("==================================");
   }
 
   await prisma.media.delete({
     where: {
       id: Number(id),
-      tenantId: tenantId, // Extra safety in where clause
+      tenantId,
     },
   });
 
@@ -323,31 +321,21 @@ export async function bulkDeleteMedia(ids) {
       `Some media items not found or belong to different tenant: ${missingIds.join(", ")}`,
     );
   }
-
-  // Delete from Cloudinary for all media items
-  const cloudinaryDeletions = mediaItems.map(async (media) => {
-    if (media.publicId) {
-      try {
-        let resourceType = "image";
-        if (media.mimeType?.startsWith("video/")) resourceType = "video";
-        else if (media.mimeType?.startsWith("audio/")) resourceType = "raw";
-
-        await cloudinary.uploader.destroy(media.publicId, {
-          resource_type: resourceType,
-        });
-      } catch (cloudinaryError) {
-        console.error(
-          `Failed to delete ${media.publicId} from Cloudinary:`,
-          cloudinaryError,
-        );
-        // Don't throw - continue with database deletion
-      }
-    }
-  });
-
-  // Wait for all Cloudinary deletions (best effort)
-  await Promise.allSettled(cloudinaryDeletions);
-
+  await Promise.allSettled(
+    mediaItems.map((media) =>
+      fs
+        .unlink(
+          path.join(
+            process.cwd(),
+            "public",
+            "uploads",
+            `tenant-${tenantId}`,
+            media.publicId,
+          ),
+        )
+        .catch(() => {}),
+    ),
+  );
   // Delete all media items from database
   const result = await prisma.media.deleteMany({
     where: {
@@ -425,4 +413,3 @@ export async function getMediaStats() {
     totalSizeMB: ((totalSize._sum.size || 0) / (1024 * 1024)).toFixed(2),
   };
 }
- 

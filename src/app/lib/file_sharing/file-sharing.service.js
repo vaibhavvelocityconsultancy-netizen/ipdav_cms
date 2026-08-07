@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import fs from "fs/promises";
+import path from "path";
 import { prisma } from "../prisma";
 import { requireAuth, requirePermission } from "../withPermission";
 import { sendTriggerEmails } from "../email";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
-import cloudinary from "@/src/lib/cloudinary";
 import { requireActiveSubscription } from "../utils/subscription-access";
 
 const ALLOWED_TYPES = [
@@ -42,23 +43,66 @@ function generateSharePassword() {
   return `SHR-${code}`;
 }
 
-function getResourceType(mimeType) {
-  if (mimeType.startsWith("video/") || mimeType.startsWith("audio/")) {
-    return "video";
-  }
+// ─── Local storage helpers ──────────────────────────────────
 
-  if (
-    mimeType === "application/pdf" ||
-    mimeType === "application/msword" ||
-    mimeType.includes("officedocument") ||
-    mimeType === "application/zip" ||
-    mimeType === "text/plain"
-  ) {
-    return "raw";
-  }
-
-  return "image";
+function getTenantUploadDir(tenantId) {
+  return path.join(
+    process.cwd(),
+    "public",
+    "uploads",
+    "subscriber-files",
+    `tenant-${tenantId}`,
+  );
 }
+
+function generateSafeFileName(originalName) {
+  const ext = path.extname(originalName);
+  const baseName = path.basename(originalName, ext);
+
+  const safeBaseName = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]+/g, "-");
+
+  const uniqueSuffix = crypto.randomBytes(6).toString("hex");
+
+  return `${safeBaseName}-${uniqueSuffix}${ext.toLowerCase()}`;
+}
+
+async function saveFileToDisk(uploadedFile, tenantId) {
+  const uploadDir = getTenantUploadDir(tenantId);
+  await fs.mkdir(uploadDir, { recursive: true });
+
+  const fileName = generateSafeFileName(uploadedFile.name);
+  const filePath = path.join(uploadDir, fileName);
+
+  const bytes = await uploadedFile.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  await fs.writeFile(filePath, buffer);
+
+  return {
+    fileName,
+    originalName: uploadedFile.name,
+    url: `/uploads/subscriber-files/tenant-${tenantId}/${fileName}`,
+    mimeType: uploadedFile.type,
+    size: uploadedFile.size,
+  };
+}
+
+async function deleteFileFromDisk(fileName, tenantId) {
+  if (!fileName) return;
+
+  const filePath = path.join(getTenantUploadDir(tenantId), fileName);
+
+  try {
+    await fs.unlink(filePath);
+  } catch (err) {
+    // Ignore if the file no longer exists on disk
+    if (err.code !== "ENOENT") {
+      console.error("Local file delete failed:", err);
+    }
+  }
+}
+
 // ─── Create (multi-file) ────────────────────────────────────
 
 export async function shareFiles(fileIds, { email, message, password }) {
@@ -94,7 +138,6 @@ export async function shareFiles(fileIds, { email, message, password }) {
     );
   }
 
-  // 🔧 NEW — block sharing files marked non-shareable
   const nonShareable = files.filter((f) => !f.isShareable);
   if (nonShareable.length > 0) {
     throw new ApiError(
@@ -147,11 +190,6 @@ export async function shareFiles(fileIds, { email, message, password }) {
     password: plainPassword,
     senderName: session.user.name,
   });
-
-  // console.log("EMAIL DATA:", {
-  //   category: emailCategory,
-  //   fileTitles: files.map((f) => f.title),
-  // });
 
   return { share };
 }
@@ -304,9 +342,7 @@ export async function getAllFilesAdmin() {
   });
 }
 
-// file.service.js
 export async function getFileByIdAdmin(fileId) {
-  // await requirePermission("subscriber_upload_files_info");
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
@@ -315,7 +351,6 @@ export async function getFileByIdAdmin(fileId) {
     include: {
       uploader: { select: { id: true, name: true, email: true } },
       category: { select: { id: true, name: true, slug: true } },
-      // tags: { select: { id: true, name: true } }, // ← ADD THIS
     },
   });
   if (!file) throw new ApiError(404, "File not found");
@@ -323,10 +358,9 @@ export async function getFileByIdAdmin(fileId) {
   return file;
 }
 
-// 🔧 NEW — edit file metadata (title, descriptions, category, shareability)
-// Does NOT replace the uploaded file itself — that's a separate re-upload action
+// Edit file metadata (title, descriptions, category, shareability).
+// Optionally replaces the uploaded file itself.
 export async function updateFileAdmin(fileId, data, uploadedFile) {
-  // await requirePermission("subscriber_upload_files_info");
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
@@ -353,49 +387,20 @@ export async function updateFileAdmin(fileId, data, uploadedFile) {
       throw new ApiError(400, `Unsupported file type: ${uploadedFile.type}`);
     }
 
-    const bytes = await uploadedFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const saved = await saveFileToDisk(uploadedFile, tenantId);
 
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            folder: `subscriber-files/tenant-${tenantId}`,
-            resource_type: getResourceType(uploadedFile.type),
-            access_mode: "public",
-            use_filename: true,
-            unique_filename: true,
-            filename_override: uploadedFile.name,
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          },
-        )
-        .end(buffer);
-    });
+    // Delete old file from disk after successful save
+    await deleteFileFromDisk(existing.fileName, tenantId);
 
-    // Delete old file after successful upload
-    if (existing.fileName) {
-      try {
-        await cloudinary.uploader.destroy(existing.fileName, {
-          resource_type: getResourceType(existing.mimeType),
-        });
-      } catch (error) {
-        console.error("Cloudinary delete error:", error);
-      }
-    }
-
-    // Add the new file details into the update payload
-    data.fileName = uploadResult.public_id;
-    data.originalName = uploadedFile.name;
-    data.url = uploadResult.secure_url;
-    data.mimeType = uploadedFile.type;
-    data.size = uploadedFile.size;
+    data.fileName = saved.fileName;
+    data.originalName = saved.originalName;
+    data.url = saved.url;
+    data.mimeType = saved.mimeType;
+    data.size = saved.size;
   }
 
   return prisma.uploadedFile.update({
-    where: { id: fileId, tenantId },
+    where: { id: fileId },
     data: {
       ...(data.title !== undefined && { title: data.title.trim() }),
       ...(data.shortDesc !== undefined && {
@@ -418,7 +423,6 @@ export async function updateFileAdmin(fileId, data, uploadedFile) {
       ...(data.mimeType && { mimeType: data.mimeType }),
       ...(data.size && { size: data.size }),
     },
-
     include: { category: true },
   });
 }
@@ -438,16 +442,7 @@ export async function deleteFileAdmin(fileId) {
     throw new ApiError(404, "File not found");
   }
 
-  if (file.fileName) {
-    try {
-      await cloudinary.uploader.destroy(file.fileName, {
-        resource_type: getResourceType(file.mimeType),
-      });
-    } catch (error) {
-      console.error("Cloudinary delete error:", error); // ← check server logs for the REAL reason now
-      throw new ApiError(500, "Failed to delete file from Cloudinary");
-    }
-  }
+  await deleteFileFromDisk(file.fileName, tenantId);
 
   await prisma.uploadedFile.delete({
     where: {

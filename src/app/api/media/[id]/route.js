@@ -8,15 +8,26 @@ import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 import { NextResponse } from "next/server";
 
 
+import fs from "fs/promises";
+import path from "path";
+// import { getMediaById } from "@/src/app/lib/services/media/media.service";
+
 export async function GET(req, { params }) {
-  const media = await getMediaById(params.id);
+  const { id } = await params;
 
-  const response = await fetch(media.url);
+  const media = await getMediaById(id);
 
-  return new Response(response.body, {
+  const filePath = path.join(
+    process.cwd(),
+    "public",
+    media.url
+  );
+
+  const file = await fs.readFile(filePath);
+
+  return new Response(file, {
     headers: {
-      "Content-Type": response.headers.get("Content-Type"),
-      "Content-Length": response.headers.get("Content-Length") ?? "",
+      "Content-Type": media.mimeType,
     },
   });
 }
