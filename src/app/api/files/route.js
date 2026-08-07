@@ -7,7 +7,7 @@ import { ApiError } from "../../lib/utils/ApiError";
 import { ApiResponse } from "../../lib/utils/ApiResponse";
 import { asyncHandler } from "../../lib/utils/asyncHandler";
 import { requireActiveSubscription } from "../../lib/utils/subscription-access";
-import { getSubscriberUploadDir } from "../../lib/utils/uploadconfig";
+import { getSubscriberFileUrl, getSubscriberUploadDir } from "../../lib/utils/uploadconfig";
 
 const ALLOWED_TYPES = [
   // Images
