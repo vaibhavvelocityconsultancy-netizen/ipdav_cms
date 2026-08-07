@@ -19,6 +19,7 @@ import { fetchers } from "@/src/lib/fetchers";
 import { getApiBaseUrl } from "@/src/lib/axios";
 import Link from "next/link";
 import { SchemaRenderer } from "@/src/components/admin/pages/SchemaOutput";
+import { processPublicPageHtml } from "@/src/lib/public-page-html";
 
 const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
@@ -100,21 +101,18 @@ export default function PreviewPage() {
     if (!pageData?.data || !settings) return;
     const page = pageData.data;
     const run = async () => {
-      const { html, hasForms } = await injectForms(page.html);
-      console.log("Original HTML:", page.html);
-      console.log("Processed HTML:", html);
-      console.log("Has forms:", hasForms);
-      const htmlWithBreadcrumb = injectBreadcrumb(
-        html,
-        [{ label: page.title || "Page", href: `/${page.slug ?? ""}` }],
+      const { html, hasForms } = await processPublicPageHtml(page.html, {
+        breadcrumbItems: [
+          { label: page.title || "Page", href: `/${page.slug ?? ""}` },
+        ],
         breadcrumbSettings,
-        {
+        context: {
           isHome: false,
           is404: false,
           isSearch: false,
         },
-      );
-      setProcessedHtml(htmlWithBreadcrumb);
+      });
+      setProcessedHtml(html);
       setHasForms(hasForms);
 
       // HTML just landed in the DOM — if CDN already loaded, refresh now

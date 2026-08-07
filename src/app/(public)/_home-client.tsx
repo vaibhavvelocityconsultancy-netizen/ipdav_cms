@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
-import { injectBreadcrumb } from "@/src/lib/shortcode/renderBreadcrumbHtml";
+import { FORM_CSS } from "@/src/lib/form-renderer";
 import Link from "next/link";
 import { SchemaRenderer } from "../../components/admin/pages/SchemaOutput";
+import { processPublicPageHtml } from "@/src/lib/public-page-html";
+import { getApiBaseUrl } from "@/src/lib/axios";
 
 interface Post {
   id: string;
@@ -93,6 +95,9 @@ export default function PostsListPage() {
     return postsData?.data ?? [];
   }, [postsData, homepageId]);
 
+  const [processedPageHtml, setProcessedPageHtml] = useState("");
+  const [hasForms, setHasForms] = useState(false);
+
   // ── 6. Inject homepage page CSS (when homepage is a static page) ──
   useEffect(() => {
     if (!page?.css) return;
@@ -131,6 +136,165 @@ export default function PostsListPage() {
     return () => main.removeEventListener("click", handler);
   }, [page?.id, router]);
 
+  useEffect(() => {
+    if (!processedPageHtml || !hasForms) return;
+
+    const main = document.querySelector("main[data-page-content]");
+    if (!main) return;
+
+    const ac = new AbortController();
+    const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
+    main.addEventListener(
+      "submit",
+      async (e) => {
+        const form = (e.target as HTMLElement).closest(
+          ".cms-form",
+        ) as HTMLFormElement;
+        if (!form) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        let valid = true;
+        form.querySelectorAll("[required]").forEach((el: any) => {
+          const err = el
+            .closest(".cms-field-wrap")
+            ?.querySelector(".cms-field-error");
+          const empty = el.type === "checkbox" ? !el.checked : !el.value.trim();
+          if (empty) {
+            valid = false;
+            el.classList.add("cms-field-invalid");
+            if (err) err.textContent = "This field is required.";
+          } else {
+            el.classList.remove("cms-field-invalid");
+            if (err) err.textContent = "";
+          }
+        });
+        if (!valid) return;
+
+        const slug = form.dataset.formSlug;
+        const submitBtn =
+          form.querySelector<HTMLButtonElement>(".cms-form-submit");
+        const originalLabel = submitBtn?.textContent ?? "Submit";
+        const statusEl = form.querySelector<HTMLElement>(".cms-form-status");
+
+        const setStatus = (type: string, msg: string) => {
+          if (!statusEl) return;
+          statusEl.className =
+            "cms-form-status" + (type ? ` cms-form-status--${type}` : "");
+          statusEl.textContent = msg;
+        };
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Sending…";
+        }
+        setStatus("loading", "Sending…");
+
+        const data: Record<string, string> = {};
+        new FormData(form).forEach((val, key) => {
+          data[key] = val as string;
+        });
+        form
+          .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+          .forEach((cb) => {
+            data[cb.name] = cb.checked ? "true" : "false";
+          });
+
+        try {
+          const res = await fetch(apiPath(`/api/form/submit/${slug}`), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          const json = await res.json();
+
+          if (res.ok && json.success !== false) {
+            const redirect = form.dataset.redirect;
+            if (redirect) {
+              window.location.href = redirect;
+              return;
+            }
+
+            const msg =
+              form.dataset.confirmMessage ||
+              "Thank you! Your message has been received.";
+            const fieldsEl =
+              form.querySelector<HTMLElement>(".cms-form-fields");
+            const footerEl =
+              form.querySelector<HTMLElement>(".cms-form-footer");
+            if (fieldsEl) fieldsEl.style.display = "none";
+            if (footerEl) footerEl.style.display = "none";
+            setStatus("success", msg);
+
+            setTimeout(() => {
+              form.reset();
+              form.querySelectorAll(".cms-field-error").forEach((el) => {
+                el.textContent = "";
+              });
+              form.querySelectorAll(".cms-field-invalid").forEach((el) => {
+                el.classList.remove("cms-field-invalid");
+              });
+              setStatus("", "");
+              if (fieldsEl) fieldsEl.style.display = "";
+              if (footerEl) footerEl.style.display = "";
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalLabel;
+              }
+            }, 3000);
+          } else {
+            const errMsg =
+              json.message?.length < 200
+                ? json.message
+                : "Something went wrong.";
+            setStatus("error", errMsg);
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalLabel;
+            }
+          }
+        } catch {
+          setStatus("error", "Network error. Please try again.");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+          }
+        }
+      },
+      { signal: ac.signal },
+    );
+
+    main.addEventListener(
+      "input",
+      (e) => {
+        const el = e.target as HTMLElement;
+        if (
+          !el.matches(".cms-form input, .cms-form textarea, .cms-form select")
+        )
+          return;
+        el.classList.remove("cms-field-invalid");
+        const err = el
+          .closest(".cms-field-wrap")
+          ?.querySelector(".cms-field-error");
+        if (err) err.textContent = "";
+      },
+      { signal: ac.signal },
+    );
+
+    return () => ac.abort();
+  }, [processedPageHtml, hasForms, router]);
+
+  useEffect(() => {
+    if (!hasForms) return;
+    const style = document.createElement("style");
+    style.id = "form-css";
+    style.textContent = FORM_CSS;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, [hasForms]);
+
   // ── 9. Loading gate ──
   const isPostsLoading = postsLoading;
 
@@ -139,14 +303,36 @@ export default function PostsListPage() {
     [bootstrapData],
   );
 
-  const processedPageHtml = useMemo(() => {
-    if (!page?.html) return "";
+  useEffect(() => {
+    if (!page?.html) {
+      setProcessedPageHtml("");
+      return;
+    }
 
-    return injectBreadcrumb(page.html, [], breadcrumbSettings, {
-      isHome: true,
-      is404: false,
-      isSearch: false,
-    });
+    let cancelled = false;
+
+    const run = async () => {
+      const { html, hasForms } = await processPublicPageHtml(page.html, {
+        breadcrumbItems: [],
+        breadcrumbSettings,
+        context: {
+          isHome: true,
+          is404: false,
+          isSearch: false,
+        },
+      });
+
+      if (!cancelled) {
+        setProcessedPageHtml(html);
+        setHasForms(hasForms);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [page?.html, breadcrumbSettings]);
 
   // ── 10. Homepage is a static page ──
