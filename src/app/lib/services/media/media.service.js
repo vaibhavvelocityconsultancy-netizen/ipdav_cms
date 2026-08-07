@@ -46,12 +46,10 @@ function generateTitleFromFilename(filename) {
 export async function createMedia(input) {
   await requirePermission("media_upload");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
   const files = Array.isArray(input) ? input : [input];
-
   const uploadedMedia = [];
 
   for (const file of files) {
@@ -65,32 +63,22 @@ export async function createMedia(input) {
     let width = null;
     let height = null;
 
-    if (file.type.startsWith("image/")) {
+    if (
+      file.type.startsWith("image/") &&
+      file.type !== "image/svg+xml"
+    ) {
       const metadata = await sharp(buffer).metadata();
-
       width = metadata.width ?? null;
       height = metadata.height ?? null;
     }
+
     const tenantDir = path.join(
       process.cwd(),
       "public",
       "uploads",
-      `tenant-${tenantId}`,
+      `tenant-${tenantId}`
     );
 
-    console.log("===== UPLOAD DEBUG =====");
-    console.log("cwd:", process.cwd());
-    console.log("tenantDir:", tenantDir);
-    console.log("filePath:", filePath);
-
-    await fs.mkdir(tenantDir, { recursive: true });
-
-    console.log("Directory created");
-
-    await fs.writeFile(filePath, buffer);
-
-    console.log("File written");
-    console.log("========================");
     const ext = path.extname(file.name);
 
     const base = path
@@ -99,12 +87,25 @@ export async function createMedia(input) {
       .toLowerCase();
 
     const fileName = `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+
     const filePath = path.join(tenantDir, fileName);
 
-    await fs.writeFile(filePath, buffer);
+    console.log("========== UPLOAD DEBUG ==========");
     console.log("process.cwd():", process.cwd());
-    // console.log("Upload directory:", uploadDir);
-    console.log("File path:", filePath);
+    console.log("tenantDir:", tenantDir);
+    console.log("filePath:", filePath);
+
+    await fs.mkdir(tenantDir, { recursive: true });
+    console.log("✅ Directory created");
+
+    try {
+      await fs.writeFile(filePath, buffer);
+      console.log("✅ File written successfully");
+    } catch (err) {
+      console.error("❌ Failed to write file");
+      console.error(err);
+      throw err;
+    }
 
     const publicUrl = `/uploads/tenant-${tenantId}/${fileName}`;
 
@@ -112,24 +113,22 @@ export async function createMedia(input) {
 
     const media = await prisma.media.create({
       data: {
-        fileName: fileName,
+        fileName,
         originalName: file.name,
         url: publicUrl,
         publicId: fileName,
-
         mimeType: file.type,
         size: file.size,
-
         width,
         height,
-
         title: generatedTitle,
-        // Always use tenantId from session
-        tenantId: tenantId,
+        tenantId,
       },
     });
 
     uploadedMedia.push(media);
+
+    console.log("==================================");
   }
 
   return Array.isArray(input) ? uploadedMedia : uploadedMedia[0];
