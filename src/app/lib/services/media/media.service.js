@@ -2,9 +2,11 @@ import { prisma } from "../../prisma";
 import sharp from "sharp";
 import fs from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 import { ApiError } from "../../utils/ApiError";
 import { requirePermission, requireAuth } from "../../withPermission";
-import crypto from "crypto";
+import { getTenantFileUrl, getTenantUploadDir } from "../../utils/uploadconfig";
+// import { getTenantUploadDir, getTenantFileUrl } from "../../lib/uploadConfig";
 
 // Allowed MIME Types
 const ALLOWED_TYPES = [
@@ -29,8 +31,6 @@ const ALLOWED_TYPES = [
   "audio/wav",
 ];
 
-// Add this helper at the top
-
 function generateTitleFromFilename(filename) {
   return filename
     .replace(/\.[^/.]+$/, "") // remove extension
@@ -38,6 +38,16 @@ function generateTitleFromFilename(filename) {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function generateSafeFileName(originalName) {
+  const ext = path.extname(originalName);
+  const base = path
+    .basename(originalName, ext)
+    .replace(/[^a-zA-Z0-9-_]/g, "-")
+    .toLowerCase();
+
+  return `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
 }
 
 // ─────────────────────────────────────────────
@@ -52,6 +62,9 @@ export async function createMedia(input) {
   const files = Array.isArray(input) ? input : [input];
   const uploadedMedia = [];
 
+  const tenantDir = getTenantUploadDir(tenantId);
+  await fs.mkdir(tenantDir, { recursive: true });
+
   for (const file of files) {
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new ApiError(400, `Unsupported file type: ${file.type}`);
@@ -63,52 +76,18 @@ export async function createMedia(input) {
     let width = null;
     let height = null;
 
-    if (
-      file.type.startsWith("image/") &&
-      file.type !== "image/svg+xml"
-    ) {
+    if (file.type.startsWith("image/") && file.type !== "image/svg+xml") {
       const metadata = await sharp(buffer).metadata();
       width = metadata.width ?? null;
       height = metadata.height ?? null;
     }
 
-    const tenantDir = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      `tenant-${tenantId}`
-    );
-
-    const ext = path.extname(file.name);
-
-    const base = path
-      .basename(file.name, ext)
-      .replace(/[^a-zA-Z0-9-_]/g, "-")
-      .toLowerCase();
-
-    const fileName = `${base}-${crypto.randomBytes(6).toString("hex")}${ext}`;
-
+    const fileName = generateSafeFileName(file.name);
     const filePath = path.join(tenantDir, fileName);
 
-    console.log("========== UPLOAD DEBUG ==========");
-    console.log("process.cwd():", process.cwd());
-    console.log("tenantDir:", tenantDir);
-    console.log("filePath:", filePath);
+    await fs.writeFile(filePath, buffer);
 
-    await fs.mkdir(tenantDir, { recursive: true });
-    console.log("✅ Directory created");
-
-    try {
-      await fs.writeFile(filePath, buffer);
-      console.log("✅ File written successfully");
-    } catch (err) {
-      console.error("❌ Failed to write file");
-      console.error(err);
-      throw err;
-    }
-
-    const publicUrl = `/uploads/tenant-${tenantId}/${fileName}`;
-
+    const publicUrl = getTenantFileUrl(tenantId, fileName);
     const generatedTitle = generateTitleFromFilename(file.name);
 
     const media = await prisma.media.create({
@@ -127,8 +106,6 @@ export async function createMedia(input) {
     });
 
     uploadedMedia.push(media);
-
-    console.log("==================================");
   }
 
   return Array.isArray(input) ? uploadedMedia : uploadedMedia[0];
@@ -140,33 +117,19 @@ export async function createMedia(input) {
 export async function getAllMedia({ page = 1, limit = 20, search = "" }) {
   await requirePermission("media_upload");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
   page = Number(page);
   limit = Number(limit);
 
-  // Build where clause with tenant isolation
   const where = {
-    tenantId: tenantId, // Always filter by tenant
+    tenantId: tenantId,
     ...(search && {
       OR: [
-        {
-          fileName: {
-            contains: search,
-          },
-        },
-        {
-          originalName: {
-            contains: search,
-          },
-        },
-        {
-          title: {
-            contains: search,
-          },
-        },
+        { fileName: { contains: search } },
+        { originalName: { contains: search } },
+        { title: { contains: search } },
       ],
     }),
   };
@@ -201,15 +164,13 @@ export async function getAllMedia({ page = 1, limit = 20, search = "" }) {
 export async function updateMedia(id, input) {
   await requirePermission("media_upload");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  // First verify media belongs to current tenant
   const existingMedia = await prisma.media.findUnique({
     where: {
       id: Number(id),
-      tenantId: tenantId, // Tenant check
+      tenantId: tenantId,
     },
   });
 
@@ -217,13 +178,12 @@ export async function updateMedia(id, input) {
     throw new ApiError(404, "Media not found");
   }
 
-  // Never trust tenantId from input - only update allowed fields
   const { tenantId: inputTenantId, ...updateData } = input;
 
   return prisma.media.update({
     where: {
       id: Number(id),
-      tenantId: tenantId, // Extra safety in where clause
+      tenantId: tenantId,
     },
     data: {
       altText: updateData.altText ?? null,
@@ -255,32 +215,15 @@ export async function deleteMedia(id) {
   }
 
   if (media.publicId) {
-    const filePath = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      `tenant-${tenantId}`,
-      media.publicId,
-    );
-
-    console.log("========== DELETE DEBUG ==========");
-    console.log("process.cwd():", process.cwd());
-    console.log("tenantId:", tenantId);
-    console.log("publicId:", media.publicId);
-    console.log("filePath:", filePath);
+    const filePath = path.join(getTenantUploadDir(tenantId), media.publicId);
 
     try {
-      await fs.access(filePath);
-      console.log("✅ File exists");
-
       await fs.unlink(filePath);
-      console.log("✅ File deleted successfully");
     } catch (err) {
-      console.error("❌ File delete failed");
-      console.error(err);
+      if (err.code !== "ENOENT") {
+        console.error("Media file delete failed:", err);
+      }
     }
-
-    console.log("==================================");
   }
 
   await prisma.media.delete({
@@ -299,7 +242,6 @@ export async function deleteMedia(id) {
 export async function bulkDeleteMedia(ids) {
   await requirePermission("media_delete");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
@@ -307,10 +249,8 @@ export async function bulkDeleteMedia(ids) {
     throw new ApiError(400, "Invalid or empty ids array provided");
   }
 
-  // Convert ids to numbers
   const numericIds = ids.map(Number);
 
-  // First, verify all media items belong to current tenant
   const mediaItems = await prisma.media.findMany({
     where: {
       id: {
@@ -334,28 +274,21 @@ export async function bulkDeleteMedia(ids) {
       `Some media items not found or belong to different tenant: ${missingIds.join(", ")}`,
     );
   }
+
+  const tenantDir = getTenantUploadDir(tenantId);
+
   await Promise.allSettled(
     mediaItems.map((media) =>
-      fs
-        .unlink(
-          path.join(
-            process.cwd(),
-            "public",
-            "uploads",
-            `tenant-${tenantId}`,
-            media.publicId,
-          ),
-        )
-        .catch(() => {}),
+      fs.unlink(path.join(tenantDir, media.publicId)).catch(() => {}),
     ),
   );
-  // Delete all media items from database
+
   const result = await prisma.media.deleteMany({
     where: {
       id: {
         in: numericIds,
       },
-      tenantId: tenantId, // Extra safety: only delete tenant's media
+      tenantId: tenantId,
     },
   });
 
@@ -366,12 +299,11 @@ export async function bulkDeleteMedia(ids) {
 }
 
 // ─────────────────────────────────────────────
-// GET MEDIA BY ID (Helper function)
+// GET MEDIA BY ID
 // ─────────────────────────────────────────────
 export async function getMediaById(id) {
   await requirePermission("media_upload");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
@@ -390,12 +322,11 @@ export async function getMediaById(id) {
 }
 
 // ─────────────────────────────────────────────
-// GET MEDIA STATISTICS (Optional helper)
+// GET MEDIA STATISTICS
 // ─────────────────────────────────────────────
 export async function getMediaStats() {
   await requirePermission("media_upload");
 
-  // Get tenantId from authenticated session
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 

@@ -2,6 +2,8 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { requirePermission } from "../../withPermission";
+import { getMediaFileUrl, getMediaUploadDir } from "../../utils/uploadconfig";
+// import { getMediaUploadDir, getMediaFileUrl } from "../../lib/uploadConfig";
 
 export async function uploadFile(file) {
   const { session } = await requirePermission("media_upload");
@@ -11,13 +13,7 @@ export async function uploadFile(file) {
     throw new Error("No file provided");
   }
 
-  const uploadDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "media",
-    `tenant-${tenantId}`
-  );
+  const uploadDir = getMediaUploadDir(tenantId);
 
   await fs.mkdir(uploadDir, { recursive: true });
 
@@ -38,7 +34,7 @@ export async function uploadFile(file) {
   await fs.writeFile(filePath, buffer);
 
   return {
-    url: `/uploads/media/tenant-${tenantId}/${fileName}`,
+    url: getMediaFileUrl(tenantId, fileName),
     publicId: fileName,
   };
 }
