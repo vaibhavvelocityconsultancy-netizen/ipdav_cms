@@ -3,6 +3,7 @@ import path from "path";
 import {
   getTenantUploadDir,
 } from "@/src/app/lib/utils/uploadconfig";
+import { getMediaById } from "@/src/app/lib/services/media/media.service";
 
 export async function GET(req, { params }) {
   const { id } = await params;
