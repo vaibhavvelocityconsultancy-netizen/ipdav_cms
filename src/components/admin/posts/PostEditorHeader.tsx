@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { appUrl } from "@/src/lib/base-path";
 import { Post } from "./Post.type";
 
 interface PostEditorHeaderProps {
@@ -19,7 +20,11 @@ function generateSlug(title: string) {
     .replace(/-+/g, "-");
 }
 
-export function PostEditorHeader({ post, onChange, onCancel }: PostEditorHeaderProps) {
+export function PostEditorHeader({
+  post,
+  onChange,
+  onCancel,
+}: PostEditorHeaderProps) {
   const [slugEditing, setSlugEditing] = useState(false);
   const [slugInput, setSlugInput] = useState(post.slug);
 
@@ -43,7 +48,10 @@ export function PostEditorHeader({ post, onChange, onCancel }: PostEditorHeaderP
         onClick={onCancel}
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 group"
       >
-        <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
+        <ArrowLeft
+          size={13}
+          className="group-hover:-translate-x-0.5 transition-transform"
+        />
         All Posts
       </button>
 
@@ -61,11 +69,7 @@ export function PostEditorHeader({ post, onChange, onCancel }: PostEditorHeaderP
         <span className="font-medium">Permalink:</span>
         {slugEditing ? (
           <div className="flex items-center gap-2">
-            <span className="text-primary">
-              {typeof window !== "undefined"
-                ? `${window.location.origin}/posts/`
-                : "/posts/"}
-            </span>
+            <span className="text-primary">{appUrl("/posts/")}</span>
             <input
               value={slugInput}
               onChange={(e) => setSlugInput(e.target.value)}
@@ -96,9 +100,7 @@ export function PostEditorHeader({ post, onChange, onCancel }: PostEditorHeaderP
               target="_blank"
               className="text-primary hover:underline"
             >
-              {typeof window !== "undefined"
-                ? `${window.location.origin}/posts/`
-                : "/posts/"}
+              {appUrl("/posts/")}
               <span className="font-medium">{post.slug}</span>/
             </a>
             <button

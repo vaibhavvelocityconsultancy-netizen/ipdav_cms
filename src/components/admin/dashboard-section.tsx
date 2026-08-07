@@ -17,12 +17,15 @@ import {
   Tag,
   Menu,
   Eye,
+  Download,
+  Upload,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/src/lib/axios";
+import { api, getApiBaseUrl } from "@/src/lib/axios";
 import { appUrl } from "@/src/lib/base-path";
+import { toast } from "@/src/hooks/use-toast";
 
 interface DashboardData {
   stats: {
@@ -51,7 +54,8 @@ interface DashboardData {
 }
 
 export function DashboardSection() {
-  const { data, isLoading, error } = useQuery({
+  const [isImportExportLoading, setIsImportExportLoading] = useState(false);
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
       const response = await api.get("/api/dashboard");
@@ -61,6 +65,89 @@ export function DashboardSection() {
   });
 
   const dashboardData = data;
+
+  async function readJsonResponse(res: Response) {
+    const contentType = res.headers.get("content-type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      throw new Error(
+        text.trim().startsWith("<")
+          ? `Request failed with a non-JSON response (${res.status})`
+          : text || `Request failed (${res.status})`,
+      );
+    }
+
+    return res.json();
+  }
+
+  const handleExport = async () => {
+    try {
+      setIsImportExportLoading(true);
+      const res = await fetch(`${getApiBaseUrl()}/api/export`);
+      const json = await readJsonResponse(res);
+
+      const blob = new Blob([JSON.stringify(json.data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cms-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export successful",
+        description: "Your backup file is downloading.",
+      });
+    } catch (err: any) {
+      toast({ title: "Export failed", description: err.message });
+    } finally {
+      setIsImportExportLoading(false);
+    }
+  };
+
+  const handleImport = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+
+    input.onchange = async (event: any) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      try {
+        setIsImportExportLoading(true);
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        const res = await fetch(`${getApiBaseUrl()}/api/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data, strategy: "skip" }),
+        });
+
+        const json = await readJsonResponse(res);
+
+        if (!res.ok) {
+          throw new Error(json.message || "Import failed");
+        }
+
+        await refetch();
+        toast({
+          title: "Import successful",
+          description: `${json.data?.pages?.created ?? 0} created, ${json.data?.pages?.skipped ?? 0} skipped, ${json.data?.pages?.overwritten ?? 0} overwritten.`,
+        });
+      } catch (err: any) {
+        toast({ title: "Import failed", description: err.message });
+      } finally {
+        setIsImportExportLoading(false);
+      }
+    };
+
+    input.click();
+  };
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -307,14 +394,26 @@ export function DashboardSection() {
                 })}
               </span>
             </div>
-            {/* <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 bg-sidebar-primary text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <Zap size={14} />
-              Export Report
-            </motion.button> */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={isImportExportLoading}
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-50"
+              >
+                <Upload size={14} />
+                Import
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={isImportExportLoading}
+                className="flex items-center gap-2 rounded-lg bg-sidebar-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-sidebar-primary/90 disabled:opacity-50"
+              >
+                <Download size={14} />
+                Export
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -528,7 +627,9 @@ export function DashboardSection() {
                   transition={{ delay: 0.6 + idx * 0.1 }}
                   className="p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
                   onClick={() =>
-                    (window.location.href = appUrl(`/admin/${activity.type}s/${activity.slug}`))
+                    (window.location.href = appUrl(
+                      `/admin/${activity.type}s/${activity.slug}`,
+                    ))
                   }
                 >
                   <div className="flex items-start justify-between">
