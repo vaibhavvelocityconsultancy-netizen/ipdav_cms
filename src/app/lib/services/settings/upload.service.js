@@ -36,6 +36,9 @@ export async function uploadFile(file) {
   const buffer = Buffer.from(bytes);
 
   await fs.writeFile(filePath, buffer);
+  console.log("process.cwd():", process.cwd());
+console.log("Upload directory:", uploadDir);
+console.log("File path:", filePath);
 
   return {
     url: `/uploads/media/tenant-${tenantId}/${fileName}`,
