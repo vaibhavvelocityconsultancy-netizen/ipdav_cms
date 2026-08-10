@@ -88,6 +88,7 @@ interface FormEditorData {
   redirectUrl: string;
   emails: EmailConfig[];
   status: string;
+  layout: string;
 }
 
 function generateId() {
@@ -604,6 +605,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
     redirectUrl: form.redirectUrl || "",
     emails: (form.emails || []) as EmailConfig[],
     status: form.status || "active",
+    layout: form.layout || "default",
   });
   function handleFieldDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -918,6 +920,31 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
             <p className="text-xs text-muted-foreground mt-2">
               Choose whether to display an on-page message or redirect to a
               different page after they submit the form.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Form Layout
+            </label>
+
+            <select
+              value={data.layout}
+              onChange={(e) =>
+                setData({
+                  ...data,
+                  layout: e.target.value,
+                })
+              }
+              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="default">Default</option>
+              <option value="two-column">Two Column</option>
+              <option value="full-width">Full Width</option>
+            </select>
+
+            <p className="text-xs text-muted-foreground mt-2">
+              Choose how this form should be displayed on the website.
             </p>
           </div>
 

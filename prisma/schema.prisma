@@ -86,32 +86,33 @@ model tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users              user[]
-  pages              page[]
-  forms              form[]
-  menus              menu[]
-  posts              post[]
-  collections        collection[]
-  sitesettings       sitesettings?
-  footersettings     footersettings[]
-  categories         category[]
-  tags               tag[]
-  media              media[]
-  redirects          Redirect[]
-  notFoundLogs       NotFoundLog[]
-  redirectImports    RedirectImport[]
-  NavbarConfig       NavbarConfig?
-  breadcrumbSettings BreadcrumbSettings?
-  footerConfig       FooterConfig?
-  trackingSettings   TrackingSettings?
-  analyticsSettings  analyticsSettings?
-  aicrawlSettings    AICrawlSettings?
-  aicrawlContents    AICrawlContent[]
-  internalLinkRules  InternalLinkRule[]
-  uploadedFiles      UploadedFile[]
-  plans              Plan[]
-  planSettings       PlanSettings?
-  fileCategories     FileCategory[]
+  users               user[]
+  pages               page[]
+  forms               form[]
+  menus               menu[]
+  posts               post[]
+  collections         collection[]
+  sitesettings        sitesettings?
+  footersettings      footersettings[]
+  categories          category[]
+  tags                tag[]
+  media               media[]
+  redirects           Redirect[]
+  notFoundLogs        NotFoundLog[]
+  redirectImports     RedirectImport[]
+  NavbarConfig        NavbarConfig?
+  breadcrumbSettings  BreadcrumbSettings?
+  footerConfig        FooterConfig?
+  trackingSettings    TrackingSettings?
+  analyticsSettings   analyticsSettings?
+  aicrawlSettings     AICrawlSettings?
+  aicrawlContents     AICrawlContent[]
+  internalLinkRules   InternalLinkRule[]
+  uploadedFiles       UploadedFile[]
+  plans               Plan[]
+  planSettings        PlanSettings?
+  fileCategories      FileCategory[]
+  pricingPageSettings pricingPageSettings?
 }
 
 model EmailTemplate {
@@ -461,17 +462,18 @@ model userpermission {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model page {
-  id             Int     @id @default(autoincrement())
-  title          String
-  slug           String
-  html           String  @db.Text
-  css            String? @db.Text
-  js             String? @db.Text
-  jsxCode        String? @db.Text
-  pageType       String  @default("html")
-  status         status  @default(PUBLISHED)
-  seoData        Json?
-  sitemapEnabled Boolean @default(true)
+  id                Int     @id @default(autoincrement())
+  title             String
+  slug              String
+  html              String  @db.Text
+  css               String? @db.Text
+  js                String? @db.Text
+  jsxCode           String? @db.Text
+  pageType          String  @default("html")
+  status            status  @default(PUBLISHED)
+  seoData           Json?
+  sitemapEnabled    Boolean @default(true)
+  componentSettings Json?
 
   sitemapPriority   Decimal                @default(0.8) @db.Decimal(2, 1)
   sitemapChangeFreq sitemapChangeFrequency @default(WEEKLY)
@@ -482,6 +484,18 @@ model page {
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+}
+
+model pricingPageSettings {
+  id        Int      @id @default(autoincrement())
+  formId    Int?
+  tenantId  Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  form form? @relation(fields: [formId], references: [id], onDelete: SetNull)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -679,6 +693,7 @@ model form {
   title               String
   slug                String
   fields              Json
+  
   submitButtonLabel   String?  @default("Submit")
   confirmationType    String   @default("message")
   confirmationMessage String?  @db.Text
@@ -688,9 +703,11 @@ model form {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   tenantId            Int
+  layout              String   @default("default")
 
-  tenant         tenant           @relation(fields: [tenantId], references: [id])
-  formsubmission formsubmission[]
+  tenant              tenant                @relation(fields: [tenantId], references: [id])
+  formsubmission      formsubmission[]
+  pricingPageSettings pricingPageSettings[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])

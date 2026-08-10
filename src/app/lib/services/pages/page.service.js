@@ -140,6 +140,7 @@ export async function createPage(input) {
       css: mergedCss, // ← was: cleanInput.css ?? ""
       js: cleanInput.js ?? "",
       seoData: cleanInput.seoData ?? null,
+      componentSettings: cleanInput.componentSettings ?? null,
       status:
         cleanInput.status === "PUBLISHED" || cleanInput.status === "published"
           ? "PUBLISHED"

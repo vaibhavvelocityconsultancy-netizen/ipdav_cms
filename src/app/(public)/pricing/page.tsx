@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { fetchers } from "../../../lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
+import { FormEmbed } from "@/src/components/public/FormEmbed";
 
 interface Plan {
   id: number;
@@ -31,10 +32,26 @@ function formatUSD(val: number | null) {
 
 export default function PricingPlansPage() {
   const router = useRouter();
+
   const { data, isLoading } = useSWR("plans", fetchers.publicPlans);
+
+  const { data: pricingSettings } = useSWR(
+    "pricing-page-settings",
+    async () => {
+      const res = await fetch("/api/pricing-page-settings");
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch pricing page settings");
+      }
+
+      return res.json();
+    },
+  );
+
   const { user: currentUser, loading: userLoading } = useCurrentUser();
 
   const allPlans = (data?.data ?? []) as Plan[];
+  const pricingForm = pricingSettings?.data?.form;
 
   // Check if any plans have monthly/yearly enabled
   const hasMonthly = useMemo(
@@ -140,48 +157,8 @@ export default function PricingPlansPage() {
             </div>
           </section>
 
-          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+          <div className="min-h-screen bg-[#f8f9fa]">
             <div className="relative px-4 py-16 max-w-6xl mx-auto">
-              <div className="text-center mb-12">
-                <div className="inline-flex items-center gap-2 bg-blue-100/80 px-4 py-2 rounded-full mb-6">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700">
-                    Choose your plan
-                  </span>
-                </div>
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                  Simple, transparent pricing
-                </h1>
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-                  Pick the plan that fits you — cancel or switch anytime.
-                </p>
-
-                {/* Toggle — only rendered if both MONTHLY and YEARLY exist */}
-                {showToggle && (
-                  <div className="mt-8 inline-flex items-center bg-slate-100 rounded-full p-1">
-                    <button
-                      onClick={() => setSelectedCycle("MONTHLY")}
-                      className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${
-                        selectedCycle === "MONTHLY"
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Monthly
-                    </button>
-                    <button
-                      onClick={() => setSelectedCycle("YEARLY")}
-                      className={`px-6 py-2 text-sm font-medium rounded-full transition-colors ${
-                        selectedCycle === "YEARLY"
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Yearly
-                    </button>
-                  </div>
-                )}
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {plans.map((plan: Plan) => {
@@ -196,10 +173,10 @@ export default function PricingPlansPage() {
                   return (
                     <div
                       key={plan.id}
-                      className={`relative w-full rounded-none overflow-hidden flex flex-col border-t-4 ${
+                      className={`relative w-full rounded-none overflow-hidden flex flex-col border  ${
                         dark
-                          ? "bg-slate-900 border-slate-900 text-white"
-                          : "bg-slate-50 border-slate-900 text-slate-900"
+                          ? "bg-slate-900  border-t-4 border-white text-white"
+                          : "bg-slate-50 border-t-4 border-slate-900 text-slate-900"
                       }`}
                     >
                       <div className="p-8 flex flex-col flex-grow">
@@ -239,7 +216,7 @@ export default function PricingPlansPage() {
                           className={`w-full py-3 text-sm font-medium mb-6 disabled:opacity-60 ${
                             dark
                               ? "bg-white text-slate-900 hover:bg-slate-100"
-                              : "bg-slate-900 text-white hover:bg-slate-800"
+                              : "bg-[#152539] text-white hover:bg-slate-800"
                           }`}
                         >
                           {userLoading ? "Checking..." : "Create Free Trial"}
@@ -286,6 +263,12 @@ export default function PricingPlansPage() {
                   );
                 })}
               </div>
+
+              {pricingForm && (
+                <div className="mt-24">
+                  <FormEmbed slug={pricingForm.slug} />
+                </div>
+              )}
             </div>
           </div>
         </>

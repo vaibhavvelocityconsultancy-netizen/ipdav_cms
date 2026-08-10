@@ -280,6 +280,13 @@ const adminNavItems: NavItem[] = [
         href: "/admin/settings",
       },
       {
+        id: "react-page-settings",
+        label: "React Page Settings",
+        icon: Layout,
+        description: "React page configuration",
+        href: "/admin/component-settings",
+      },
+      {
         id: "footer-settings",
         label: "Footer Settings",
         icon: PanelBottom,
