@@ -4,11 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/src/ui/button";
-import {
-  FORM_CSS,
-  FORM_SUBMIT_SCRIPT,
-  injectForms,
-} from "@/src/lib/form-renderer";
+import { FORM_CSS } from "@/src/lib/form-renderer";
+import { submitCmsForm } from "@/src/lib/form-submit-handler";
 import {
   DEFAULT_BREADCRUMB_SETTINGS,
   injectBreadcrumb,
@@ -204,7 +201,6 @@ export default function PreviewPage() {
         });
         if (!valid) return;
 
-        const slug = form.dataset.formSlug;
         const submitBtn =
           form.querySelector<HTMLButtonElement>(".cms-form-submit");
         const originalLabel = submitBtn?.textContent ?? "Submit";
@@ -223,25 +219,10 @@ export default function PreviewPage() {
         }
         setStatus("loading", "Sending…");
 
-        const data: Record<string, string> = {};
-        new FormData(form).forEach((val, key) => {
-          data[key] = val as string;
-        });
-        form
-          .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
-          .forEach((cb) => {
-            data[cb.name] = cb.checked ? "true" : "false";
-          });
-
         try {
-          const res = await fetch(apiPath(`/api/form/submit/${slug}`), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
-          });
-          const json = await res.json();
+          const { ok, json } = await submitCmsForm(form, apiPath);
 
-          if (res.ok && json.success !== false) {
+          if (ok && json.success !== false) {
             const redirect = form.dataset.redirect;
             if (redirect) {
               window.location.href = redirect;

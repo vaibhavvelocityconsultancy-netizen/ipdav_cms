@@ -39,6 +39,7 @@ const FIELD_TYPES = [
   { value: "textarea", label: "Textarea" },
   { value: "select", label: "Select" },
   { value: "checkbox", label: "Checkbox" },
+  { value: "upload", label: "File / Image Upload" }, // 👈 single type
   { value: "message", label: "Message (static text)" },
 ];
 
@@ -51,6 +52,10 @@ interface FormField {
   placeholder?: string;
   options?: string[];
   message?: string;
+  accept?: string; // for upload field
+  maxSizeMB?: number; // for upload field
+  multiple?: boolean; // for upload field
+  min?: number; // for number field
 }
 
 interface EmailConfig {
@@ -73,8 +78,46 @@ interface FormEditorProps {
   onCancel: () => void;
 }
 
+interface FormEditorData {
+  title: string;
+  slug: string;
+  fields: FormField[];
+  submitButtonLabel: string;
+  confirmationType: string;
+  confirmationMessage: string;
+  redirectUrl: string;
+  emails: EmailConfig[];
+  status: string;
+}
+
 function generateId() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+function normalizeField(
+  input: Partial<FormField> | null | undefined,
+): FormField {
+  const field = input && typeof input === "object" ? input : {};
+
+  return {
+    id: typeof field.id === "string" ? field.id : generateId(),
+    type: typeof field.type === "string" ? field.type : "text",
+    name: typeof field.name === "string" ? field.name : "",
+    label: typeof field.label === "string" ? field.label : "",
+    required: field.required === true,
+    placeholder: typeof field.placeholder === "string" ? field.placeholder : "",
+    options: Array.isArray(field.options)
+      ? field.options.filter(
+          (option): option is string => typeof option === "string",
+        )
+      : undefined,
+    message: typeof field.message === "string" ? field.message : undefined,
+    accept: typeof field.accept === "string" ? field.accept : undefined,
+    maxSizeMB:
+      typeof field.maxSizeMB === "number" ? field.maxSizeMB : undefined,
+    multiple: field.multiple === true,
+    min: typeof field.min === "number" ? field.min : undefined,
+  };
 }
 
 // ── Field Block ───────────────────────────────────────────
@@ -251,6 +294,91 @@ function FieldBlock({
                 placeholder={"Option 1\nOption 2\nOption 3"}
                 className="w-full border border-border rounded px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-mono"
               />
+            </div>
+          )}
+
+          {/* Upload config */}
+          {field.type === "upload" && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Upload Type
+                </label>
+                <select
+                  value={
+                    field.accept === "image/*"
+                      ? "image"
+                      : field.accept
+                        ? "custom"
+                        : "any"
+                  }
+                  onChange={(e) => {
+                    const preset = e.target.value;
+                    const accept =
+                      preset === "image"
+                        ? "image/*"
+                        : preset === "any"
+                          ? ""
+                          : field.accept || "";
+                    onChange({ ...field, accept });
+                  }}
+                  className="w-full border border-border rounded px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="any">Any file</option>
+                  <option value="image">Images only</option>
+                  <option value="custom">Custom (specify extensions)</option>
+                </select>
+              </div>
+
+              {(field.accept || field.accept === "") &&
+                field.accept !== "image/*" && (
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      Allowed Extensions
+                    </label>
+                    <input
+                      type="text"
+                      value={field.accept || ""}
+                      onChange={(e) =>
+                        onChange({ ...field, accept: e.target.value })
+                      }
+                      placeholder=".pdf,.doc,.docx (leave blank for any file)"
+                      className="w-full border border-border rounded px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">
+                    Max Size (MB)
+                  </label>
+                  <input
+                    type="number"
+                    value={field.maxSizeMB || 5}
+                    onChange={(e) =>
+                      onChange({ ...field, maxSizeMB: Number(e.target.value) })
+                    }
+                    min={1}
+                    className="w-full border border-border rounded px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={field.multiple || false}
+                      onChange={(e) =>
+                        onChange({ ...field, multiple: e.target.checked })
+                      }
+                      className="rounded"
+                    />
+                    <span className="text-sm text-foreground">
+                      Allow multiple files
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -463,10 +591,12 @@ function EmailBlock({
 // ── Main FormEditor ───────────────────────────────────────
 
 export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
-  const [data, setData] = useState({
+  const [data, setData] = useState<FormEditorData>({
     title: form.title || "",
     slug: form.slug || "",
-    fields: (form.fields || []) as FormField[],
+    fields: Array.isArray(form.fields)
+      ? form.fields.map((field: Partial<FormField>) => normalizeField(field))
+      : [],
     submitButtonLabel: form.submitButtonLabel || "Submit",
     confirmationType: form.confirmationType || "message",
     confirmationMessage:
@@ -490,25 +620,29 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState<"editor" | "submissions">("editor");
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   // ── Field operations ──
 
-  function addField() {
+  function addField(type: string) {
     const newField: FormField = {
       id: generateId(),
-      type: "text",
+      type,
       name: "",
       label: "",
       required: false,
       placeholder: "",
+      ...(type === "upload"
+        ? { accept: "", maxSizeMB: 5, multiple: false }
+        : {}),
     };
     setData((d) => ({ ...d, fields: [...d.fields, newField] }));
+    setShowAddMenu(false);
   }
-
   function updateField(id: string, updated: FormField) {
     setData((d) => ({
       ...d,
-      fields: d.fields.map((f) => (f.id === id ? updated : f)),
+      fields: d.fields.map((f) => (f.id === id ? normalizeField(updated) : f)),
     }));
   }
 
@@ -728,7 +862,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
             </DndContext>
 
             <button
-              onClick={addField}
+              onClick={() => addField("text")}
               className="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
             >
               <Plus size={15} />

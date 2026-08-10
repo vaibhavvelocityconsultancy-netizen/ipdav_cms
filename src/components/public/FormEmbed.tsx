@@ -1,4 +1,3 @@
-// components/public/FormEmbed.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,6 +12,9 @@ interface FormField {
   placeholder?: string;
   options?: string[];
   message?: string;
+  accept?: string;      // 👈 new
+  multiple?: boolean;   // 👈 new
+  maxSizeMB?: number;   // 👈 new
 }
 
 interface PublicForm {
@@ -30,6 +32,7 @@ const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 export function FormEmbed({ slug }: { slug: string }) {
   const [form, setForm] = useState<PublicForm | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, FileList | null>>({}); // 👈 new
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -44,17 +47,37 @@ export function FormEmbed({ slug }: { slug: string }) {
 
   if (!form) return null;
 
+  const hasUploadField = form.fields.some((f) => f.type === "upload");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const res = await fetch(apiPath(`/api/form/submit/${slug}`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
+      let res: Response;
+
+      if (hasUploadField) {
+        // multipart — required when any file is attached
+        const fd = new FormData();
+        Object.entries(values).forEach(([k, v]) => fd.append(k, v));
+        Object.entries(files).forEach(([name, fileList]) => {
+          if (!fileList) return;
+          Array.from(fileList).forEach((file) => fd.append(name, file));
+        });
+
+        res = await fetch(apiPath(`/api/form/submit/${slug}`), {
+          method: "POST",
+          body: fd, // no Content-Type header — browser sets multipart boundary
+        });
+      } else {
+        res = await fetch(apiPath(`/api/form/submit/${slug}`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        });
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -143,6 +166,25 @@ export function FormEmbed({ slug }: { slug: string }) {
                 }
                 className="rounded"
               />
+            ) : field.type === "upload" ? (
+              <>
+                <input
+                  type="file"
+                  name={field.name}
+                  required={field.required}
+                  accept={field.accept || undefined}
+                  multiple={field.multiple || false}
+                  onChange={(e) =>
+                    setFiles({ ...files, [field.name]: e.target.files })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:text-sm hover:file:bg-blue-100"
+                />
+                {field.maxSizeMB && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Max {field.maxSizeMB}MB per file
+                  </p>
+                )}
+              </>
             ) : (
               <input
                 type={field.type}

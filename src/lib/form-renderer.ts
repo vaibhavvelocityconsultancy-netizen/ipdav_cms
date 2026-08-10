@@ -49,7 +49,8 @@ export type FormFieldType =
   | "textarea"
   | "select"
   | "checkbox"
-  | "message";
+  | "message"
+  | "upload";
 
 export interface FormField {
   id: string;
@@ -61,6 +62,9 @@ export interface FormField {
   options?: string[]; // for select
   content?: string; // for message (static text block)
   width?: "full" | "half";
+  accept?: string; // 👈 new
+  multiple?: boolean; // 👈 new
+  maxSizeMB?: number; // 👈 new
 }
 
 export interface FormData {
@@ -116,6 +120,9 @@ export async function fetchFormsBySlug(
       try {
         const res = await fetch(
           `${baseUrl}${apiPath(`/api/form/slug/${slug}`)}`,
+          {
+            cache: "no-store",
+          }
         );
         if (!res.ok) return;
         const json = await res.json();
@@ -218,6 +225,18 @@ function renderField(field: FormField): string {
             <span>${escapeHtml(field.label)}${field.required ? ` <span class="cms-field-required" aria-hidden="true">*</span>` : ""}</span>
           </label>
         </div>`;
+
+    case "upload":
+      input = `<input
+    type="file"
+    id="${id}"
+    name="${escapeAttr(field.name)}"
+    class="cms-field-input cms-field-file"
+    ${field.accept ? `accept="${escapeAttr(field.accept)}"` : ""}
+    ${field.multiple ? "multiple" : ""}
+    ${field.required ? "required" : ""}
+  />`;
+      break;
 
     case "message":
       return `
@@ -341,18 +360,30 @@ export const FORM_SUBMIT_SCRIPT = `
     }
     setStatus(form, 'loading', 'Sending…');
 
-    var data = {};
-    new FormData(form).forEach(function (val, key) { data[key] = val; });
-    form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-      data[cb.name] = cb.checked ? 'true' : 'false';
-    });
+   var hasFileInput = form.querySelector('input[type="file"]') !== null;
+var fetchOptions;
 
-    try {
-      var res = await fetch(resolveAppUrl('/api/form/submit/' + slug, window.location.origin || ''), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+if (hasFileInput) {
+  var fd = new FormData(form);
+  form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+    fd.set(cb.name, cb.checked ? 'true' : 'false');
+  });
+  fetchOptions = { method: 'POST', body: fd }; // no Content-Type — browser sets boundary
+} else {
+  var data = {};
+  new FormData(form).forEach(function (val, key) { data[key] = val; });
+  form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+    data[cb.name] = cb.checked ? 'true' : 'false';
+  });
+  fetchOptions = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  };
+}
+
+try {
+  var res = await fetch(resolveAppUrl('/api/form/submit/' + slug, window.location.origin || ''), fetchOptions);
       var json = await res.json();
 
       if (res.ok && json.success !== false) {
@@ -441,6 +472,7 @@ export const FORM_CSS = `
   .cms-field-wrap--half { grid-column: span 1; }
   .cms-field-label { font-size: 0.875rem; font-weight: 500; color: #374151; }
   .cms-field-required { color: #ef4444; margin-left: 2px; }
+  .cms-field-file { padding: 0.5rem 0.75rem; cursor: pointer;}
   .cms-field-input {
     width: 100%; padding: 0.625rem 0.875rem;
     border: 1px solid #d1d5db; border-radius: 8px;

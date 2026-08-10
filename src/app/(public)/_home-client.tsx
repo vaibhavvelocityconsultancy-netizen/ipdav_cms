@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
 import { FORM_CSS } from "@/src/lib/form-renderer";
+import { submitCmsForm } from "@/src/lib/form-submit-handler";
 import Link from "next/link";
 import { SchemaRenderer } from "../../components/admin/pages/SchemaOutput";
 import { processPublicPageHtml } from "@/src/lib/public-page-html";
@@ -173,7 +174,6 @@ export default function PostsListPage() {
         });
         if (!valid) return;
 
-        const slug = form.dataset.formSlug;
         const submitBtn =
           form.querySelector<HTMLButtonElement>(".cms-form-submit");
         const originalLabel = submitBtn?.textContent ?? "Submit";
@@ -192,25 +192,10 @@ export default function PostsListPage() {
         }
         setStatus("loading", "Sending…");
 
-        const data: Record<string, string> = {};
-        new FormData(form).forEach((val, key) => {
-          data[key] = val as string;
-        });
-        form
-          .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
-          .forEach((cb) => {
-            data[cb.name] = cb.checked ? "true" : "false";
-          });
-
         try {
-          const res = await fetch(apiPath(`/api/form/submit/${slug}`), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
-          });
-          const json = await res.json();
+          const { ok, json } = await submitCmsForm(form, apiPath);
 
-          if (res.ok && json.success !== false) {
+          if (ok && json.success !== false) {
             const redirect = form.dataset.redirect;
             if (redirect) {
               window.location.href = redirect;
