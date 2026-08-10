@@ -11,6 +11,21 @@ import {
 import { Button } from "@/src/ui/button";
 import { FormSubmissions } from "./FormSubmissions";
 import { getApiBaseUrl } from "@/src/lib/axios";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 // import { FormSubmissions } from "./FormSubmissions";
 
 const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
@@ -75,11 +90,36 @@ function FieldBlock({
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-card">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="border border-border rounded-lg overflow-hidden bg-card"
+    >
       {/* Field header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 border-b border-border">
-        <GripVertical size={14} className="text-muted-foreground cursor-grab" />
+        <button
+          {...attributes}
+          {...listeners}
+          className="text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical size={14} />
+        </button>{" "}
         <span className="text-sm font-medium text-foreground flex-1">
           {field.label || field.type || "New Field"}
           <span className="ml-2 text-xs text-muted-foreground font-mono">
@@ -435,6 +475,18 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
     emails: (form.emails || []) as EmailConfig[],
     status: form.status || "active",
   });
+  function handleFieldDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setData((d) => {
+      const oldIndex = d.fields.findIndex((f) => f.id === active.id);
+      const newIndex = d.fields.findIndex((f) => f.id === over.id);
+      return { ...d, fields: arrayMove(d.fields, oldIndex, newIndex) };
+    });
+  }
+
+  const sensors = useSensors(useSensor(PointerSensor));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState<"editor" | "submissions">("editor");
@@ -653,16 +705,27 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
               </h2>
             </div>
 
-            <div className="space-y-3">
-              {data.fields.map((field) => (
-                <FieldBlock
-                  key={field.id}
-                  field={field}
-                  onChange={(updated) => updateField(field.id, updated)}
-                  onDelete={() => deleteField(field.id)}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleFieldDragEnd}
+            >
+              <SortableContext
+                items={data.fields.map((f) => f.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {data.fields.map((field) => (
+                    <FieldBlock
+                      key={field.id}
+                      field={field}
+                      onChange={(updated) => updateField(field.id, updated)}
+                      onDelete={() => deleteField(field.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
 
             <button
               onClick={addField}
@@ -672,7 +735,6 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
               Add Field
             </button>
           </div>
-
           {/* Submit button label */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
