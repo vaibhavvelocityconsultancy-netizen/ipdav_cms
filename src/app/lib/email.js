@@ -4,6 +4,15 @@ import { sendTriggerEmail } from "./email/trigger";
 
 import nodemailer from "nodemailer";
 
+function escapeHtml(text) {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const hasSmtpConfig =
   process.env.SMTP_HOST &&
   process.env.SMTP_PORT &&
@@ -32,7 +41,7 @@ const transporter = hasSmtpConfig
 
 // ── Replace {{fieldName}} variables in a string ───────────
 
-export function replaceVariables(template, data = {}) {
+export function replaceVariables(template, data = {}, fieldLabels = {}) {
   if (!template) return "";
 
   let result = template;
@@ -40,13 +49,14 @@ export function replaceVariables(template, data = {}) {
   // Replace {{*}} with full HTML table of all fields
   if (result.includes("{{*}}")) {
     const tableRows = Object.entries(data)
-      .map(
-        ([key, value]) => `
+      .map(([key, value]) => {
+        const label = fieldLabels[key] || key;
+        return `
         <tr>
-          <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">${key}</td>
-          <td style="padding:8px 12px;border:1px solid #e5e7eb;">${value ?? ""}</td>
-        </tr>`,
-      )
+          <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">${escapeHtml(label)}</td>
+          <td style="padding:8px 12px;border:1px solid #e5e7eb;">${escapeHtml(value ?? "")}</td>
+        </tr>`;
+      })
       .join("");
 
     const table = `
@@ -95,7 +105,11 @@ export async function sendEmail({ to, cc, bcc, replyTo, from, subject, html }) {
 
 // ── Process all email configs for a form submission ───────
 
-export async function sendFormEmails(emailConfigs, submissionData) {
+export async function sendFormEmails(
+  emailConfigs,
+  submissionData,
+  fieldLabels = {},
+) {
   if (!emailConfigs?.length) return;
 
   const errors = [];
@@ -103,16 +117,36 @@ export async function sendFormEmails(emailConfigs, submissionData) {
   for (const emailConfig of emailConfigs) {
     let to = "";
     try {
-      const subject = replaceVariables(emailConfig.subject, submissionData);
+      const subject = replaceVariables(
+        emailConfig.subject,
+        submissionData,
+        fieldLabels,
+      );
       const html = emailConfig.html
         ? emailConfig.html
-        : replaceVariables(emailConfig.message, submissionData);
+        : replaceVariables(emailConfig.message, submissionData, fieldLabels);
 
       const htmlBody = html.includes("<") ? html : html.replace(/\n/g, "<br/>");
-      to = replaceVariables(emailConfig.emailTo, submissionData).trim();
-      const cc = replaceVariables(emailConfig.cc, submissionData).trim();
-      const bcc = replaceVariables(emailConfig.bcc, submissionData).trim();
-      const replyTo = replaceVariables(emailConfig.replyTo, submissionData).trim();
+      to = replaceVariables(
+        emailConfig.emailTo,
+        submissionData,
+        fieldLabels,
+      ).trim();
+      const cc = replaceVariables(
+        emailConfig.cc,
+        submissionData,
+        fieldLabels,
+      ).trim();
+      const bcc = replaceVariables(
+        emailConfig.bcc,
+        submissionData,
+        fieldLabels,
+      ).trim();
+      const replyTo = replaceVariables(
+        emailConfig.replyTo,
+        submissionData,
+        fieldLabels,
+      ).trim();
 
       // Build dynamic "from" display name
       const senderName = submissionData.senderName;
@@ -151,7 +185,6 @@ export async function sendTriggerEmails(triggerEvent, data) {
   if (!configs.length) return;
   return sendFormEmails(configs, data ?? {});
 }
-
 
 // import Mailgun from "mailgun.js";
 // import FormData from "form-data";

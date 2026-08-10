@@ -15,6 +15,7 @@ interface FormField {
   accept?: string;
   multiple?: boolean;
   maxSizeMB?: number;
+  hideLabel?: boolean;
 }
 
 interface PublicForm {
@@ -51,9 +52,7 @@ export function FormEmbed({ slug }: { slug: string }) {
 
   if (!form) return null;
 
-  const hasUploadField = form.fields.some(
-    (f) => f.type === "upload"
-  );
+  const hasUploadField = form.fields.some((f) => f.type === "upload");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,24 +77,18 @@ export function FormEmbed({ slug }: { slug: string }) {
           });
         });
 
-        res = await fetch(
-          apiPath(`/api/form/submit/${slug}`),
-          {
-            method: "POST",
-            body: fd,
-          }
-        );
+        res = await fetch(apiPath(`/api/form/submit/${slug}`), {
+          method: "POST",
+          body: fd,
+        });
       } else {
-        res = await fetch(
-          apiPath(`/api/form/submit/${slug}`),
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(values),
-          }
-        );
+        res = await fetch(apiPath(`/api/form/submit/${slug}`), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        });
       }
 
       const data = await res.json();
@@ -105,10 +98,7 @@ export function FormEmbed({ slug }: { slug: string }) {
         return;
       }
 
-      if (
-        data.data.confirmationType === "redirect" &&
-        data.data.redirectUrl
-      ) {
+      if (data.data.confirmationType === "redirect" && data.data.redirectUrl) {
         window.location.href = data.data.redirectUrl;
         return;
       }
@@ -124,8 +114,7 @@ export function FormEmbed({ slug }: { slug: string }) {
   if (submitted) {
     return (
       <div className="py-10 text-center">
-        {form.confirmationMessage ||
-          "Thank you for your submission!"}
+        {form.confirmationMessage || "Thank you for your submission!"}
       </div>
     );
   }
@@ -137,21 +126,21 @@ export function FormEmbed({ slug }: { slug: string }) {
    */
   const renderField = (field: FormField) => {
     if (field.type === "message") {
-      return (
-        <div key={field.id}>
-          {field.message}
-        </div>
-      );
+      return <div key={field.id}>{field.message}</div>;
     }
 
     return (
       <div key={field.id}>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          className={
+            field.hideLabel
+              ? "sr-only"
+              : "block text-sm font-medium text-gray-700 mb-1"
+          }
+        >
           {field.label}
 
-          {field.required && (
-            <span className="text-red-500 ml-1">*</span>
-          )}
+          {field.required && <span className="text-red-500 ml-1">*</span>}
         </label>
 
         {field.type === "textarea" ? (
@@ -173,6 +162,7 @@ export function FormEmbed({ slug }: { slug: string }) {
           <select
             name={field.name}
             required={field.required}
+            aria-label={field.hideLabel ? field.label : undefined}
             value={values[field.name] || ""}
             onChange={(e) =>
               setValues({
@@ -191,20 +181,27 @@ export function FormEmbed({ slug }: { slug: string }) {
             ))}
           </select>
         ) : field.type === "checkbox" ? (
-          <input
-            type="checkbox"
-            name={field.name}
-            checked={values[field.name] === "true"}
-            onChange={(e) =>
-              setValues({
-                ...values,
-                [field.name]: e.target.checked
-                  ? "true"
-                  : "false",
-              })
-            }
-            className="rounded"
-          />
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              name={field.name}
+              checked={values[field.name] === "true"}
+              onChange={(e) =>
+                setValues({
+                  ...values,
+                  [field.name]: e.target.checked ? "true" : "false",
+                })
+              }
+              className="rounded"
+              aria-label={field.hideLabel ? field.label : undefined}
+            />
+            <span
+              className={field.hideLabel ? "sr-only" : "text-sm text-gray-700"}
+            >
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </span>
+          </label>
         ) : field.type === "upload" ? (
           <>
             <input
@@ -213,6 +210,7 @@ export function FormEmbed({ slug }: { slug: string }) {
               required={field.required}
               accept={field.accept || undefined}
               multiple={field.multiple || false}
+              aria-label={field.hideLabel ? field.label : undefined}
               onChange={(e) =>
                 setFiles({
                   ...files,
@@ -234,6 +232,7 @@ export function FormEmbed({ slug }: { slug: string }) {
             name={field.name}
             required={field.required}
             placeholder={field.placeholder}
+            aria-label={field.hideLabel ? field.label : undefined}
             value={values[field.name] || ""}
             onChange={(e) =>
               setValues({
@@ -260,38 +259,30 @@ export function FormEmbed({ slug }: { slug: string }) {
       <div className="w-full py-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-
             {/* LEFT SIDE */}
             <div className="flex items-center">
               <h2 className="custom-font text-5xl lg:text-6xl font-serif font-normal leading-tight text-[#0B3154]">
                 {form.title}
               </h2>
+              <h2 className="custom-font text-5xl lg:text-6xl font-serif font-normal leading-tight text-[#0B3154]">
+                {form.description}
+              </h2>
             </div>
 
             {/* RIGHT SIDE */}
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-5"
-            >
+            <form onSubmit={handleSubmit} className="space-y-5">
               {form.fields.map(renderField)}
 
-              {error && (
-                <p className="text-red-500 text-sm">
-                  {error}
-                </p>
-              )}
+              {error && <p className="text-red-500 text-sm">{error}</p>}
 
               <button
                 type="submit"
                 disabled={loading}
                 className="bg-blue-600 text-white px-12 py-4 text-base font-medium hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading
-                  ? "Submitting..."
-                  : form.submitButtonLabel || "Submit"}
+                {loading ? "Submitting..." : form.submitButtonLabel || "Submit"}
               </button>
             </form>
-
           </div>
         </div>
       </div>
@@ -305,26 +296,17 @@ export function FormEmbed({ slug }: { slug: string }) {
    * the old design.
    */
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-5"
-    >
+    <form onSubmit={handleSubmit} className="space-y-5">
       {form.fields.map(renderField)}
 
-      {error && (
-        <p className="text-red-500 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-red-500 text-sm">{error}</p>}
 
       <button
         type="submit"
         disabled={loading}
         className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
       >
-        {loading
-          ? "Submitting..."
-          : form.submitButtonLabel || "Submit"}
+        {loading ? "Submitting..." : form.submitButtonLabel || "Submit"}
       </button>
     </form>
   );

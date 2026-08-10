@@ -65,6 +65,7 @@ export interface FormField {
   accept?: string; // 👈 new
   multiple?: boolean; // 👈 new
   maxSizeMB?: number; // 👈 new
+  hideLabel?: boolean;
 }
 
 export interface FormData {
@@ -122,7 +123,7 @@ export async function fetchFormsBySlug(
           `${baseUrl}${apiPath(`/api/form/slug/${slug}`)}`,
           {
             cache: "no-store",
-          }
+          },
         );
         if (!res.ok) return;
         const json = await res.json();
@@ -172,9 +173,12 @@ export function renderFormHtml(form: FormData): string {
 
 function renderField(field: FormField): string {
   const id = `field-${escapeAttr(field.id || field.name)}`;
+  const ariaLabelAttr = field.hideLabel
+    ? `aria-label="${escapeAttr(field.label)}"`
+    : "";
   const label =
     field.type !== "message"
-      ? `<label class="cms-field-label" for="${id}">
+      ? `<label class="cms-field-label${field.hideLabel ? " sr-only" : ""}" for="${id}">
           ${escapeHtml(field.label)}
           ${field.required ? `<span class="cms-field-required" aria-hidden="true">*</span>` : ""}
         </label>`
@@ -189,8 +193,7 @@ function renderField(field: FormField): string {
         name="${escapeAttr(field.name)}"
         class="cms-field-input cms-field-textarea"
         placeholder="${escapeAttr(field.placeholder ?? "")}"
-        ${field.required ? "required" : ""}
-        rows="5"
+        ${field.required ? "required" : ""}        ${ariaLabelAttr}        rows="5"
       ></textarea>`;
       break;
 
@@ -200,6 +203,7 @@ function renderField(field: FormField): string {
         name="${escapeAttr(field.name)}"
         class="cms-field-input cms-field-select"
         ${field.required ? "required" : ""}
+        ${ariaLabelAttr}
       >
         <option value="">— Select an option —</option>
         ${(field.options ?? [])
@@ -222,7 +226,7 @@ function renderField(field: FormField): string {
               class="cms-field-checkbox"
               ${field.required ? "required" : ""}
             />
-            <span>${escapeHtml(field.label)}${field.required ? ` <span class="cms-field-required" aria-hidden="true">*</span>` : ""}</span>
+            <span class="${field.hideLabel ? "sr-only" : ""}">${escapeHtml(field.label)}${field.required ? ` <span class="cms-field-required" aria-hidden="true">*</span>` : ""}</span>
           </label>
         </div>`;
 
@@ -235,6 +239,7 @@ function renderField(field: FormField): string {
     ${field.accept ? `accept="${escapeAttr(field.accept)}"` : ""}
     ${field.multiple ? "multiple" : ""}
     ${field.required ? "required" : ""}
+    ${ariaLabelAttr}
   />`;
       break;
 

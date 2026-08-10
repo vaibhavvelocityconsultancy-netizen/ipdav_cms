@@ -56,6 +56,7 @@ interface FormField {
   maxSizeMB?: number; // for upload field
   multiple?: boolean; // for upload field
   min?: number; // for number field
+  hideLabel?: boolean;
 }
 
 interface EmailConfig {
@@ -118,6 +119,7 @@ function normalizeField(
       typeof field.maxSizeMB === "number" ? field.maxSizeMB : undefined,
     multiple: field.multiple === true,
     min: typeof field.min === "number" ? field.min : undefined,
+    hideLabel: field.hideLabel === true,
   };
 }
 
@@ -403,6 +405,26 @@ function FieldBlock({
               </label>
             </div>
           )}
+
+          {field.type !== "message" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`hide-label-${field.id}`}
+                checked={field.hideLabel || false}
+                onChange={(e) =>
+                  onChange({ ...field, hideLabel: e.target.checked })
+                }
+                className="rounded"
+              />
+              <label
+                htmlFor={`hide-label-${field.id}`}
+                className="text-sm text-foreground"
+              >
+                Hide label on public form
+              </label>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -637,6 +659,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
       ...(type === "upload"
         ? { accept: "", maxSizeMB: 5, multiple: false }
         : {}),
+      hideLabel: false,
     };
     setData((d) => ({ ...d, fields: [...d.fields, newField] }));
     setShowAddMenu(false);

@@ -208,9 +208,10 @@ export async function submitForm(slug, data, ipAddress) {
   // Send emails
   const emailConfigs = Array.isArray(form.emails) ? form.emails : [];
   if (emailConfigs.length > 0) {
-    // Fetch site settings for template (logo, siteName)
-    const siteSettings = await prisma.siteSettings.findFirst();
-    await sendFormEmails(emailConfigs, data, siteSettings);
+    const fieldLabels = Object.fromEntries(
+      fields.map((field) => [field.name, field.label || field.name]),
+    );
+    await sendFormEmails(emailConfigs, data, fieldLabels);
   }
 
   return {
