@@ -13,6 +13,22 @@ function escapeHtml(text) {
     .replace(/'/g, "&#39;");
 }
 
+function formatFieldLabel(name) {
+  const raw = String(name ?? "").trim();
+  if (!raw) return "";
+
+  const spaced = raw
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2");
+
+  return spaced
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 const hasSmtpConfig =
   process.env.SMTP_HOST &&
   process.env.SMTP_PORT &&
@@ -50,7 +66,7 @@ export function replaceVariables(template, data = {}, fieldLabels = {}) {
   if (result.includes("{{*}}")) {
     const tableRows = Object.entries(data)
       .map(([key, value]) => {
-        const label = fieldLabels[key] || key;
+        const label = fieldLabels[key] || formatFieldLabel(key);
         return `
         <tr>
           <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600;background:#f9fafb;">${escapeHtml(label)}</td>
