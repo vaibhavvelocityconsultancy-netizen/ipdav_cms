@@ -27,7 +27,7 @@ export default function PricingPageSettings() {
     async function load() {
       try {
         const [formsRes, settingsRes] = await Promise.all([
-          fetch(`${getBaseUrl()}/api/forms`),
+          fetch(`${getBaseUrl()}/api/form`),
           fetch(`${getBaseUrl()}/api/pricing-page-settings`),
         ]);
 
