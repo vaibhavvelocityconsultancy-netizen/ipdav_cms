@@ -15,7 +15,6 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Timer,
   FileText,
   MoreVertical,
   User,
@@ -38,8 +37,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 interface Plan {
   id: number;
   title: string;
-  monthlyPrice: string;
-  yearlyPrice: string;
+  monthlyPrice: string | number | null;
+  yearlyPrice: string | number | null;
   allowMonthly: boolean;
   allowYearly: boolean;
   billingCycle: string;
@@ -79,7 +78,7 @@ interface RecentShare {
 
 interface SubscriptionData {
   accessType: string;
-  plan: Plan;
+  plan: Plan | null;
   status: string;
   trialDaysRemaining: number | null;
   trialEndsAt: string | null;
@@ -114,73 +113,16 @@ const fetchDashboardData = async (): Promise<DashboardResponse> => {
   return data;
 };
 
-const CountdownTimer = ({
+const AccessDateSummary = ({
   targetDate,
-  label,
+  status,
 }: {
-  targetDate: string;
-  label: string;
+  targetDate: string | null;
+  status: string;
 }) => {
-  const targetDateObj = new Date(targetDate);
-  const isValidTargetDate = !Number.isNaN(targetDateObj.getTime());
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-  const [isExpired, setIsExpired] = useState(false);
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      if (!isValidTargetDate) {
-        setIsExpired(false);
-        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-      }
-
-      const now = new Date().getTime();
-      const target = targetDateObj.getTime();
-      const difference = target - now;
-
-      if (difference <= 0) {
-        setIsExpired(true);
-        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-      }
-
-      return {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor(
-          (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-        ),
-        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((difference % (1000 * 60)) / 1000),
-      };
-    };
-
-    setTimeLeft(calculateTimeLeft());
-
-    const timer = setInterval(() => {
-      const newTimeLeft = calculateTimeLeft();
-      setTimeLeft(newTimeLeft);
-
-      if (
-        newTimeLeft.days === 0 &&
-        newTimeLeft.hours === 0 &&
-        newTimeLeft.minutes === 0 &&
-        newTimeLeft.seconds === 0
-      ) {
-        setIsExpired(true);
-        clearInterval(timer);
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [targetDate]);
-
-  if (isExpired) {
-    return <div className="text-red-600 font-medium">{label} has expired</div>;
-  }
-
+  const targetDateObj = targetDate ? new Date(targetDate) : null;
+  const isValidTargetDate =
+    !!targetDateObj && !Number.isNaN(targetDateObj.getTime());
   const formattedTargetDate = isValidTargetDate
     ? targetDateObj.toLocaleDateString("en-US", {
         month: "short",
@@ -188,54 +130,32 @@ const CountdownTimer = ({
         year: "numeric",
       })
     : null;
+  const daysRemaining = isValidTargetDate
+    ? Math.max(
+        0,
+        Math.ceil(
+          (targetDateObj!.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        ),
+      )
+    : null;
+  const isTrial = status === "TRIAL";
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="text-center">
-            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-              <span className="text-xl font-bold text-gray-800">
-                {String(timeLeft.days).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Days</div>
-          </div>
-          <span className="text-gray-400 font-light">:</span>
-          <div className="text-center">
-            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-              <span className="text-xl font-bold text-gray-800">
-                {String(timeLeft.hours).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Hrs</div>
-          </div>
-          <span className="text-gray-400 font-light">:</span>
-          <div className="text-center">
-            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-              <span className="text-xl font-bold text-gray-800">
-                {String(timeLeft.minutes).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Min</div>
-          </div>
-          <span className="text-gray-400 font-light">:</span>
-          <div className="text-center">
-            <div className="bg-gray-100 rounded-lg px-3 py-1.5 min-w-[40px]">
-              <span className="text-xl font-bold text-gray-800">
-                {String(timeLeft.seconds).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Sec</div>
-          </div>
-        </div>
+    <div className="flex flex-col items-start gap-1 text-sm lg:items-end">
+      <div className="font-semibold text-gray-900">
+        {daysRemaining === null
+          ? isTrial
+            ? "Trial end date unavailable"
+            : "Renewal date unavailable"
+          : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining`}
       </div>
-      {formattedTargetDate && (
-        <div className="text-xs text-gray-500">
-          {label === "Trial ends in" ? "Ends on" : "Renews on"}{" "}
-          {formattedTargetDate}
-        </div>
-      )}
+      <div className="text-xs text-gray-500">
+        {formattedTargetDate
+          ? `${isTrial ? "Ends on" : "Renews on"} ${formattedTargetDate}`
+          : isTrial
+            ? "Trial end date is not set"
+            : "Renewal date is not set"}
+      </div>
     </div>
   );
 };
@@ -511,34 +431,35 @@ export default function DashboardPage() {
     }
   };
 
-  const getTimerLabel = (status: string) => {
-    switch (status) {
-      case "TRIAL":
-        return "Trial ends in";
-      case "ACTIVE":
-        return "Renews in";
-      default:
-        return "Expired";
-    }
+  const getNumericPrice = (price: Plan["monthlyPrice"]) => {
+    if (price === null || price === undefined || price === "") return null;
+    const numericPrice = Number(price);
+    return Number.isFinite(numericPrice) ? numericPrice : null;
   };
 
-  const formatPrice = (price: string) => {
+  const formatPrice = (price: Plan["monthlyPrice"]) => {
+    const numericPrice = getNumericPrice(price);
+    if (numericPrice === null) return null;
+
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 0,
-    }).format(parseFloat(price));
+    }).format(numericPrice);
   };
 
-  const getBillingLabel = (plan: Plan) => {
-    if (plan?.allowMonthly && plan.allowYearly) {
-      return `${formatPrice(plan.monthlyPrice)}/mo or ${formatPrice(plan.yearlyPrice)}/yr`;
+  const getBillingLabel = (plan: Plan | null) => {
+    const monthlyPrice = formatPrice(plan?.monthlyPrice);
+    const yearlyPrice = formatPrice(plan?.yearlyPrice);
+
+    if (plan?.allowMonthly && monthlyPrice && plan.allowYearly && yearlyPrice) {
+      return `${monthlyPrice}/mo or ${yearlyPrice}/yr`;
     }
-    if (plan?.allowMonthly) {
-      return `${formatPrice(plan.monthlyPrice)}/mo`;
+    if (plan?.allowMonthly && monthlyPrice) {
+      return `${monthlyPrice}/mo`;
     }
-    if (plan?.allowYearly) {
-      return `${formatPrice(plan.yearlyPrice)}/yr`;
+    if (plan?.allowYearly && yearlyPrice) {
+      return `${yearlyPrice}/yr`;
     }
     return "Contact us";
   };
@@ -597,8 +518,10 @@ export default function DashboardPage() {
                     <span>{getBillingLabel(subscription.plan)}</span>
                     {subscription.status !== "EXPIRED" && (
                       <span className="flex items-center gap-1">
-                        <Timer className="w-3 h-3" />
-                        {getTimerLabel(subscription.status)}
+                        <Calendar className="w-3 h-3" />
+                        {subscription.status === "TRIAL"
+                          ? "Trial access"
+                          : "Subscription access"}
                       </span>
                     )}
                   </div>
@@ -607,9 +530,9 @@ export default function DashboardPage() {
 
               <div className="flex items-center gap-6">
                 {subscription.status !== "EXPIRED" && (
-                  <CountdownTimer
+                  <AccessDateSummary
                     targetDate={getTimerDate(subscription.status)}
-                    label={getTimerLabel(subscription.status)}
+                    status={subscription.status}
                   />
                 )}
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap">
