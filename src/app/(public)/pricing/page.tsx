@@ -208,13 +208,12 @@ export default function PricingPlansPage() {
                             {plan.features.map((f: Feature) => (
                               <div
                                 key={f.id}
-                                className="flex items-start gap-3"
+                                className="flex items-center gap-3"
                               >
-                                  <CustomCheck
-                                    size={12}
-                                    className="h-[25px] w-[25px] text-orange-500"
-                                    // strokeWidth={3}
-                                  />
+                                <CustomCheck
+                                  size={25}
+                                  className="fill-[#0F1B2B] group-hover:fill-white transition-colors duration-300 shrink-0" // strokeWidth={3}
+                                />
                                 <span className="text-base font-serif text-slate-800 group-hover:text-slate-100 transition-colors duration-300">
                                   {f.title}
                                 </span>
