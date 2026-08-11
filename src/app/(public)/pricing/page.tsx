@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { fetchers } from "../../../lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { FormEmbed } from "@/src/components/public/FormEmbed";
+import CustomCheck from "@/src/components/icons/CustomCheck";
 
 interface Plan {
   id: number;
@@ -159,39 +160,25 @@ export default function PricingPlansPage() {
 
           <div className="min-h-screen bg-[#f8f9fa]">
             <div className="relative px-4 py-16 max-w-6xl mx-auto">
-
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {plans.map((plan: Plan) => {
-                  const dark = plan.isFeatured;
                   const currentCycle = showToggle ? selectedCycle : "MONTHLY";
                   const price = getPlanPrice(plan, currentCycle);
                   const label = getPlanLabel(plan, currentCycle);
 
-                  // If plan doesn't support the current cycle, skip it
                   if (!price && !label) return null;
 
                   return (
                     <div
                       key={plan.id}
-                      className={`relative w-full rounded-none overflow-hidden flex flex-col border  ${
-                        dark
-                          ? "bg-slate-900  border-t-4 border-white text-white"
-                          : "bg-slate-50 border-t-4 border-slate-900 text-slate-900"
-                      }`}
+                      className="group relative w-full rounded-none overflow-hidden flex flex-col border border-t-4 border-[#152539] bg-white text-slate-900 hover:bg-[#152539] hover:text-white transition-colors duration-300"
                     >
                       <div className="p-8 flex flex-col flex-grow">
-                        <h3
-                          className={`font-serif text-5xl mb-3 ${
-                            dark ? "text-white" : "text-slate-900"
-                          }`}
-                        >
+                        <h3 className="font-serif text-5xl mb-3 text-slate-900 group-hover:text-white transition-colors duration-300">
                           {plan.title}
                         </h3>
-                        <p
-                          className={`text-sm mb-6 ${
-                            dark ? "text-slate-300" : "text-slate-600"
-                          }`}
-                        >
+
+                        <p className="text-sm mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                           {plan.description}
                         </p>
 
@@ -199,11 +186,7 @@ export default function PricingPlansPage() {
                           <span className="font-serif text-6xl">
                             {formatUSD(price)}
                           </span>
-                          <span
-                            className={`text-lg ${
-                              dark ? "text-slate-300" : "text-slate-600"
-                            }`}
-                          >
+                          <span className="text-lg text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                             / {label}
                           </span>
                         </div>
@@ -213,20 +196,12 @@ export default function PricingPlansPage() {
                             handleSelectPlan(plan.id, currentCycle)
                           }
                           disabled={userLoading}
-                          className={`w-full py-3 text-sm font-medium mb-6 disabled:opacity-60 ${
-                            dark
-                              ? "bg-white text-slate-900 hover:bg-slate-100"
-                              : "bg-[#152539] text-white hover:bg-slate-800"
-                          }`}
+                          className="w-full py-3 text-sm font-medium mb-6 disabled:opacity-60 bg-[#152539] text-white group-hover:bg-white group-hover:text-slate-900 transition-colors duration-300"
                         >
                           {userLoading ? "Checking..." : "Create Free Trial"}
                         </button>
 
-                        <div
-                          className={`border-t mb-6 ${
-                            dark ? "border-slate-700" : "border-slate-300"
-                          }`}
-                        />
+                        <div className="border-t mb-6 border-slate-300 group-hover:border-slate-700 transition-colors duration-300" />
 
                         {plan.features?.length > 0 && (
                           <div className="flex-grow space-y-3">
@@ -235,23 +210,12 @@ export default function PricingPlansPage() {
                                 key={f.id}
                                 className="flex items-start gap-3"
                               >
-                                <div
-                                  className={`flex-shrink-0 h-4 w-4 border flex items-center justify-center mt-0.5 ${
-                                    dark
-                                      ? "border-orange-400"
-                                      : "border-orange-500"
-                                  }`}
-                                >
-                                  <Check
-                                    className="h-3 w-3 text-orange-500"
-                                    strokeWidth={3}
+                                  <CustomCheck
+                                    size={12}
+                                    className="h-[25px] w-[25px] text-orange-500"
+                                    // strokeWidth={3}
                                   />
-                                </div>
-                                <span
-                                  className={`text-base font-serif ${
-                                    dark ? "text-slate-100" : "text-slate-800"
-                                  }`}
-                                >
+                                <span className="text-base font-serif text-slate-800 group-hover:text-slate-100 transition-colors duration-300">
                                   {f.title}
                                 </span>
                               </div>
