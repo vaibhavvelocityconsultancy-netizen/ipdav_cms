@@ -160,7 +160,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                 [field.name]: e.target.value,
               })
             }
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         ) : field.type === "select" ? (
           <select
@@ -174,7 +174,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                 [field.name]: e.target.value,
               })
             }
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border  px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select an option</option>
 
@@ -221,7 +221,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                   [field.name]: e.target.files,
                 })
               }
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border  px-3 py-2 text-sm"
             />
 
             {field.maxSizeMB && (
@@ -244,7 +244,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                 [field.name]: e.target.value,
               })
             }
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border  px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         )}
       </div>
@@ -276,7 +276,10 @@ export function FormEmbed({ slug }: { slug: string }) {
             </div>
 
             {/* RIGHT SIDE */}
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form
+              onSubmit={handleSubmit}
+              className="public-form-embed public-form-embed--two-column space-y-5"
+            >
               {form.fields.map(renderField)}
 
               {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -302,7 +305,10 @@ export function FormEmbed({ slug }: { slug: string }) {
    * the old design.
    */
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      className="public-form-embed public-form-embed--default space-y-5"
+    >
       {form.fields.map(renderField)}
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -310,7 +316,7 @@ export function FormEmbed({ slug }: { slug: string }) {
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+        className="bg-blue-600 text-white px-6 py-2.5  text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
       >
         {loading ? "Submitting..." : form.submitButtonLabel || "Submit"}
       </button>

@@ -172,22 +172,22 @@ export default function PricingPlansPage() {
                   return (
                     <div
                       key={plan.id}
-                      className="group relative w-full rounded-none overflow-hidden flex flex-col border border-t-4 border-[#152539] bg-white text-slate-900 hover:bg-[#152539] hover:text-white transition-colors duration-300"
+                      className="pricing-plan-card group relative w-full rounded-none overflow-hidden flex flex-col border border-t-4 border-[#152539] bg-white text-slate-900 hover:bg-[#152539] hover:text-white transition-colors duration-300"
                     >
                       <div className="p-8 flex flex-col flex-grow">
-                        <h3 className="font-serif text-5xl mb-3 text-slate-900 group-hover:text-white transition-colors duration-300">
+                        <h3 className=" mb-3 text-slate-900 group-hover:text-white transition-colors duration-300">
                           {plan.title}
                         </h3>
 
-                        <p className="text-sm mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
+                        <p className=" mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                           {plan.description}
                         </p>
 
                         <div className="mb-6 flex items-baseline gap-2">
-                          <span className="font-serif text-6xl">
+                          <span className="">
                             {formatUSD(price)}
                           </span>
-                          <span className="text-lg text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
+                          <span className=" text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                             / {label}
                           </span>
                         </div>
@@ -209,13 +209,13 @@ export default function PricingPlansPage() {
                             {plan.features.map((f: Feature) => (
                               <div
                                 key={f.id}
-                                className="flex items-center gap-3"
+                                className="feature-lists flex items-center gap-3"
                               >
                                 <CustomCheck
                                   size={25}
-                                  className="fill-[#0F1B2B] group-hover:fill-white transition-colors duration-300 shrink-0" // strokeWidth={3}
+                                  className="check-icon fill-[#0F1B2B] group-hover:fill-white transition-colors duration-300 shrink-0" // strokeWidth={3}
                                 />
-                                <span className="text-base font-serif text-slate-800 group-hover:text-slate-100 transition-colors duration-300">
+                                <span className="text-base text-slate-800 group-hover:text-slate-100 transition-colors duration-300">
                                   {f.title}
                                 </span>
                               </div>
