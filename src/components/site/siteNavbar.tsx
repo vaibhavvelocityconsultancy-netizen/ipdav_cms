@@ -4,7 +4,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/src/lib/query-key";
+import { fetchers } from "@/src/lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 
 type SiteSettings = {
@@ -96,6 +98,19 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
   const [openMobileSubmenus, setOpenMobileSubmenus] = useState<Set<string>>(
     new Set(),
   );
+
+  const queryClient = useQueryClient(); // ← add this
+
+  const prefetchPage = (item: MenuItem) => {
+    if (item.type !== "page" || !item.slug) return;
+    const slug = item.slug.replace(/^\/+/, "");
+
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.page(slug),
+      queryFn: () => fetchers.publicPageBySlug(slug),
+      staleTime: 1000 * 60 * 5,
+    });
+  };
 
   const dashboardUrl =
     user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
@@ -220,6 +235,7 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
                     href={childHref}
                     aria-current={childActive ? "page" : undefined}
                     className="block whitespace-nowrap px-5 py-2.5 text-[15px] text-white hover:bg-white/10"
+                    onMouseEnter={() => prefetchPage(child)} // ← add this
                   >
                     {child.label}
                   </Link>
@@ -250,16 +266,14 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
             <Link
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex-1 py-4 text-[17px] transition-colors ${
-                level > 0 ? "pl-6 text-[15px]" : ""
-              } ${
-                active
-                  ? "font-medium text-[#ff8000]"
-                  : "font-normal text-[#152539] hover:text-[#ff8000]"
-              }`}
-              onClick={closeMobileMenu}
+              onMouseEnter={() => prefetchPage(item)} // ← add this
             >
               {item.label}
+              {hasChildren ? (
+                <span className="ml-1 text-xs opacity-70" aria-hidden="true">
+                  ▾
+                </span>
+              ) : null}
             </Link>
 
             {hasChildren ? (

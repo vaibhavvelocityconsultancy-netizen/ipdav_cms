@@ -137,6 +137,34 @@ export default function PostsListPage() {
     return () => main.removeEventListener("click", handler);
   }, [page?.id, router]);
 
+  // ── prefetch internal page links on hover ──
+useEffect(() => {
+  const main = document.querySelector("main[data-page-content]");
+  if (!main) return;
+
+  const prefetched = new Set<string>();
+
+  const handler = (event: Event) => {
+    const a = (event.target as HTMLElement).closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href?.startsWith("/")) return;
+
+    const slug = href.replace(/^\/+/, "");
+    if (!slug || prefetched.has(slug)) return;
+    prefetched.add(slug);
+
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.page(slug),
+      queryFn: () => fetchers.publicPageBySlug(slug),
+      staleTime: 1000 * 60 * 5,
+    });
+  };
+
+  main.addEventListener("mouseover", handler);
+  return () => main.removeEventListener("mouseover", handler);
+}, [page?.id, queryClient]);
+
   useEffect(() => {
     if (!processedPageHtml || !hasForms) return;
 

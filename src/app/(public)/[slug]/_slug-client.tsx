@@ -69,7 +69,7 @@ export default function PreviewPage() {
     queryKey: queryKeys.page(slug),
     queryFn: () => fetchers.publicPageBySlug(slug),
     enabled: !!slug,
-    staleTime: 0,
+    staleTime: 1000 * 60 * 5, 
   });
 
   const bootstrapData = queryClient.getQueryData<any>(["public", "bootstrap"]);
@@ -324,6 +324,35 @@ export default function PreviewPage() {
     main.addEventListener("click", handler);
     return () => main.removeEventListener("click", handler);
   }, [page?.id, router]);
+
+  // ── prefetch internal page links on hover ──
+useEffect(() => {
+  const main = document.querySelector("main[data-page-content]");
+  if (!main) return;
+
+  const prefetched = new Set<string>();
+
+  const handler = (event: Event) => {
+    const mouseEvent = event as MouseEvent;
+    const a = (mouseEvent.target as HTMLElement).closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href?.startsWith("/")) return;
+
+    const slug = href.replace(/^\/+/, "");
+    if (!slug || prefetched.has(slug)) return;
+    prefetched.add(slug);
+
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.page(slug),
+      queryFn: () => fetchers.publicPageBySlug(slug),
+      staleTime: 1000 * 60 * 5,
+    });
+  };
+
+  main.addEventListener("mouseover", handler);
+  return () => main.removeEventListener("mouseover", handler);
+}, [page?.id, queryClient, router]);
 
   // update page title on client navigation
   useEffect(() => {
