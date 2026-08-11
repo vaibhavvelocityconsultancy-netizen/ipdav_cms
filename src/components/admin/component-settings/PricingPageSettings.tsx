@@ -27,8 +27,8 @@ export default function PricingPageSettings() {
     async function load() {
       try {
         const [formsRes, settingsRes] = await Promise.all([
-          fetch("/api/form"),
-          fetch("/api/pricing-page-settings"),
+          fetch(`${getBaseUrl()}/api/forms`),
+          fetch(`${getBaseUrl()}/api/pricing-page-settings`),
         ]);
 
         const formsData = await formsRes.json();
