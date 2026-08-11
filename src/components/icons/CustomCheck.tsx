@@ -4,7 +4,7 @@ const CustomCheck = ({
 }) => {
   return (
     <img
-      src="newweb/checked.svg"
+      src="/newweb/checked.svg"
       alt=""
       width={size}
       height={size}
