@@ -8,6 +8,7 @@ import { fetchers } from "../../../lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { FormEmbed } from "@/src/components/public/FormEmbed";
 import CustomCheck from "@/src/components/icons/CustomCheck";
+import { getBaseUrl } from "@/src/lib/config";
 
 interface Plan {
   id: number;
@@ -39,7 +40,7 @@ export default function PricingPlansPage() {
   const { data: pricingSettings } = useSWR(
     "pricing-page-settings",
     async () => {
-      const res = await fetch("/api/pricing-page-settings");
+      const res = await fetch(`${getBaseUrl()}/api/pricing-page-settings`);
 
       if (!res.ok) {
         throw new Error("Failed to fetch pricing page settings");

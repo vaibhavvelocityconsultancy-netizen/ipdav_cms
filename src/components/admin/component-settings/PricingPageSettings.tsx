@@ -1,5 +1,6 @@
 "use client";
 
+import { getBaseUrl } from "@/src/lib/config";
 import { useEffect, useState } from "react";
 
 interface FormItem {
@@ -60,7 +61,7 @@ export default function PricingPageSettings() {
 
     try {
       const response = await fetch(
-        "/api/pricing-page-settings",
+        `${getBaseUrl()}/api/pricing-page-settings`,
         {
           method: "PUT",
           headers: {
