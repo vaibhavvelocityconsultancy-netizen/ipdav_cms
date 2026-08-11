@@ -23,6 +23,8 @@ interface PublicForm {
   title: string;
   slug: string;
   layout?: string;
+  twoColumnHeading?: string | null;
+  twoColumnParagraph?: string | null;
   fields: FormField[];
   submitButtonLabel: string;
   confirmationType: string;
@@ -53,6 +55,8 @@ export function FormEmbed({ slug }: { slug: string }) {
   if (!form) return null;
 
   const hasUploadField = form.fields.some((f) => f.type === "upload");
+  const twoColumnHeading = form.twoColumnHeading?.trim() || form.title;
+  const twoColumnParagraph = form.twoColumnParagraph?.trim() || "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -260,13 +264,15 @@ export function FormEmbed({ slug }: { slug: string }) {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             {/* LEFT SIDE */}
-            <div className="flex items-center">
+            <div className="space-y-6">
               <h2 className="custom-font text-5xl lg:text-6xl font-serif font-normal leading-tight text-[#0B3154]">
-                {form.title}
+                {twoColumnHeading}
               </h2>
-              <h2 className="custom-font text-5xl lg:text-6xl font-serif font-normal leading-tight text-[#0B3154]">
-                {form.description}
-              </h2>
+              {twoColumnParagraph && (
+                <p className="max-w-xl text-lg leading-8 text-slate-600">
+                  {twoColumnParagraph}
+                </p>
+              )}
             </div>
 
             {/* RIGHT SIDE */}

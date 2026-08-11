@@ -704,6 +704,8 @@ model form {
   updatedAt           DateTime @updatedAt
   tenantId            Int
   layout              String   @default("default")
+  twoColumnHeading    String?  @db.Text
+  twoColumnParagraph  String?  @db.Text
 
   tenant              tenant                @relation(fields: [tenantId], references: [id])
   formsubmission      formsubmission[]

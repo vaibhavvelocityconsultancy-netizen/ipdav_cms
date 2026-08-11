@@ -90,6 +90,8 @@ interface FormEditorData {
   emails: EmailConfig[];
   status: string;
   layout: string;
+  twoColumnHeading: string;
+  twoColumnParagraph: string;
 }
 
 function generateId() {
@@ -628,6 +630,8 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
     emails: (form.emails || []) as EmailConfig[],
     status: form.status || "active",
     layout: form.layout || "default",
+    twoColumnHeading: form.twoColumnHeading || "",
+    twoColumnParagraph: form.twoColumnParagraph || "",
   });
   function handleFieldDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -970,6 +974,49 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
               Choose how this form should be displayed on the website.
             </p>
           </div>
+
+          {data.layout === "two-column" && (
+            <div className="space-y-4 rounded-lg border border-border bg-card p-4">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Two Column Content
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This heading and paragraph appear beside the form on the
+                  public site.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Heading
+                </label>
+                <input
+                  type="text"
+                  value={data.twoColumnHeading}
+                  onChange={(e) =>
+                    setData({ ...data, twoColumnHeading: e.target.value })
+                  }
+                  placeholder={data.title || "Form heading"}
+                  className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Paragraph
+                </label>
+                <textarea
+                  rows={4}
+                  value={data.twoColumnParagraph}
+                  onChange={(e) =>
+                    setData({ ...data, twoColumnParagraph: e.target.value })
+                  }
+                  className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Confirmation Message or Redirect URL */}
           {data.confirmationType === "message" ? (

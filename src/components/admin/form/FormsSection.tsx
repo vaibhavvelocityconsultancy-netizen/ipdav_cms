@@ -95,6 +95,9 @@ export function FormsSection() {
       redirectUrl: "",
       emails: [],
       status: "active",
+      layout: "default",
+      twoColumnHeading: "",
+      twoColumnParagraph: "",
     });
     setIsNew(true);
   }

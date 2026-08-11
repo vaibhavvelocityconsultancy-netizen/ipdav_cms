@@ -61,6 +61,8 @@ export async function getFormBySlug(slug, tenantId) {
       title: true,
       slug: true,
       layout: true,
+      twoColumnHeading: true,
+      twoColumnParagraph: true,
       fields: true,
       submitButtonLabel: true,
       confirmationType: true,
@@ -98,6 +100,8 @@ export async function createForm(input) {
       fields: input.fields ?? [],
       submitButtonLabel: input.submitButtonLabel ?? "Submit",
       layout: input.layout ?? "default",
+      twoColumnHeading: input.twoColumnHeading ?? null,
+      twoColumnParagraph: input.twoColumnParagraph ?? null,
       confirmationType: input.confirmationType ?? "message",
       confirmationMessage:
         input.confirmationMessage ?? "Thank you for your submission.",
