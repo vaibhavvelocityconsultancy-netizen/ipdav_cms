@@ -128,9 +128,9 @@ export default function PricingPlansPage() {
         </div>
       ) : (
         <>
-          <section className="w-full bg-[#0B0F1A] py-20">
+          <section className="price-section w-full bg-[#0B0F1A] py-20">
             <div className="mx-auto max-w-7xl px-6 text-center">
-              <h1 className="text-5xl font-bold text-white lg:text-7xl">
+              <h1 className="price-title text-5xl font-bold text-white lg:text-7xl">
                 Pricing
               </h1>
               <div className="mt-6 flex justify-center">
@@ -172,22 +172,22 @@ export default function PricingPlansPage() {
                   return (
                     <div
                       key={plan.id}
-                      className="pricing-plan-card group relative w-full rounded-none overflow-hidden flex flex-col border border-t-4 border-[#152539] bg-white text-slate-900 hover:bg-[#152539] hover:text-white transition-colors duration-300"
+                      className="pricing-card pricing-plan-card group relative w-full rounded-none overflow-hidden flex flex-col border border-t-4 border-[#152539] bg-white text-slate-900 hover:bg-[#152539] hover:text-white transition-colors duration-300"
                     >
-                      <div className="p-8 flex flex-col flex-grow">
-                        <h3 className=" mb-3 text-slate-900 group-hover:text-white transition-colors duration-300">
+                      <div className="pricing-card-body p-8 flex flex-col flex-grow">
+                        <h3 className="pricing-card-title mb-3 text-slate-900 group-hover:text-white transition-colors duration-300">
                           {plan.title}
                         </h3>
 
-                        <p className=" mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
+                        <p className="pricing-card-description mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                           {plan.description}
                         </p>
 
-                        <div className="mb-6 flex items-baseline gap-2">
-                          <span className="">
+                        <div className="pricing-card-price-wrapper mb-6 flex items-baseline gap-2">
+                          <span className="pricing-card-price">
                             {formatUSD(price)}
                           </span>
-                          <span className=" text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
+                          <span className="pricing-card-price-label text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                             / {label}
                           </span>
                         </div>
@@ -197,25 +197,25 @@ export default function PricingPlansPage() {
                             handleSelectPlan(plan.id, currentCycle)
                           }
                           disabled={userLoading}
-                          className="w-full py-3 text-sm font-medium mb-6 disabled:opacity-60 bg-[#152539] text-white group-hover:bg-white group-hover:text-slate-900 transition-colors duration-300"
+                          className="pricing-card-cta w-full py-3 text-sm font-medium mb-6 disabled:opacity-60 bg-[#152539] text-white group-hover:bg-white group-hover:text-slate-900 transition-colors duration-300"
                         >
                           {userLoading ? "Checking..." : "Create Free Trial"}
                         </button>
 
-                        <div className="border-t mb-6 border-slate-300 group-hover:border-slate-700 transition-colors duration-300" />
+                        <div className="pricing-card-divider border-t mb-6 border-slate-300 group-hover:border-slate-700 transition-colors duration-300" />
 
                         {plan.features?.length > 0 && (
-                          <div className="flex-grow space-y-3">
+                          <div className="pricing-card-features flex-grow space-y-3">
                             {plan.features.map((f: Feature) => (
                               <div
                                 key={f.id}
-                                className="feature-lists flex items-center gap-3"
+                                className="pricing-card-feature-item feature-lists flex items-center gap-3"
                               >
                                 <CustomCheck
                                   size={25}
-                                  className="check-icon fill-[#0F1B2B] group-hover:fill-white transition-colors duration-300 shrink-0" // strokeWidth={3}
+                                  className="pricing-card-feature-icon check-icon fill-[#0F1B2B] group-hover:fill-white transition-colors duration-300 shrink-0"
                                 />
-                                <span className="text-base text-slate-800 group-hover:text-slate-100 transition-colors duration-300">
+                                <span className="pricing-card-feature-text text-base text-slate-800 group-hover:text-slate-100 transition-colors duration-300">
                                   {f.title}
                                 </span>
                               </div>
