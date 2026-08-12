@@ -68,7 +68,13 @@ const PostsGridSkeleton = () => (
   </div>
 );
 
-export default function PostsListPage() {
+export default function PostsListPage({
+  initialProcessedHtml = "",
+  initialHasForms = false,
+}: {
+  initialProcessedHtml?: string;
+  initialHasForms?: boolean;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -96,18 +102,11 @@ export default function PostsListPage() {
     return postsData?.data ?? [];
   }, [postsData, homepageId]);
 
-  const [processedPageHtml, setProcessedPageHtml] = useState("");
-  const [hasForms, setHasForms] = useState(false);
+  const [processedPageHtml, setProcessedPageHtml] =
+    useState(initialProcessedHtml);
+  const [hasForms, setHasForms] = useState(initialHasForms);
 
-  // ── 6. Inject homepage page CSS (when homepage is a static page) ──
-  useEffect(() => {
-    if (!page?.css) return;
-    const style = document.createElement("style");
-    style.id = `page-css-${page.id}`;
-    style.textContent = page.css;
-    document.head.appendChild(style);
-    return () => style.remove();
-  }, [page?.id, page?.css]);
+  // CSS injection handled inline in the page render to avoid flicker
 
   // ── 7. Inject homepage page JS ──
   useEffect(() => {
@@ -138,32 +137,32 @@ export default function PostsListPage() {
   }, [page?.id, router]);
 
   // ── prefetch internal page links on hover ──
-useEffect(() => {
-  const main = document.querySelector("main[data-page-content]");
-  if (!main) return;
+  useEffect(() => {
+    const main = document.querySelector("main[data-page-content]");
+    if (!main) return;
 
-  const prefetched = new Set<string>();
+    const prefetched = new Set<string>();
 
-  const handler = (event: Event) => {
-    const a = (event.target as HTMLElement).closest("a");
-    if (!a) return;
-    const href = a.getAttribute("href");
-    if (!href?.startsWith("/")) return;
+    const handler = (event: Event) => {
+      const a = (event.target as HTMLElement).closest("a");
+      if (!a) return;
+      const href = a.getAttribute("href");
+      if (!href?.startsWith("/")) return;
 
-    const slug = href.replace(/^\/+/, "");
-    if (!slug || prefetched.has(slug)) return;
-    prefetched.add(slug);
+      const slug = href.replace(/^\/+/, "");
+      if (!slug || prefetched.has(slug)) return;
+      prefetched.add(slug);
 
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.page(slug),
-      queryFn: () => fetchers.publicPageBySlug(slug),
-      staleTime: 1000 * 60 * 5,
-    });
-  };
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.page(slug),
+        queryFn: () => fetchers.publicPageBySlug(slug),
+        staleTime: 1000 * 60 * 5,
+      });
+    };
 
-  main.addEventListener("mouseover", handler);
-  return () => main.removeEventListener("mouseover", handler);
-}, [page?.id, queryClient]);
+    main.addEventListener("mouseover", handler);
+    return () => main.removeEventListener("mouseover", handler);
+  }, [page?.id, queryClient]);
 
   useEffect(() => {
     if (!processedPageHtml || !hasForms) return;
@@ -317,8 +316,8 @@ useEffect(() => {
   );
 
   useEffect(() => {
-    if (!page?.html) {
-      setProcessedPageHtml("");
+    if (!page?.html || initialProcessedHtml) {
+      if (!page?.html && !initialProcessedHtml) setProcessedPageHtml("");
       return;
     }
 
@@ -346,12 +345,13 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-  }, [page?.html, breadcrumbSettings]);
+  }, [page?.html, breadcrumbSettings, initialProcessedHtml]);
 
   // ── 10. Homepage is a static page ──
   if (page) {
     return (
       <>
+        {page?.css && <style id={`page-css-${page.id}`}>{page.css}</style>}
         <SchemaRenderer seoData={page?.seoData} />
         <main
           data-page-content
@@ -406,6 +406,8 @@ useEffect(() => {
                     <img
                       src={post.featuredImage}
                       alt={post.title}
+                      width={400}
+                      height={192}
                       className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </a>

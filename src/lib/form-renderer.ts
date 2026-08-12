@@ -532,7 +532,6 @@ export async function injectForms(
   baseUrl = "",
 ): Promise<{ html: string; hasForms: boolean }> {
   const slugs = resolveFormSlugs(html);
-  console.log("Detected slugs:", slugs);
 
   if (slugs.length === 0) return { html, hasForms: false };
 

@@ -6,6 +6,7 @@ import {
 import HomeClient from "./_home-client";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
+import { processPublicPageHtml } from "@/src/lib/public-page-html";
 
 export default async function Page() {
   const queryClient = new QueryClient();
@@ -59,14 +60,38 @@ export default async function Page() {
         ),
       ]),
     ]);
+    
   } catch (error) {
     // Silently fail during build; client will fetch on hydration
     console.error("Prefetch failed (expected during build):", error);
   }
 
+  // after your existing prefetch block, add:
+const bootstrapData = queryClient.getQueryData<any>(["public", "bootstrap"]);
+const homepage = bootstrapData?.data?.homepage;
+const page = homepage?.type === "page" ? homepage?.page : null;
+const breadcrumbSettings = bootstrapData?.data?.breadcrumbSettings;
+
+let initialProcessedHtml = "";
+let initialHasForms = false;
+
+if (page?.html) {
+  try {
+    const { html, hasForms } = await processPublicPageHtml(page.html, {
+      breadcrumbItems: [],
+      breadcrumbSettings,
+      context: { isHome: true, is404: false, isSearch: false },
+    });
+    initialProcessedHtml = html;
+    initialHasForms = hasForms;
+  } catch (error) {
+    console.error("Server-side page HTML processing failed:", error);
+  }
+}
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <HomeClient />
+      <HomeClient 
+        initialProcessedHtml={initialProcessedHtml} initialHasForms={initialHasForms}/>
     </HydrationBoundary>
   );
 }

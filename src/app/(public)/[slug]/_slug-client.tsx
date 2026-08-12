@@ -51,15 +51,21 @@ const PostsGridSkeleton = () => (
   </div>
 );
 
-export default function PreviewPage() {
+export default function PreviewPage({
+  initialProcessedHtml = "",
+  initialHasForms = false,
+}: {
+  initialProcessedHtml?: string;
+  initialHasForms?: boolean;
+}) {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
   const slug = params?.slug ?? "";
   const queryClient = useQueryClient();
 
   // ── state ──
-  const [processedHtml, setProcessedHtml] = useState("");
-  const [hasForms, setHasForms] = useState(false);
+  const [processedHtml, setProcessedHtml] = useState(initialProcessedHtml);
+  const [hasForms, setHasForms] = useState(initialHasForms);
   const [isPostsPage, setIsPostsPage] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [isPostsLoading, setIsPostsLoading] = useState(false);
@@ -69,7 +75,7 @@ export default function PreviewPage() {
     queryKey: queryKeys.page(slug),
     queryFn: () => fetchers.publicPageBySlug(slug),
     enabled: !!slug,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 
   const bootstrapData = queryClient.getQueryData<any>(["public", "bootstrap"]);
@@ -95,7 +101,7 @@ export default function PreviewPage() {
 
   // ── process page HTML ──
   useEffect(() => {
-    if (!pageData?.data || !settings) return;
+    if (!pageData?.data || !settings || initialProcessedHtml) return; // skip if server already processed
     const page = pageData.data;
     const run = async () => {
       const { html, hasForms } = await processPublicPageHtml(page.html, {
@@ -132,17 +138,9 @@ export default function PreviewPage() {
       }
     };
     run();
-  }, [pageData, settings, breadcrumbSettings]);
+  }, [pageData, settings, breadcrumbSettings, initialProcessedHtml]);
 
-  // ── inject page CSS ──
-  useEffect(() => {
-    if (!page?.css) return;
-    const style = document.createElement("style");
-    style.id = `page-css-${page.id}`;
-    style.textContent = page.css;
-    document.head.appendChild(style);
-    return () => style.remove();
-  }, [page?.id, page?.css]);
+  // CSS injection handled inline in render to avoid layout shift
 
   // ── inject page JS ──
   useEffect(() => {
@@ -326,33 +324,33 @@ export default function PreviewPage() {
   }, [page?.id, router]);
 
   // ── prefetch internal page links on hover ──
-useEffect(() => {
-  const main = document.querySelector("main[data-page-content]");
-  if (!main) return;
+  useEffect(() => {
+    const main = document.querySelector("main[data-page-content]");
+    if (!main) return;
 
-  const prefetched = new Set<string>();
+    const prefetched = new Set<string>();
 
-  const handler = (event: Event) => {
-    const mouseEvent = event as MouseEvent;
-    const a = (mouseEvent.target as HTMLElement).closest("a");
-    if (!a) return;
-    const href = a.getAttribute("href");
-    if (!href?.startsWith("/")) return;
+    const handler = (event: Event) => {
+      const mouseEvent = event as MouseEvent;
+      const a = (mouseEvent.target as HTMLElement).closest("a");
+      if (!a) return;
+      const href = a.getAttribute("href");
+      if (!href?.startsWith("/")) return;
 
-    const slug = href.replace(/^\/+/, "");
-    if (!slug || prefetched.has(slug)) return;
-    prefetched.add(slug);
+      const slug = href.replace(/^\/+/, "");
+      if (!slug || prefetched.has(slug)) return;
+      prefetched.add(slug);
 
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.page(slug),
-      queryFn: () => fetchers.publicPageBySlug(slug),
-      staleTime: 1000 * 60 * 5,
-    });
-  };
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.page(slug),
+        queryFn: () => fetchers.publicPageBySlug(slug),
+        staleTime: 1000 * 60 * 5,
+      });
+    };
 
-  main.addEventListener("mouseover", handler);
-  return () => main.removeEventListener("mouseover", handler);
-}, [page?.id, queryClient, router]);
+    main.addEventListener("mouseover", handler);
+    return () => main.removeEventListener("mouseover", handler);
+  }, [page?.id, queryClient, router]);
 
   // update page title on client navigation
   useEffect(() => {
@@ -449,6 +447,8 @@ useEffect(() => {
                       <img
                         src={post.featuredImage}
                         alt={post.title}
+                        width={400}
+                        height={192}
                         className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </a>
@@ -528,6 +528,7 @@ useEffect(() => {
   // ── regular page ──
   return (
     <>
+      {page?.css && <style id={`page-css-${page.id}`}>{page.css}</style>}
       <SchemaRenderer seoData={page?.seoData} />
       <main
         data-page-content

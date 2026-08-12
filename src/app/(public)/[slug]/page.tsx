@@ -10,6 +10,7 @@ import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
 import { log404Error } from "@/src/lib/redirectMiddleware";
 import { SchemaRenderer } from "@/src/components/admin/pages/SchemaOutput";
+import { processPublicPageHtml } from "@/src/lib/public-page-html";
 
 export async function generateMetadata({
   params,
@@ -108,12 +109,39 @@ export default async function Page({
       redirect(seoData.redirectUrl);
     }
 
+    // ── NEW: process page HTML server-side ──
+    const bootstrapData = queryClient.getQueryData<any>([
+      "public",
+      "bootstrap",
+    ]);
+    const breadcrumbSettings = bootstrapData?.data?.breadcrumbSettings;
+
+    let initialProcessedHtml = "";
+    let initialHasForms = false;
+
+    try {
+      const { html, hasForms } = await processPublicPageHtml(page.html, {
+        breadcrumbItems: [
+          { label: page.title || "Page", href: `/${page.slug ?? ""}` },
+        ],
+        breadcrumbSettings,
+        context: { isHome: false, is404: false, isSearch: false },
+      });
+      initialProcessedHtml = html;
+      initialHasForms = hasForms;
+    } catch (error) {
+      console.error("Server-side page HTML processing failed:", error);
+    }
+
     return (
       <>
         {/* <SchemaRenderer seoData={seoData} /> */}
 
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <SlugClient />
+          <SlugClient
+            initialProcessedHtml={initialProcessedHtml}
+            initialHasForms={initialHasForms}
+          />
         </HydrationBoundary>
       </>
     );
