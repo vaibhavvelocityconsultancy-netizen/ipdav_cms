@@ -60,38 +60,46 @@ export default async function Page() {
         ),
       ]),
     ]);
-    
   } catch (error) {
     // Silently fail during build; client will fetch on hydration
     console.error("Prefetch failed (expected during build):", error);
   }
 
   // after your existing prefetch block, add:
-const bootstrapData = queryClient.getQueryData<any>(["public", "bootstrap"]);
-const homepage = bootstrapData?.data?.homepage;
-const page = homepage?.type === "page" ? homepage?.page : null;
-const breadcrumbSettings = bootstrapData?.data?.breadcrumbSettings;
+  const bootstrapData = queryClient.getQueryData<any>(["public", "bootstrap"]);
+  const homepage = bootstrapData?.data?.homepage;
+  const page = homepage?.type === "page" ? homepage?.page : null;
+  const breadcrumbSettings = bootstrapData?.data?.breadcrumbSettings;
 
-let initialProcessedHtml = "";
-let initialHasForms = false;
+  let initialProcessedHtml = "";
+  let initialHasForms = false;
 
-if (page?.html) {
-  try {
-    const { html, hasForms } = await processPublicPageHtml(page.html, {
-      breadcrumbItems: [],
-      breadcrumbSettings,
-      context: { isHome: true, is404: false, isSearch: false },
-    });
-    initialProcessedHtml = html;
-    initialHasForms = hasForms;
-  } catch (error) {
-    console.error("Server-side page HTML processing failed:", error);
+  if (page?.html) {
+    try {
+      const serverBaseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : `http://localhost:3000`);
+
+      const { html, hasForms } = await processPublicPageHtml(page.html, {
+        breadcrumbItems: [],
+        breadcrumbSettings,
+        baseUrl: serverBaseUrl,
+        context: { isHome: true, is404: false, isSearch: false },
+      });
+      initialProcessedHtml = html;
+      initialHasForms = hasForms;
+    } catch (error) {
+      console.error("Server-side page HTML processing failed:", error);
+    }
   }
-}
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <HomeClient 
-        initialProcessedHtml={initialProcessedHtml} initialHasForms={initialHasForms}/>
+      <HomeClient
+        initialProcessedHtml={initialProcessedHtml}
+        initialHasForms={initialHasForms}
+      />
     </HydrationBoundary>
   );
 }

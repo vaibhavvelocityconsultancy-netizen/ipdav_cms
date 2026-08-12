@@ -22,8 +22,8 @@ export async function generateMetadata({
   try {
     const result = await fetchers.publicPageBySlug(slug);
     const page = result?.data;
-    const seo = page.seoData || {};
-    const title = seo.metaTitle || page.title;
+    const seo = page?.seoData || {};
+    const title = seo.metaTitle || page?.title;
     const description = seo.metaDescription || undefined;
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
@@ -120,11 +120,18 @@ export default async function Page({
     let initialHasForms = false;
 
     try {
+      const serverBaseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : `http://localhost:3000`);
+
       const { html, hasForms } = await processPublicPageHtml(page.html, {
         breadcrumbItems: [
           { label: page.title || "Page", href: `/${page.slug ?? ""}` },
         ],
         breadcrumbSettings,
+        baseUrl: serverBaseUrl,
         context: { isHome: false, is404: false, isSearch: false },
       });
       initialProcessedHtml = html;
