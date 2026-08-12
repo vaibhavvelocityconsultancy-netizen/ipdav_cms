@@ -7,7 +7,7 @@ export default function TailwindRuntime() {
     <Script
       id="tailwind-runtime"
       src="https://cdn.tailwindcss.com"
-      strategy="beforeInteractive"
+      strategy="afterInteractive"
     />
   );
 }
