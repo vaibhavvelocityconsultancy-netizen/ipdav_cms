@@ -39,9 +39,7 @@ export async function generateMetadata({
     return {
       title,
       description,
-      alternates: {
-        canonical,
-      },
+      alternates: { canonical },
       robots: {
         index: seo.robotsIndex ?? true,
         follow: seo.robotsFollow ?? true,
@@ -95,7 +93,6 @@ export default async function Page({
     const page = pageResult?.data;
 
     if (!pageResult?.success || !pageResult?.data) {
-      // Log 404 here, before calling notFound()
       try {
         await log404Error(`/public/${slug}`, undefined, "");
       } catch (error) {
@@ -103,13 +100,14 @@ export default async function Page({
       }
       notFound();
     }
+
     const seoData = page.seoData || {};
 
     if (seoData.redirectEnabled && seoData.redirectUrl) {
       redirect(seoData.redirectUrl);
     }
 
-    // ── NEW: process page HTML server-side ──
+    // ── process page HTML server-side ──
     const bootstrapData = queryClient.getQueryData<any>([
       "public",
       "bootstrap",
@@ -143,7 +141,6 @@ export default async function Page({
     return (
       <>
         {/* <SchemaRenderer seoData={seoData} /> */}
-
         <HydrationBoundary state={dehydrate(queryClient)}>
           <SlugClient
             initialProcessedHtml={initialProcessedHtml}
@@ -153,6 +150,6 @@ export default async function Page({
       </>
     );
   } catch (error) {
-    notFound(); // Show 404 instead of crashing
+    notFound();
   }
 }

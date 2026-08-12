@@ -11,10 +11,8 @@ import { processPublicPageHtml } from "@/src/lib/public-page-html";
 export default async function Page() {
   const queryClient = new QueryClient();
 
-  // Attempt to prefetch queries with timeout to prevent build hanging
-  // If queries fail or timeout, render without hydration (client will fetch)
   try {
-    const timeoutMs = 5000; // 5-second timeout per query
+    const timeoutMs = 5000;
     await Promise.allSettled([
       Promise.race([
         queryClient.prefetchQuery({
@@ -61,11 +59,9 @@ export default async function Page() {
       ]),
     ]);
   } catch (error) {
-    // Silently fail during build; client will fetch on hydration
     console.error("Prefetch failed (expected during build):", error);
   }
 
-  // after your existing prefetch block, add:
   const bootstrapData = queryClient.getQueryData<any>(["public", "bootstrap"]);
   const homepage = bootstrapData?.data?.homepage;
   const page = homepage?.type === "page" ? homepage?.page : null;
@@ -94,6 +90,7 @@ export default async function Page() {
       console.error("Server-side page HTML processing failed:", error);
     }
   }
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <HomeClient
