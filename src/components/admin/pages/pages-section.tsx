@@ -408,7 +408,7 @@ export function PagesSection() {
       cell: (page) => (
         <button
           onClick={() => {
-            window.open(`newweb/${page.slug}`, "_blank");
+            window.open(`${process.env.NEXT_PUBLIC_SITE_URL}/${page.slug}`, "_blank");
           }}
           className="text-xs font-mono text-primary hover:underline cursor-pointer"
         >
@@ -416,7 +416,7 @@ export function PagesSection() {
         </button>
       ),
     },
-    {
+    { 
       key: "status",
       header: "Status",
       filterable: true,

@@ -96,7 +96,7 @@ export function PostEditorHeader({
         ) : (
           <>
             <a
-              href={`/posts/${post.slug}`}
+              href={`${appUrl("/posts/")}${post.slug}/`}
               target="_blank"
               className="text-primary hover:underline"
             >

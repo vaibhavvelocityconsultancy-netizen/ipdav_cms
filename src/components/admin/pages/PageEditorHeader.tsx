@@ -102,7 +102,7 @@ export function PageEditorHeader({
             <div className="flex items-center gap-2">
               <span className="text-primary">
                 {typeof window !== "undefined"
-                  ? `${window.location.origin}/`
+                  ? `${process.env.NEXT_PUBLIC_SITE_URL}/`
                   : "/"}
               </span>
               <input
@@ -136,7 +136,7 @@ export function PageEditorHeader({
                 className="text-primary hover:underline"
               >
                 {typeof window !== "undefined"
-                  ? `${window.location.origin}/`
+                  ? `${process.env.NEXT_PUBLIC_SITE_URL}/`
                   : "/"}
                 <span className="font-medium">{page.slug}</span>/
               </a>
