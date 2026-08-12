@@ -229,7 +229,7 @@ export default function PricingPlansPage() {
               </div>
 
               {pricingForm && (
-                <div className="mt-24">
+                <div className="price-form">
                   <FormEmbed slug={pricingForm.slug} />
                 </div>
               )}

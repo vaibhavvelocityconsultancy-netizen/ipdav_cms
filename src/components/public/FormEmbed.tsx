@@ -265,11 +265,11 @@ export function FormEmbed({ slug }: { slug: string }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             {/* LEFT SIDE */}
             <div className="space-y-6">
-              <h2 className="custom-font text-5xl lg:text-6xl font-serif font-normal leading-tight text-[#0B3154]">
+              <h2 className="form-heading text-[#0B3154]">
                 {twoColumnHeading}
               </h2>
               {twoColumnParagraph && (
-                <p className="max-w-xl text-lg leading-8 text-slate-600">
+                <p className="form-paragraph text-[#0B3154]">
                   {twoColumnParagraph}
                 </p>
               )}
