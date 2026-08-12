@@ -73,10 +73,12 @@ export default async function Page() {
   if (page?.html) {
     try {
       const serverBaseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : `http://localhost:3000`);
+        process.env.NEXT_PUBLIC_SITE_URL || `http://localhost:3000`;
+
+      console.log("DEBUG serverBaseUrl:", serverBaseUrl);
+
+      // temporarily add in page.tsx, right where serverBaseUrl is set
+      console.log("DEBUG serverBaseUrl:", serverBaseUrl);
 
       const { html, hasForms } = await processPublicPageHtml(page.html, {
         breadcrumbItems: [],
