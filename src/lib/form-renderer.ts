@@ -120,7 +120,7 @@ export async function fetchFormsBySlug(
     slugs.map(async (slug) => {
       try {
         const res = await fetch(
-          `${baseUrl}${apiPath(`/api/form/slug/${slug}`)}`,
+          `${baseUrl}/api/form/slug/${slug}`,   // ← use baseUrl directly, no apiPath()
           {
             cache: "no-store",
           },
@@ -532,6 +532,9 @@ export async function injectForms(
   baseUrl = "",
 ): Promise<{ html: string; hasForms: boolean }> {
   const slugs = resolveFormSlugs(html);
+   console.log("DEBUG detected slugs:", slugs);
+  console.log("DEBUG html length:", html.length);
+  console.log("DEBUG html snippet:", html.substring(0, 500));
 
   if (slugs.length === 0) return { html, hasForms: false };
 
