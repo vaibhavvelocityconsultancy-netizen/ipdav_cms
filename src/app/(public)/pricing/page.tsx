@@ -185,10 +185,6 @@ export default function PricingPlansPage() {
                           {plan.tagline}
                         </p>
 
-                        <p className="pricing-card-description mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
-                          {plan.description}
-                        </p>
-
                         <div className="pricing-card-price-wrapper mb-6 flex items-baseline gap-2">
                           <span className="pricing-card-price">
                             {formatUSD(price)}
@@ -197,6 +193,10 @@ export default function PricingPlansPage() {
                             / {label}
                           </span>
                         </div>
+                        <p className="pricing-card-description mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
+                          {plan.description}
+                        </p>
+
 
                         <button
                           onClick={() =>

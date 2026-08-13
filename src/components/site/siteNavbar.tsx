@@ -8,6 +8,7 @@
   import { queryKeys } from "@/src/lib/query-key";
   import { fetchers } from "@/src/lib/fetchers";
   import { useCurrentUser } from "@/src/hooks/use-current-user";
+import { appUrl } from "@/src/lib/base-path";
 
   type SiteSettings = {
     logo?: string;
@@ -184,7 +185,7 @@
 
       setIsSearchOpen(false);
       setIsMobileMenuOpen(false);
-      window.location.assign(`/search?q=${encodeURIComponent(query)}`);
+      window.location.assign(`${appUrl}/search?q=${encodeURIComponent(query)}`);
     };
 
     const closeMobileMenu = () => {
