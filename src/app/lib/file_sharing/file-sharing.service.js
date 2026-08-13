@@ -8,6 +8,7 @@ import { sendTriggerEmails } from "../email";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
 import { requireActiveSubscription } from "../utils/subscription-access";
+export { resolveFileDownloadUrl } from "../utils/fileDownloadUrl";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -59,9 +60,7 @@ function generateSafeFileName(originalName) {
   const ext = path.extname(originalName);
   const baseName = path.basename(originalName, ext);
 
-  const safeBaseName = baseName
-    .toLowerCase()
-    .replace(/[^a-z0-9.-]+/g, "-");
+  const safeBaseName = baseName.toLowerCase().replace(/[^a-z0-9.-]+/g, "-");
 
   const uniqueSuffix = crypto.randomBytes(6).toString("hex");
 

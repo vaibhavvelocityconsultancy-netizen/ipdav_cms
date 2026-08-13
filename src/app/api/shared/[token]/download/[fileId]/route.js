@@ -1,4 +1,5 @@
 import { markFileDownloaded } from "@/src/app/lib/file_sharing/file-sharing.service";
+import { resolveFileDownloadUrl } from "@/src/app/lib/utils/fileDownloadUrl";
 import { prisma } from "@/src/app/lib/prisma";
 import { ApiError } from "@/src/app/lib/utils/ApiError";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
@@ -28,7 +29,11 @@ export const GET = asyncHandler(async (req, { params }) => {
   await markFileDownloaded(token, fileId);
 
   const file = share.files[0].file;
-  const res = await fetch(file.url);
+  const fileUrl = resolveFileDownloadUrl(
+    file.url,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  );
+  const res = await fetch(fileUrl);
   const blob = await res.arrayBuffer();
 
   return new Response(blob, {
