@@ -1,15 +1,17 @@
 // app/search/page.jsx
 import Link from "next/link";
+import { getBaseUrl } from "@/src/lib/config";
 
 async function getResults(query) {
+  const baseUrl = getBaseUrl();
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_SITE_URL}/api/search?q=${encodeURIComponent(query)}`,
-    { cache: "no-store" }
+    `${baseUrl}/api/search?q=${encodeURIComponent(query)}`,
+    { cache: "no-store" },
   );
 
   if (!res.ok) return [];
   const json = await res.json();
-  return json.data ?? [];      // ← FIXED: was json.results
+  return json.data ?? []; // ← FIXED: was json.results
 }
 
 export default async function SearchPage({
