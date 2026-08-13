@@ -1,12 +1,15 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { authApi } from "@/src/lib/auth";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 
 export default function SiteNavbar({ settings, user, onToggleSidebar }: any) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
@@ -17,6 +20,17 @@ export default function SiteNavbar({ settings, user, onToggleSidebar }: any) {
         queryFn: () => fetchers.publicPageBySlug(slug),
         staleTime: 0,
       });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      queryClient.clear();
+      setIsUserDropdownOpen(false);
+      router.replace("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
     }
   };
 
@@ -108,10 +122,7 @@ export default function SiteNavbar({ settings, user, onToggleSidebar }: any) {
 
                   <hr className="my-1 border-gray-100" />
                   <button
-                    onClick={() => {
-                      // Handle logout
-                      setIsUserDropdownOpen(false);
-                    }}
+                    onClick={handleLogout}
                     className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
                     Logout

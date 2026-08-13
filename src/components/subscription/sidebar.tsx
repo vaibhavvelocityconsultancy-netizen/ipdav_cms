@@ -2,6 +2,7 @@ import { BookOpen, Home, LogOut, Plane, Receipt, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { AccessData } from "@/src/app/subscription/util";
+import { getBaseUrl } from "@/src/lib/config";
 
 /**
  * ═════════════════════════════════════════════════════════════════════
@@ -76,7 +77,7 @@ export function SubscriberSidebar({
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      await fetch(`${getBaseUrl()}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
