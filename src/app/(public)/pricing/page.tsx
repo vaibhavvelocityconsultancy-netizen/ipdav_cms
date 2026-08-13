@@ -19,6 +19,7 @@ interface Plan {
   allowMonthly: boolean;
   allowYearly: boolean;
   isFeatured: boolean;
+  tagline: string;
   features: Feature[];
 }
 
@@ -133,6 +134,7 @@ export default function PricingPlansPage() {
               <h1 className="price-title text-5xl font-bold text-white lg:text-7xl">
                 Pricing
               </h1>
+              
               <div className="mt-6 flex justify-center">
                 <nav className="breadcrumb" aria-label="breadcrumb">
                   <ol className="breadcrumb-list flex items-center flex-wrap text-sm">
@@ -178,6 +180,10 @@ export default function PricingPlansPage() {
                         <h3 className="pricing-card-title mb-3 text-slate-900 group-hover:text-white transition-colors duration-300">
                           {plan.title}
                         </h3>
+
+                        <p className="pricing-card-tagline mb-3 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
+                          {plan.tagline}
+                        </p>
 
                         <p className="pricing-card-description mb-6 text-slate-600 group-hover:text-slate-300 transition-colors duration-300">
                           {plan.description}
