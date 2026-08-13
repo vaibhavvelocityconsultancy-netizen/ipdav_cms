@@ -135,7 +135,7 @@ export default function PricingPlansPage() {
                 Pricing
               </h1>
               
-              <div className="mt-6 flex justify-center">
+              <div className=" flex justify-center">
                 <nav className="breadcrumb" aria-label="breadcrumb">
                   <ol className="breadcrumb-list flex items-center flex-wrap text-sm">
                     <li className="flex items-center">
