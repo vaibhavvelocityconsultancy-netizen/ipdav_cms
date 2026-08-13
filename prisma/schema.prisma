@@ -474,6 +474,7 @@ model page {
   seoData           Json?
   sitemapEnabled    Boolean @default(true)
   componentSettings Json?
+  searchText        String? @db.Text
 
   sitemapPriority   Decimal                @default(0.8) @db.Decimal(2, 1)
   sitemapChangeFreq sitemapChangeFrequency @default(WEEKLY)
@@ -513,6 +514,8 @@ model post {
   authorId      Int?
   seoData       Json?
   publishedAt   DateTime?
+
+  searchText String? @db.Text
 
   sitemapEnabled Boolean @default(true)
 
@@ -689,11 +692,11 @@ model menuitem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model form {
-  id                  Int      @id @default(autoincrement())
-  title               String
-  slug                String
-  fields              Json
-  
+  id     Int    @id @default(autoincrement())
+  title  String
+  slug   String
+  fields Json
+
   submitButtonLabel   String?  @default("Submit")
   confirmationType    String   @default("message")
   confirmationMessage String?  @db.Text

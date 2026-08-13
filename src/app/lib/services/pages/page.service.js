@@ -131,6 +131,8 @@ export async function createPage(input) {
 
   const arbitraryCss = generateArbitraryCss(pageHtml ?? "");
   const mergedCss = mergePageCss(cleanInput.css ?? "", arbitraryCss);
+  const searchText = extractSearchableText(pageHtml ?? "");   // ← ADD
+
 
   const createdPage = await prisma.page.create({
     data: {
@@ -139,6 +141,7 @@ export async function createPage(input) {
       html: pageHtml,
       css: mergedCss, // ← was: cleanInput.css ?? ""
       js: cleanInput.js ?? "",
+      searchText, // ← ADD
       seoData: cleanInput.seoData ?? null,
       componentSettings: cleanInput.componentSettings ?? null,
       status:
@@ -206,6 +209,7 @@ export async function updatePage(id, input) {
       .replace(/\/\* ── auto-generated arbitrary classes ── \*\/[\s\S]*/g, "")
       .trim();
     cleanInput.css = mergePageCss(userCss, arbitraryCss);
+    cleanInput.searchText = extractSearchableText(cleanInput.html ?? "");
   }
 
   if (cleanInput.status) {

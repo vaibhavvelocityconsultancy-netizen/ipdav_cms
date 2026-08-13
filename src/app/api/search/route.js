@@ -1,28 +1,17 @@
-// import { searchContent }
-//   from "@/lib/services/search.service.js";
+// app/api/search/route.js
+// import { NextResponse } from "next/server";
+// import { searchPublishedContent } from "@/src/app/lib/services/search.service.js";
 
-import { searchContext } from "../../lib/services/settings/search.service";
+import { searchPublishedContent } from "../../lib/services/common_urls/search.service";
+import { ApiResponse } from "../../lib/utils/ApiResponse";
 
-export async function GET(req) {
-  try {
-    const { searchParams } = new URL(req.url);
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q");
 
-    const query = searchParams.get("q");
+  const results = await searchPublishedContent(query);
 
-    const results = await searchContext(query);
-
-    return Response.json(results);
-  } catch (error) {
-    console.error(error);
-
-    return Response.json(
-      {
-        success: false,
-        message: "Search failed",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
+  return Response.json(
+    new ApiResponse(200, results, "Search results retrieved successfully"),
+  );
 }
