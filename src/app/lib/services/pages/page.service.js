@@ -6,6 +6,7 @@ import {
 } from "../../tailwind-arbitrary-css";
 import { normalizeURL } from "../../utils/redirectUtils";
 import { requireAuth, requirePermission } from "../../withPermission.js";
+import { extractSearchableText } from "../../search/extractText.js";
 import { clearSitemapCache } from "../seo/sitemap.service.js";
 import { processImageSeo } from "../seo/image-seo.service.js";
 import { clearRedirectCache } from "../../../../lib/redirectMiddleware";
@@ -131,8 +132,7 @@ export async function createPage(input) {
 
   const arbitraryCss = generateArbitraryCss(pageHtml ?? "");
   const mergedCss = mergePageCss(cleanInput.css ?? "", arbitraryCss);
-  const searchText = extractSearchableText(pageHtml ?? "");   // ← ADD
-
+  const searchText = extractSearchableText(pageHtml ?? ""); // ← ADD
 
   const createdPage = await prisma.page.create({
     data: {
