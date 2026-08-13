@@ -129,7 +129,7 @@ export default function PricingPlansPage() {
         </div>
       ) : (
         <>
-          <section className="price-section w-full bg-[#0B0F1A] py-20">
+          <section className="price-section w-full bg-[#142438] py-20">
             <div className="mx-auto max-w-7xl px-6 text-center">
               <h1 className="price-title text-5xl font-bold text-white lg:text-7xl">
                 Pricing

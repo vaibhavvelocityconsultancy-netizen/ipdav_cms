@@ -1,18 +1,7 @@
 // app/search/page.jsx
 import Link from "next/link";
-import { getBaseUrl } from "@/src/lib/config";
-
-async function getResults(query) {
-  const baseUrl = getBaseUrl();
-  const res = await fetch(
-    `${baseUrl}/api/search?q=${encodeURIComponent(query)}`,
-    { cache: "no-store" },
-  );
-
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json.data ?? []; // ← FIXED: was json.results
-}
+import { searchPublishedContent } from "../../lib/services/common_urls/search.service";
+// import { searchPublishedContent } from "@/src/app/lib/services/search.service.js";
 
 export default async function SearchPage({
   searchParams,
@@ -21,7 +10,7 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const query = params?.q?.trim() || "";
-  const results = query ? await getResults(query) : [];
+  const results = query ? await searchPublishedContent(query) : [];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
