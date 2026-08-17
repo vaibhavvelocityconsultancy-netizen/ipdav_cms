@@ -10,8 +10,10 @@ type Payment = {
   status: "PENDING" | "SUCCESS" | "FAILED";
   billingCycle: string;
   createdAt: string;
-  paypalOrderId: string;
+  paypalOrderId: string | null;
+  paypalSubscriptionId?: string | null;
   paypalCaptureId: string | null;
+  orderReference?: string | null;
   plan: {
     id: number;
     name?: string;
@@ -219,7 +221,9 @@ export default function BillingPage() {
                           {payment.billingCycle.toLowerCase()}
                         </td>
                         <td className="py-3 px-2 text-muted-foreground font-mono text-xs">
-                          {payment.paypalOrderId?.slice(0, 16)}...
+                          {payment.orderReference
+                            ? `${payment.orderReference.slice(0, 16)}...`
+                            : "—"}
                         </td>
                         <td className="py-3 px-2 text-right font-semibold">
                           {formatUSD(payment.amount)}

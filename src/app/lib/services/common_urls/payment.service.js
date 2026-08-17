@@ -2,6 +2,7 @@ import paypal from "@paypal/checkout-server-sdk";
 import { prisma } from "../../prisma";
 import { ApiError } from "../../utils/ApiError";
 import { sendTriggerEmails } from "../../email";
+import { getPaymentOrderReference } from "./payment-reference.js";
 
 const TRIGGER_BY_TYPE = {
   PLAN: "ORDER_PLACED",
@@ -120,7 +121,7 @@ export async function capturePayment(orderId) {
     await prisma.payment.updateMany({
       where: { paypalOrderId: orderId },
       data: {
-        status: "SUCCESS",       // your Prisma enum value
+        status: "SUCCESS", // your Prisma enum value
         paypalCaptureId: captureId,
       },
     });
@@ -131,10 +132,7 @@ export async function capturePayment(orderId) {
 
     console.error("PayPal Capture Error:", err);
 
-    throw new ApiError(
-      400,
-      err?.message || "PayPal payment failed"
-    );
+    throw new ApiError(400, err?.message || "PayPal payment failed");
   }
 }
 async function sendPaymentSuccessEmail(payment) {
@@ -153,9 +151,14 @@ async function sendPaymentSuccessEmail(payment) {
 }
 
 export async function getPaymentHistory(userId) {
-  return prisma.payment.findMany({
+  const payments = await prisma.payment.findMany({
     where: { userId: Number(userId) },
     include: { plan: true },
     orderBy: { createdAt: "desc" },
   });
+
+  return payments.map((payment) => ({
+    ...payment,
+    orderReference: getPaymentOrderReference(payment),
+  }));
 }
