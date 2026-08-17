@@ -139,10 +139,27 @@ async function validateRule(input, tenantId, excludeId = null) {
       if (!course) throw new Error("Destination course not found");
       break;
     }
-    case "post":
-    case "category":
-    case "tag":
+    case "post": {
+      const post = await prisma.post.findFirst({
+        where: { id: String(input.destinationId), tenantId },
+      });
+      if (!post) throw new Error("Destination post not found");
       break;
+    }
+    case "category": {
+      const category = await prisma.category.findFirst({
+        where: { id: String(input.destinationId), tenantId },
+      });
+      if (!category) throw new Error("Destination category not found");
+      break;
+    }
+    case "tag": {
+      const tag = await prisma.tag.findFirst({
+        where: { id: String(input.destinationId), tenantId },
+      });
+      if (!tag) throw new Error("Destination tag not found");
+      break;
+    }
     case "custom":
       break;
   }
@@ -199,6 +216,19 @@ async function createRedirectForRule(tenantId, rule) {
   if (!destinationUrl || destinationUrl === "#") return;
   if (!sourceUrl || sourceUrl === destinationUrl) return;
 
+  // Safety check: don't hijack a URL that belongs to a real, live page/post
+  const collidesWithLivePage = await urlBelongsToLiveContent(
+    sourceUrl,
+    tenantId,
+  );
+  if (collidesWithLivePage) {
+    console.warn(
+      `Skipped auto-redirect for keyword "${rule.keyword}" — ` +
+        `"${sourceUrl}" matches an existing live page/post URL.`,
+    );
+    return;
+  }
+
   try {
     await prisma.redirect.create({
       data: {
@@ -217,6 +247,24 @@ async function createRedirectForRule(tenantId, rule) {
   }
 }
 
+// New helper — checks if a URL path matches a real, live page or post
+async function urlBelongsToLiveContent(url, tenantId) {
+  const cleanPath = url.replace(/^\//, "").split("?")[0];
+  if (!cleanPath) return false;
+
+  const [page, post] = await Promise.all([
+    prisma.page.findFirst({
+      where: { tenantId, slug: cleanPath, status: "PUBLISHED" },
+      select: { id: true },
+    }),
+    prisma.post.findFirst({
+      where: { tenantId, slug: cleanPath, status: "PUBLISHED" },
+      select: { id: true },
+    }),
+  ]);
+
+  return Boolean(page || post);
+}
 // ─── CRUD ─────────────────────────────────────────────────
 
 export async function getInternalLinkRules() {
@@ -611,10 +659,13 @@ export async function suggestInternalLinkTargetsWithPhrases(
     .filter((c) => c.destTitle)
     .map((c) => {
       const phrases = extractPhraseOccurrences(sourceText, c.destTitle);
+
+      // Use the actual matched phrase text, not destTitle again
+      const bestMatchPhrase = phrases.length > 0 ? phrases[0].phrase : "";
       const relevanceScore = scoreRelevance(
         sourceTitle,
         c.destTitle,
-        c.destTitle,
+        bestMatchPhrase,
       );
 
       return {
@@ -633,12 +684,11 @@ export async function suggestInternalLinkTargetsWithPhrases(
         linked: existingKeywords.has(c.destTitle.toLowerCase()),
       };
     })
-    .filter((s) => s.phrases.length > 0) // Only include if found in text
+    .filter((s) => s.phrases.length > 0)
     .sort((a, b) => {
       if (a.linked !== b.linked) return a.linked ? 1 : -1;
-      return b.relevanceScore - a.relevanceScore; // Higher relevance first
+      return b.relevanceScore - a.relevanceScore;
     });
-
   return suggestions;
 }
 
