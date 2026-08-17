@@ -76,31 +76,98 @@ export async function createMedia(input) {
     let width = null;
     let height = null;
 
-    if (file.type.startsWith("image/") && file.type !== "image/svg+xml") {
+    let finalBuffer = buffer;
+    let finalFileName = generateSafeFileName(file.name);
+    let finalMimeType = file.type;
+
+    // ─────────────────────────────────────────
+    // OPTIMIZE IMAGES
+    // ─────────────────────────────────────────
+    if (
+      file.type === "image/jpeg" ||
+      file.type === "image/png" ||
+      file.type === "image/webp"
+    ) {
       const metadata = await sharp(buffer).metadata();
+
       width = metadata.width ?? null;
       height = metadata.height ?? null;
+
+      // Generate optimized WebP
+      finalBuffer = await sharp(buffer)
+        .webp({
+          quality: 80,
+        })
+        .toBuffer();
+
+      // Change extension to .webp
+      const originalBaseName = path.basename(
+        file.name,
+        path.extname(file.name),
+      );
+
+      const safeBaseName = originalBaseName
+        .replace(/[^a-zA-Z0-9-_]/g, "-")
+        .toLowerCase();
+
+      finalFileName = `${safeBaseName}-${crypto
+        .randomBytes(6)
+        .toString("hex")}.webp`;
+
+      finalMimeType = "image/webp";
+    } else if (file.type.startsWith("image/")) {
+      // SVG / GIF
+      const metadata = await sharp(buffer)
+        .metadata()
+        .catch(() => null);
+
+      width = metadata?.width ?? null;
+      height = metadata?.height ?? null;
     }
 
-    const fileName = generateSafeFileName(file.name);
-    const filePath = path.join(tenantDir, fileName);
+    // ─────────────────────────────────────────
+    // SAVE FILE
+    // ─────────────────────────────────────────
 
-    await fs.writeFile(filePath, buffer);
+    const filePath = path.join(tenantDir, finalFileName);
 
-    const publicUrl = getTenantFileUrl(tenantId, fileName);
+    await fs.writeFile(filePath, finalBuffer);
+
+    // ─────────────────────────────────────────
+    // PUBLIC URL
+    // ─────────────────────────────────────────
+
+    const publicUrl = getTenantFileUrl(tenantId, finalFileName);
+
     const generatedTitle = generateTitleFromFilename(file.name);
+
+    // ─────────────────────────────────────────
+    // SAVE DATABASE RECORD
+    // ─────────────────────────────────────────
 
     const media = await prisma.media.create({
       data: {
-        fileName,
+        fileName: finalFileName,
+
+        // Keep the user's original filename
         originalName: file.name,
+
+        // Public URL now points to optimized WebP
         url: publicUrl,
-        publicId: fileName,
-        mimeType: file.type,
-        size: file.size,
+
+        publicId: finalFileName,
+
+        // Store the actual served format
+        mimeType: finalMimeType,
+
+        // Store optimized file size
+        size: finalBuffer.length,
+
         width,
         height,
+
         title: generatedTitle,
+
         tenantId,
       },
     });
