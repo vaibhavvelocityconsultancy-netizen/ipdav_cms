@@ -407,7 +407,7 @@ export default function SitemapSettingsPage() {
             { id: "includePosts", label: "Posts", icon: FileArchive },
             { id: "includeCategories", label: "Categories", icon: Layers },
             { id: "includeTags", label: "Tags", icon: Globe },
-            { id: "includeCourses", label: "Courses", icon: FileText },
+            // { id: "includeCourses", label: "Courses", icon: FileText },
           ].map(({ id, label, icon: Icon }) => (
             <div key={id} className="flex items-center space-x-2">
               <Checkbox
