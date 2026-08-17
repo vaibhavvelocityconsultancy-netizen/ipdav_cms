@@ -1,6 +1,6 @@
 import "@/src/lib/fetch-patch"; // must be first import — patches fetch before anything else runs
 import type { Metadata } from "next";
-import { Space_Mono } from "next/font/google";
+import { Inter, Space_Mono } from "next/font/google";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster as AppToaster } from "@/src/ui/toaster";
 import "../../styles/globals.css";
@@ -8,6 +8,12 @@ import QueryProvider from "../provider/QueryProvider";
 import { fetchers } from "@/src/lib/fetchers";
 
 export const revalidate = 0;
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
@@ -51,7 +57,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={spaceMono.variable}>
+      <body className={`${inter.variable} ${spaceMono.variable}`}>
         <QueryProvider>
           {children}
           <AppToaster />
