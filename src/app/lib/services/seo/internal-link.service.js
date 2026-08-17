@@ -65,7 +65,7 @@ function extractSnippet(text, matchStart, matchEnd) {
   const snippetEnd = Math.min(text.length, matchEnd + contextLength);
 
   let snippet = text.substring(snippetStart, snippetEnd).trim();
-  
+
   // Add ellipsis if we trimmed
   if (snippetStart > 0) snippet = "..." + snippet;
   if (snippetEnd < text.length) snippet = snippet + "...";
@@ -395,6 +395,7 @@ export async function processInternalLinks(html, tenantId) {
     )
   )
     .filter((rule) => isSafeUrl(rule.resolvedUrl) || rule.resolvedUrl === "#")
+    // Longer keywords win first, then higher priority
     .sort(
       (a, b) => b.keyword.length - a.keyword.length || b.priority - a.priority,
     );
@@ -414,55 +415,102 @@ export async function processInternalLinks(html, tenantId) {
       const insideHeading = $parent.closest(HEADING_SELECTOR).length > 0;
       const insideAnchor = $parent.closest("a").length > 0;
 
-      let text = $(this).text();
-      let changed = false;
+      const text = $(this).text();
+      if (!text.trim()) return;
+
+      // Step 1: Collect ALL candidate matches from ALL rules,
+      // always scanning the ORIGINAL plain text (never modified text)
+      const candidates = [];
 
       for (const rule of resolvedRules) {
         if (rule.ignoreHeadings && insideHeading) continue;
         if (rule.ignoreExistingLinks && insideAnchor) continue;
-
-        const already = linkCounts.get(rule.id) ?? 0;
-        if (already >= rule.maxLinksPerPage) continue;
-        if (rule.firstOccurrenceOnly && already >= 1) continue;
 
         const re = buildKeywordRegex(rule.keyword, {
           wholeWordOnly: rule.wholeWordOnly,
           caseSensitive: rule.caseSensitive,
         });
 
+        let match;
+        while ((match = re.exec(text)) !== null) {
+          candidates.push({
+            rule,
+            start: match.index,
+            end: match.index + match[0].length,
+            matchText: match[0],
+          });
+          // Prevent infinite loop on zero-length matches
+          if (match[0].length === 0) re.lastIndex++;
+        }
+      }
+
+      if (!candidates.length) return;
+
+      // Step 2: Sort candidates by rule priority order (already reflected
+      // in resolvedRules order), then by position in text.
+      // Since resolvedRules is sorted longest-keyword-first, we sort
+      // candidates the same way so longer/higher-priority matches claim
+      // their range before shorter ones can steal part of it.
+      const ruleRank = new Map(resolvedRules.map((r, i) => [r.id, i]));
+      candidates.sort((a, b) => {
+        const rankDiff = ruleRank.get(a.rule.id) - ruleRank.get(b.rule.id);
+        if (rankDiff !== 0) return rankDiff;
+        return a.start - b.start;
+      });
+
+      // Step 3: Walk candidates, accept non-overlapping ones only,
+      // respecting maxLinksPerPage / firstOccurrenceOnly per rule.
+      const accepted = [];
+      const takenRanges = []; // [start, end] pairs already claimed
+
+      const overlaps = (start, end) =>
+        takenRanges.some((r) => start < r[1] && end > r[0]);
+
+      for (const c of candidates) {
+        if (overlaps(c.start, c.end)) continue;
+
+        const already = linkCounts.get(c.rule.id) ?? 0;
+        if (already >= c.rule.maxLinksPerPage) continue;
+        if (c.rule.firstOccurrenceOnly && already >= 1) continue;
+
+        linkCounts.set(c.rule.id, already + 1);
+        takenRanges.push([c.start, c.end]);
+        accepted.push(c);
+      }
+
+      if (!accepted.length) return;
+
+      // Step 4: Build the final string in ONE pass, left to right,
+      // over the ORIGINAL text — so no rule ever scans HTML.
+      accepted.sort((a, b) => a.start - b.start);
+
+      let result = "";
+      let cursor = 0;
+
+      for (const c of accepted) {
+        result += text.slice(cursor, c.start);
+
         const attrs = [
-          `href="${rule.resolvedUrl}"`,
+          `href="${c.rule.resolvedUrl}"`,
           `class="auto-internal-link"`,
           `rel="internal"`,
-          rule.linkTitle
-            ? `title="${rule.linkTitle.replace(/"/g, "&quot;")}"`
+          c.rule.linkTitle
+            ? `title="${c.rule.linkTitle.replace(/"/g, "&quot;")}"`
             : null,
-          rule.openInNewTab
+          c.rule.openInNewTab
             ? `target="_blank" rel="internal noopener noreferrer"`
             : null,
         ]
           .filter(Boolean)
           .join(" ");
 
-        text = text.replace(re, (matchText, offset) => {
-          const count = linkCounts.get(rule.id) ?? 0;
-          if (count >= rule.maxLinksPerPage) return matchText;
-          if (rule.firstOccurrenceOnly && count >= 1) return matchText;
-          if (
-            isInsideMarkdownLinkLabel(text, offset, offset + matchText.length)
-          ) {
-            return matchText;
-          }
-
-          linkCounts.set(rule.id, count + 1);
-          changed = true;
-          return `<a ${attrs}>${matchText}</a>`;
-        });
+        result += `<a ${attrs}>${c.matchText}</a>`;
+        cursor = c.end;
       }
 
-      if (changed) {
-        $(this).replaceWith($.parseHTML(text));
-      }
+      result += text.slice(cursor);
+
+      $(this).replaceWith($.parseHTML(result));
     });
 
   return $.html();
@@ -494,7 +542,7 @@ function extractPhraseOccurrences(text, keyword) {
 export async function suggestInternalLinkTargetsWithPhrases(
   sourceType,
   sourceId,
-  sourceTitle
+  sourceTitle,
 ) {
   const { session } = await requirePermission("seo_manage");
   const tenantId = session.user.tenantId;
@@ -563,7 +611,11 @@ export async function suggestInternalLinkTargetsWithPhrases(
     .filter((c) => c.destTitle)
     .map((c) => {
       const phrases = extractPhraseOccurrences(sourceText, c.destTitle);
-      const relevanceScore = scoreRelevance(sourceTitle, c.destTitle, c.destTitle);
+      const relevanceScore = scoreRelevance(
+        sourceTitle,
+        c.destTitle,
+        c.destTitle,
+      );
 
       return {
         keyword: c.destTitle,
