@@ -449,7 +449,7 @@ Sitemap: ${siteUrl}/sitemap.xml
   };
 
   const handleOpenLive = () => {
-    window.open("/robots.txt", "_blank");
+    window.open(appUrl("/robots.txt"), "_blank");
   };
 
   const formatDate = (dateString: string | null) => {
