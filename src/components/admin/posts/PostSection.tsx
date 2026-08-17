@@ -9,6 +9,7 @@ import { Button } from "@/src/ui/button";
 import { PostEditor } from "./PostEditor";
 import { toast } from "@/src/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { appUrl } from "@/src/lib/base-path";
 
 export function PostsSection() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -224,7 +225,7 @@ export function PostsSection() {
       cell: (row) => (
         <div className="relative group w-[280px]">
           <button
-            onClick={() => window.open(`newweb/posts/${row.slug}`, "_blank")}
+            onClick={() => window.open(`${appUrl}/posts/${row.slug}`, "_blank")}
             className="block w-full overflow-hidden whitespace-nowrap text-ellipsis text-left font-mono text-xs text-primary hover:underline"
           >
             /posts/{row.slug}
