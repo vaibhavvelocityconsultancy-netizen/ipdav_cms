@@ -172,6 +172,12 @@ export function PageEditor({
               siteName={process.env.NEXT_PUBLIC_SITE_NAME || "Your Site"} // ADD THIS
               initialData={(page as PageWithSeo).seoData}
               onChange={handleSeoChange}
+              onSlugChange={(slug) =>
+                onChange({
+                  ...page,
+                  slug,
+                })
+              }
             />
           )}
         </div>

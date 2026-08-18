@@ -103,6 +103,7 @@ interface SeoPanelProps {
   siteName?: string;
   pageNumber?: number;
   onChange?: (data: SeoData) => void;
+  onSlugChange?: (slug: string) => void;
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -133,6 +134,7 @@ const DEFAULT_SEO: SeoData = {
   breadcrumbTitle: "",
   redirectEnabled: false,
   redirectUrl: "",
+
   schemas: [],
   autoAlt: true,
   autoTitle: true,
@@ -996,6 +998,7 @@ export function SeoPanel({
   pageContent = "",
   siteUrl = "https://yoursite.com",
   initialData,
+  onSlugChange,
   pageNumber,
   siteName = "Your Site",
   onChange,
@@ -1009,10 +1012,19 @@ export function SeoPanel({
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">(
     "desktop",
   );
+  const [slug, setSlug] = useState(pageSlug);
+  useEffect(() => {
+    setSlug(pageSlug);
+  }, [pageSlug]);
   const [editingSchemaId, setEditingSchemaId] = useState<string | null>(null);
   const [showAddSchema, setShowAddSchema] = useState(false);
 
   const kwRef = useRef<HTMLInputElement>(null);
+
+  const handleSlugChange = (value: string) => {
+    setSlug(value);
+    onSlugChange?.(value);
+  };
 
   const update = (patch: Partial<SeoData>) =>
     setSeo((prev) => ({ ...prev, ...patch }));
@@ -1041,7 +1053,7 @@ export function SeoPanel({
   const focusKw = seo.focusKeywords[0] ?? "";
 
   const serpTitle = seo.metaTitle || pageTitle || "Page Title";
-  const serpSlug = pageSlug || "page-slug";
+  const serpSlug = slug || "page-slug";
   const serpDesc =
     seo.metaDescription ||
     stripHtml(pageContent).slice(0, 160) ||
@@ -1306,15 +1318,15 @@ export function SeoPanel({
 
               <input
                 type="text"
-                value={pageSlug}
-                onChange={(e) => onChange?.({ ...seo, slug: e.target.value })}
+                value={slug}
+                onChange={(e) => handleSlugChange(e.target.value)}
                 className="flex-1 px-3 py-2 bg-background text-sm outline-none"
               />
             </div>
 
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground break-all">
-                {siteUrl}/{pageSlug}
+                {siteUrl}/{slug}
               </p>
 
               <button
