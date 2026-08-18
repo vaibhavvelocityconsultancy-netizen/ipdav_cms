@@ -167,7 +167,7 @@ export function PageEditor({
               pageContent={page.html || ""}
               siteUrl={
                 process.env.NEXT_PUBLIC_SITE_URL ||
-                "https://next-crm-momemtums.vercel.app/"
+                "https://ipdav.com" 
               }
               siteName={process.env.NEXT_PUBLIC_SITE_NAME || "Your Site"} // ADD THIS
               initialData={(page as PageWithSeo).seoData}
