@@ -158,16 +158,43 @@ export function renderFormHtml(form: FormData): string {
   return `
 <div class="cms-form-wrap" id="cms-form-${escapeAttr(form.slug)}">
   <form
-    class="cms-form"
-    data-form-slug="${escapeAttr(form.slug)}"
-    ${confirmAttr}
-    novalidate
-  >
+  class="cms-form"
+  data-form-slug="${escapeAttr(form.slug)}"
+  ${confirmAttr}
+  novalidate
+  oninput="
+    (function(form) {
+      var fields = form.querySelectorAll(
+        'input:not([type=submit]):not([type=button]), textarea, select'
+      );
+
+      var hasValue = Array.from(fields).some(function(field) {
+        if (field.disabled) return false;
+
+        if (field.type === 'checkbox' || field.type === 'radio') {
+          return field.checked;
+        }
+
+        if (field.type === 'file') {
+          return field.files && field.files.length > 0;
+        }
+
+        return String(field.value || '').trim() !== '';
+      });
+
+      var button = form.querySelector('.cms-form-submit');
+
+      if (button) {
+        button.disabled = !hasValue;
+      }
+    })(this);
+  "
+>
     <div class="cms-form-fields">
       ${fieldHtml}
     </div>
     <div class="cms-form-footer">
-      <button type="submit" class="${escapeAttr(buttonClass)}">
+      <button type="submit" class="${escapeAttr(buttonClass)}" disabled>
         ${escapeHtml(form.submitButtonLabel ?? "Submit")}
       </button>
     </div>
@@ -322,6 +349,31 @@ export const FORM_SUBMIT_SCRIPT = `
 (function () {
   const attachedForms = new WeakMap(); // Track which forms have listeners
 
+  function updateSubmitButtonState(form) {
+    var submitBtn = form.querySelector('.cms-form-submit');
+    if (!submitBtn) return;
+
+    var fields = form.querySelectorAll(
+      'input:not([type="submit"]):not([type="button"]), textarea, select',
+    );
+
+    var hasValue = Array.from(fields).some(function (field) {
+      if (field.disabled) return false;
+
+      if (field.type === 'checkbox' || field.type === 'radio') {
+        return field.checked;
+      }
+
+      if (field.type === 'file') {
+        return field.files && field.files.length > 0;
+      }
+
+      return String(field.value || '').trim() !== '';
+    });
+
+    submitBtn.disabled = !hasValue;
+  }
+  
   function validateForm(form) {
     let valid = true;
     form.querySelectorAll('[required]').forEach(function (el) {
@@ -345,13 +397,6 @@ export const FORM_SUBMIT_SCRIPT = `
     if (!statusEl) return;
     statusEl.className = 'cms-form-status' + (type ? ' cms-form-status--' + type : '');
     statusEl.textContent = msg;
-  }
-
-  function attachInputListeners(form) {
-    form.querySelectorAll('input,textarea,select').forEach(function (el) {
-      // Use input event delegation via form listener instead of individual listeners
-      // This prevents memory buildup from individual element listeners
-    });
   }
 
   async function handleSubmit(e) {
@@ -404,10 +449,7 @@ try {
           return;
         }
         var msg = form.dataset.confirmMessage || 'Thank you! Your message has been received.';
-        var fieldsEl = form.querySelector('.cms-form-fields');
-        var footerEl = form.querySelector('.cms-form-footer');
-        if (fieldsEl) fieldsEl.style.display = 'none';
-        if (footerEl) footerEl.style.display = 'none';
+       
         setStatus(form, 'success', msg);
 
         setTimeout(function () {
@@ -415,12 +457,10 @@ try {
           form.querySelectorAll('.cms-field-error').forEach(function (err) { err.textContent = ''; });
           form.querySelectorAll('.cms-field-invalid').forEach(function (el) { el.classList.remove('cms-field-invalid'); });
           setStatus(form, '', '');
-          if (fieldsEl) fieldsEl.style.display = '';
-          if (footerEl) footerEl.style.display = '';
           if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalLabel;
-          }
+  submitBtn.textContent = originalLabel;
+  updateSubmitButtonState(form);
+}
         }, 3000);
 
       } else {
@@ -436,37 +476,50 @@ try {
 
   function handleInputChange(e) {
     const el = e.target;
+    if (!el || !el.matches) return;
     if (!el.matches('.cms-form input, .cms-form textarea, .cms-form select')) return;
+
+    const form = el.closest('.cms-form');
+    if (!form) return;
+
     el.classList.remove('cms-field-invalid');
     var wrap = el.closest('.cms-field-wrap');
     var err = wrap && wrap.querySelector('.cms-field-error');
     if (err) err.textContent = '';
+    updateSubmitButtonState(form);
+  }
+
+  document.addEventListener('input', function (e) {
+    handleInputChange(e);
+  });
+
+  document.addEventListener('change', function (e) {
+    handleInputChange(e);
+  });
+
+  function initializeFormButtons() {
+    document.querySelectorAll('.cms-form').forEach(function (form) {
+      updateSubmitButtonState(form);
+    });
   }
 
   function init() {
     document.querySelectorAll('.cms-form').forEach(function (form) {
-      // Only attach listeners if not already attached (check WeakMap)
-      if (!attachedForms.has(form)) {
-        form.addEventListener('submit', handleSubmit);
-        form.addEventListener('input', handleInputChange);
-        attachedForms.set(form, true);
-      }
+      if (attachedForms.has(form)) return;
+
+      form.addEventListener('submit', handleSubmit);
+      attachedForms.set(form, true);
     });
   }
 
-  // Run now if DOM ready, else wait - use once flag to prevent multiple DOMContentLoaded calls
-  let initialized = false;
-  function safeInit() {
-    if (!initialized) {
-      initialized = true;
-      init();
-    }
-  }
-
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', safeInit, { once: true });
+    document.addEventListener('DOMContentLoaded', function () {
+      init();
+      initializeFormButtons();
+    });
   } else {
-    safeInit();
+    init();
+    initializeFormButtons();
   }
 })();
 `;

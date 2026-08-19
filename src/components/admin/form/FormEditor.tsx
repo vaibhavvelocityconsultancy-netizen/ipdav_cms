@@ -771,6 +771,20 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
       return;
     }
 
+    const invalidField = data.fields.find((field) => {
+      if (field.type === "message") return false;
+      return !field.name.trim();
+    });
+
+    if (invalidField) {
+      setError(
+        invalidField.type === "upload"
+          ? "Upload fields need a field name before saving."
+          : "Every field except message blocks needs a field name.",
+      );
+      return;
+    }
+
     setSaving(true);
     setError("");
 
