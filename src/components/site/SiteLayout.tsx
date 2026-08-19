@@ -9,6 +9,7 @@ import SiteNavbar from "./siteNavbar";
 import SiteFooter from "./SiteFooter";
 
 import AnalyticsScripts from "./AnalyticsScripts";
+import { CartProvider } from "@/src/lib/storefront/cart";
 
 const DEFAULT_FOOTER_SETTINGS = {
   footerLogo: "",
@@ -202,26 +203,10 @@ export default function SiteLayout({
     return () => style.remove();
   }, [highlightAutoLinks]);
 
-  const hasBootstrap = !!bootstrapData?.data;
-  const isInitialLoad = !hasBootstrap;
-
-  if (isInitialLoad) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-500 animate-spin" />
-          </div>
-          <p className="text-gray-500 font-medium">Loading your site...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
+    <CartProvider>
+      <div className="min-h-screen flex flex-col">
+        <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
 
       {breadcrumbSettings?.customCss && (
         <style
@@ -248,11 +233,12 @@ export default function SiteLayout({
       />
 
       {children}
-      <SiteFooter
-        footer={footer}
-        footerMenus={footerMenus}
-        config={footerConfig}
-      />
-    </div>
+        <SiteFooter
+          footer={footer}
+          footerMenus={footerMenus}
+          config={footerConfig}
+        />
+      </div>
+    </CartProvider>
   );
 }

@@ -5,13 +5,13 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 :root {
-  --background: oklch(0.98 0.008 260);
-  --foreground: oklch(0.18 0.03 265);
+  --background: oklch(0.985 0.012 85);
+  --foreground: oklch(0.2 0.025 55);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.03 265);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.03 265);
-  --primary: oklch(0.52 0.22 272);
+  --primary: oklch(0.48 0.14 35);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.93 0.04 268);
   --secondary-foreground: oklch(0.36 0.15 272);
