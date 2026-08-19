@@ -57,7 +57,6 @@ interface FormField {
   multiple?: boolean; // for upload field
   min?: number; // for number field
   hideLabel?: boolean;
-  customClass?: string;
 }
 
 interface EmailConfig {
@@ -85,12 +84,12 @@ interface FormEditorData {
   slug: string;
   fields: FormField[];
   submitButtonLabel: string;
-  submitButtonClass: string;
   confirmationType: string;
   confirmationMessage: string;
   redirectUrl: string;
   emails: EmailConfig[];
   status: string;
+  hideRequiredIndicator: boolean;
   layout: string;
   twoColumnHeading: string;
   twoColumnParagraph: string;
@@ -124,7 +123,6 @@ function normalizeField(
     multiple: field.multiple === true,
     min: typeof field.min === "number" ? field.min : undefined,
     hideLabel: field.hideLabel === true,
-    customClass: typeof field.customClass === "string" ? field.customClass : "",
   };
 }
 
@@ -140,9 +138,7 @@ function FieldBlock({
   onDelete: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [showCustomClass, setShowCustomClass] = useState(
-    Boolean(field.customClass),
-  );
+
   const {
     attributes,
     listeners,
@@ -432,45 +428,6 @@ function FieldBlock({
               </label>
             </div>
           )}
-
-          {!showCustomClass ? (
-            <button
-              type="button"
-              onClick={() => setShowCustomClass(true)}
-              className="text-xs text-primary hover:text-primary/80 transition-colors"
-            >
-              + Add custom CSS class
-            </button>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-muted-foreground">
-                  Custom CSS class
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCustomClass(false);
-                    onChange({ ...field, customClass: "" });
-                  }}
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  Remove
-                </button>
-              </div>
-
-              <input
-                type="text"
-                value={field.customClass || ""}
-                onChange={(e) =>
-                  onChange({ ...field, customClass: e.target.value })
-                }
-                placeholder="e.g. my-input-field another-class"
-                className="w-full border border-border rounded px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -667,13 +624,13 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
       ? form.fields.map((field: Partial<FormField>) => normalizeField(field))
       : [],
     submitButtonLabel: form.submitButtonLabel || "Submit",
-    submitButtonClass: form.submitButtonClass || "",
     confirmationType: form.confirmationType || "message",
     confirmationMessage:
       form.confirmationMessage || "Thank you for your submission.",
     redirectUrl: form.redirectUrl || "",
     emails: (form.emails || []) as EmailConfig[],
     status: form.status || "active",
+    hideRequiredIndicator: form.hideRequiredIndicator === true,
     layout: form.layout || "default",
     twoColumnHeading: form.twoColumnHeading || "",
     twoColumnParagraph: form.twoColumnParagraph || "",
@@ -694,9 +651,6 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
   const [error, setError] = useState("");
   const [view, setView] = useState<"editor" | "submissions">("editor");
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [showSubmitButtonClass, setShowSubmitButtonClass] = useState(
-    Boolean(data.submitButtonClass),
-  );
 
   // ── Field operations ──
 
@@ -712,7 +666,6 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
         ? { accept: "", maxSizeMB: 5, multiple: false }
         : {}),
       hideLabel: false,
-      customClass: "",
     };
     setData((d) => ({ ...d, fields: [...d.fields, newField] }));
     setShowAddMenu(false);
@@ -948,65 +901,36 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
             </button>
           </div>
           {/* Submit button label */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Submit Button Label
-              </label>
-              <input
-                type="text"
-                value={data.submitButtonLabel}
-                onChange={(e) =>
-                  setData({ ...data, submitButtonLabel: e.target.value })
-                }
-                className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Submit Button Label
+            </label>
+            <input
+              type="text"
+              value={data.submitButtonLabel}
+              onChange={(e) =>
+                setData({ ...data, submitButtonLabel: e.target.value })
+              }
+              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
 
-            {!showSubmitButtonClass ? (
-              <button
-                type="button"
-                onClick={() => setShowSubmitButtonClass(true)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors"
-              >
-                + Add custom CSS class
-              </button>
-            ) : (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    Submit Button CSS Class
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSubmitButtonClass(false);
-                      setData({
-                        ...data,
-                        submitButtonClass: "",
-                      });
-                    }}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    Remove
-                  </button>
-                </div>
-
-                <input
-                  type="text"
-                  value={data.submitButtonClass}
-                  onChange={(e) =>
-                    setData({
-                      ...data,
-                      submitButtonClass: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. btn-primary mt-4"
-                  className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="hide-required-indicator"
+              checked={data.hideRequiredIndicator}
+              onChange={(e) =>
+                setData({ ...data, hideRequiredIndicator: e.target.checked })
+              }
+              className="rounded"
+            />
+            <label
+              htmlFor="hide-required-indicator"
+              className="text-sm text-foreground"
+            >
+              Hide required indicator
+            </label>
           </div>
 
           {/* Confirmation Type */}

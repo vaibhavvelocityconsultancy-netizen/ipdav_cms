@@ -66,6 +66,7 @@ export interface FormField {
   multiple?: boolean; // 👈 new
   maxSizeMB?: number; // 👈 new
   hideLabel?: boolean;
+  customClass?: string;
 }
 
 export interface FormData {
@@ -74,6 +75,7 @@ export interface FormData {
   slug: string;
   fields: FormField[];
   submitButtonLabel?: string;
+  submitButtonClass?: string;
   confirmationType?: "message" | "redirect";
   confirmationMessage?: string;
   redirectUrl?: string;
@@ -120,7 +122,7 @@ export async function fetchFormsBySlug(
     slugs.map(async (slug) => {
       try {
         const res = await fetch(
-          `${baseUrl}/api/form/slug/${slug}`,   // ← use baseUrl directly, no apiPath()
+          `${baseUrl}/api/form/slug/${slug}`, // ← use baseUrl directly, no apiPath()
           {
             cache: "no-store",
           },
@@ -144,6 +146,9 @@ export async function fetchFormsBySlug(
 
 export function renderFormHtml(form: FormData): string {
   const fieldHtml = form.fields.map((field) => renderField(field)).join("\n");
+  const buttonClass = ["cms-form-submit", form.submitButtonClass]
+    .filter(Boolean)
+    .join(" ");
 
   const confirmAttr =
     form.confirmationType === "redirect" && form.redirectUrl
@@ -162,7 +167,7 @@ export function renderFormHtml(form: FormData): string {
       ${fieldHtml}
     </div>
     <div class="cms-form-footer">
-      <button type="submit" class="cms-form-submit">
+      <button type="submit" class="${escapeAttr(buttonClass)}">
         ${escapeHtml(form.submitButtonLabel ?? "Submit")}
       </button>
     </div>
@@ -176,6 +181,7 @@ function renderField(field: FormField): string {
   const ariaLabelAttr = field.hideLabel
     ? `aria-label="${escapeAttr(field.label)}"`
     : "";
+  const customFieldClass = [field.customClass].filter(Boolean).join(" ");
   const label =
     field.type !== "message"
       ? `<label class="cms-field-label${field.hideLabel ? " sr-only" : ""}" for="${id}">
@@ -191,7 +197,7 @@ function renderField(field: FormField): string {
       input = `<textarea
         id="${id}"
         name="${escapeAttr(field.name)}"
-        class="cms-field-input cms-field-textarea"
+        class="${escapeAttr(["cms-field-input", "cms-field-textarea", customFieldClass].filter(Boolean).join(" "))}"
         placeholder="${escapeAttr(field.placeholder ?? "")}"
         ${field.required ? "required" : ""}        ${ariaLabelAttr}        rows="5"
       ></textarea>`;
@@ -201,7 +207,7 @@ function renderField(field: FormField): string {
       input = `<select
         id="${id}"
         name="${escapeAttr(field.name)}"
-        class="cms-field-input cms-field-select"
+        class="${escapeAttr(["cms-field-input", "cms-field-select", customFieldClass].filter(Boolean).join(" "))}"
         ${field.required ? "required" : ""}
         ${ariaLabelAttr}
       >
@@ -223,7 +229,7 @@ function renderField(field: FormField): string {
               type="checkbox"
               id="${id}"
               name="${escapeAttr(field.name)}"
-              class="cms-field-checkbox"
+              class="${escapeAttr(["cms-field-checkbox", customFieldClass].filter(Boolean).join(" "))}"
               ${field.required ? "required" : ""}
             />
             <span class="${field.hideLabel ? "sr-only" : ""}">${escapeHtml(field.label)}${field.required ? ` <span class="cms-field-required" aria-hidden="true">*</span>` : ""}</span>
@@ -235,7 +241,7 @@ function renderField(field: FormField): string {
     type="file"
     id="${id}"
     name="${escapeAttr(field.name)}"
-    class="cms-field-input cms-field-file"
+    class="${escapeAttr(["cms-field-input", "cms-field-file", customFieldClass].filter(Boolean).join(" "))}"
     ${field.accept ? `accept="${escapeAttr(field.accept)}"` : ""}
     ${field.multiple ? "multiple" : ""}
     ${field.required ? "required" : ""}
@@ -245,7 +251,7 @@ function renderField(field: FormField): string {
 
     case "message":
       return `
-        <div class="cms-field-wrap cms-field-wrap--message">
+        <div class="cms-field-wrap cms-field-wrap--message ${escapeAttr(customFieldClass)}">
           <p class="cms-field-message-text">${field.content ?? ""}</p>
         </div>`;
 
@@ -255,14 +261,14 @@ function renderField(field: FormField): string {
         type="${field.type}"
         id="${id}"
         name="${escapeAttr(field.name)}"
-        class="cms-field-input"
+        class="${escapeAttr(["cms-field-input", customFieldClass].filter(Boolean).join(" "))}"
         placeholder="${escapeAttr(field.placeholder ?? "")}"
         ${field.required ? "required" : ""}
       />`;
   }
 
   return `
-    <div class="cms-field-wrap${field.width === "half" ? " cms-field-wrap--half" : ""}">
+    <div class="cms-field-wrap${field.width === "half" ? " cms-field-wrap--half" : ""}${customFieldClass ? ` ${escapeAttr(customFieldClass)}` : ""}">
       ${label}
       ${input}
       <span class="cms-field-error" role="alert"></span>
@@ -532,7 +538,7 @@ export async function injectForms(
   baseUrl = "",
 ): Promise<{ html: string; hasForms: boolean }> {
   const slugs = resolveFormSlugs(html);
-   console.log("DEBUG detected slugs:", slugs);
+  console.log("DEBUG detected slugs:", slugs);
   console.log("DEBUG html length:", html.length);
   console.log("DEBUG html snippet:", html.substring(0, 500));
 

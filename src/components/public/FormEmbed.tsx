@@ -16,6 +16,7 @@ interface FormField {
   multiple?: boolean;
   maxSizeMB?: number;
   hideLabel?: boolean;
+  customClass?: string;
 }
 
 interface PublicForm {
@@ -27,6 +28,7 @@ interface PublicForm {
   twoColumnParagraph?: string | null;
   fields: FormField[];
   submitButtonLabel: string;
+  submitButtonClass?: string;
   confirmationType: string;
   confirmationMessage: string;
   redirectUrl: string;
@@ -129,12 +131,20 @@ export function FormEmbed({ slug }: { slug: string }) {
    * This is your existing field logic.
    */
   const renderField = (field: FormField) => {
+    const fieldClassName = [field.customClass, "w-full"]
+      .filter(Boolean)
+      .join(" ");
+
     if (field.type === "message") {
-      return <div key={field.id}>{field.message}</div>;
+      return (
+        <div key={field.id} className={field.customClass || undefined}>
+          {field.message}
+        </div>
+      );
     }
 
     return (
-      <div key={field.id}>
+      <div key={field.id} className={field.customClass || undefined}>
         <label
           className={
             field.hideLabel
@@ -160,7 +170,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                 [field.name]: e.target.value,
               })
             }
-            className="w-full border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`${fieldClassName} border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
           />
         ) : field.type === "select" ? (
           <select
@@ -174,7 +184,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                 [field.name]: e.target.value,
               })
             }
-            className="w-full border  px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`${fieldClassName} border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
           >
             <option value="">Select an option</option>
 
@@ -221,7 +231,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                   [field.name]: e.target.files,
                 })
               }
-              className="w-full border  px-3 py-2 text-sm"
+              className={`${fieldClassName} border px-3 py-2 text-sm`}
             />
 
             {field.maxSizeMB && (
@@ -244,7 +254,7 @@ export function FormEmbed({ slug }: { slug: string }) {
                 [field.name]: e.target.value,
               })
             }
-            className="w-full border  px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`${fieldClassName} border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
           />
         )}
       </div>
@@ -287,7 +297,20 @@ export function FormEmbed({ slug }: { slug: string }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="cms-form-submits bg-blue-600 text-white px-12 py-4 text-base font-medium hover:bg-blue-700 disabled:opacity-50"
+                className={[
+                  "cms-form-submits",
+                  "bg-blue-600",
+                  "text-white",
+                  "px-12",
+                  "py-4",
+                  "text-base",
+                  "font-medium",
+                  "hover:bg-blue-700",
+                  "disabled:opacity-50",
+                  form.submitButtonClass,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               >
                 {loading ? "Submitting..." : form.submitButtonLabel || "Submit"}
               </button>
@@ -316,7 +339,20 @@ export function FormEmbed({ slug }: { slug: string }) {
       <button
         type="submit"
         disabled={loading}
-        className="cms-form-submits bg-blue-600 text-white px-6 py-2.5  text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+        className={[
+          "cms-form-submits",
+          "bg-blue-600",
+          "text-white",
+          "px-6",
+          "py-2.5",
+          "text-sm",
+          "font-medium",
+          "hover:bg-blue-700",
+          "disabled:opacity-50",
+          form.submitButtonClass,
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         {loading ? "Submitting..." : form.submitButtonLabel || "Submit"}
       </button>

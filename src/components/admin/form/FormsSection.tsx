@@ -90,6 +90,7 @@ export function FormsSection() {
       slug: "",
       fields: [],
       submitButtonLabel: "Submit",
+      submitButtonClass: "",
       confirmationType: "message",
       confirmationMessage: "Thank you for your submission.",
       redirectUrl: "",

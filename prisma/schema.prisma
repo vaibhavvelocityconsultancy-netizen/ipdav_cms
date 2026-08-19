@@ -86,33 +86,34 @@ model tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users               user[]
-  pages               page[]
-  forms               form[]
-  menus               menu[]
-  posts               post[]
-  collections         collection[]
-  sitesettings        sitesettings?
-  footersettings      footersettings[]
-  categories          category[]
-  tags                tag[]
-  media               media[]
-  redirects           Redirect[]
-  notFoundLogs        NotFoundLog[]
-  redirectImports     RedirectImport[]
-  NavbarConfig        NavbarConfig?
-  breadcrumbSettings  BreadcrumbSettings?
-  footerConfig        FooterConfig?
-  trackingSettings    TrackingSettings?
-  analyticsSettings   analyticsSettings?
-  aicrawlSettings     AICrawlSettings?
-  aicrawlContents     AICrawlContent[]
-  internalLinkRules   InternalLinkRule[]
-  uploadedFiles       UploadedFile[]
-  plans               Plan[]
-  planSettings        PlanSettings?
-  fileCategories      FileCategory[]
-  pricingPageSettings pricingPageSettings?
+  users                user[]
+  pages                page[]
+  forms                form[]
+  menus                menu[]
+  posts                post[]
+  collections          collection[]
+  sitesettings         sitesettings?
+  footersettings       footersettings[]
+  categories           category[]
+  tags                 tag[]
+  media                media[]
+  redirects            Redirect[]
+  notFoundLogs         NotFoundLog[]
+  redirectImports      RedirectImport[]
+  NavbarConfig         NavbarConfig?
+  breadcrumbSettings   BreadcrumbSettings?
+  footerConfig         FooterConfig?
+  trackingSettings     TrackingSettings?
+  analyticsSettings    analyticsSettings?
+  aicrawlSettings      AICrawlSettings?
+  aicrawlContents      AICrawlContent[]
+  internalLinkRules    InternalLinkRule[]
+  uploadedFiles        UploadedFile[]
+  plans                Plan[]
+  planSettings         PlanSettings?
+  fileCategories       FileCategory[]
+  pricingPageSettings  pricingPageSettings?
+  pageElementOverrides PageElementOverride[]
 }
 
 model EmailTemplate {
@@ -476,15 +477,36 @@ model page {
   componentSettings Json?
   searchText        String? @db.Text
 
-  sitemapPriority   Decimal                @default(0.8) @db.Decimal(2, 1)
-  sitemapChangeFreq sitemapChangeFrequency @default(WEEKLY)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  tenant            tenant                 @relation(fields: [tenantId], references: [id])
-  tenantId          Int
+  sitemapPriority      Decimal                @default(0.8) @db.Decimal(2, 1)
+  sitemapChangeFreq    sitemapChangeFrequency @default(WEEKLY)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  tenant               tenant                 @relation(fields: [tenantId], references: [id])
+  tenantId             Int
+  pageElementOverrides PageElementOverride[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+}
+
+model PageElementOverride {
+  id        String   @id @default(cuid())
+  pageId    Int
+  editorId  String
+  styles    Json?
+  classes   String?
+  text      String?
+  link      String?
+  tenantId  Int
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  page   page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, editorId])
+  @@index([tenantId])
+  @@index([pageId])
 }
 
 model pricingPageSettings {
@@ -697,18 +719,20 @@ model form {
   slug   String
   fields Json
 
-  submitButtonLabel   String?  @default("Submit")
-  confirmationType    String   @default("message")
-  confirmationMessage String?  @db.Text
-  redirectUrl         String?
-  emails              Json?
-  status              String   @default("active")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  tenantId            Int
-  layout              String   @default("default")
-  twoColumnHeading    String?  @db.Text
-  twoColumnParagraph  String?  @db.Text
+  submitButtonLabel     String?  @default("Submit")
+  submitButtonClass     String?
+  confirmationType      String   @default("message")
+  confirmationMessage   String?  @db.Text
+  redirectUrl           String?
+  emails                Json?
+  status                String   @default("active")
+  hideRequiredIndicator Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  tenantId              Int
+  layout                String   @default("default")
+  twoColumnHeading      String?  @db.Text
+  twoColumnParagraph    String?  @db.Text
 
   tenant              tenant                @relation(fields: [tenantId], references: [id])
   formsubmission      formsubmission[]
