@@ -45,8 +45,8 @@ export function FormEmbed({ slug }: { slug: string }) {
   const [error, setError] = useState("");
 
   const hasValue =
-  Object.values(values).some((v) => String(v || "").trim() !== "") ||
-  Object.values(files).some((fl) => fl && fl.length > 0);
+    Object.values(values).some((v) => String(v || "").trim() !== "") ||
+    Object.values(files).some((fl) => fl && fl.length > 0);
 
   useEffect(() => {
     fetch(apiPath(`/api/form/slug/${slug}`))
