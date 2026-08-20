@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { CartLine, Product, categories, formatMoney, getCartTotal, getProductById } from "@/src/lib/storefront/data";
