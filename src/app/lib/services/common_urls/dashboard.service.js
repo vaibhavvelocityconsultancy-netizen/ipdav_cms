@@ -110,7 +110,7 @@ export async function getSubscriberDashboard(userId) {
 
     trialDaysRemaining = Math.max(
       0,
-      Math.floor((end - now) / (1000 * 60 * 60 * 24)),
+      Math.ceil((end - now) / (1000 * 60 * 60 * 24)),
     );
   }
 
