@@ -174,7 +174,13 @@ function escapeRegex(str) {
   );
 
   const finalMenuItems = useMemo(() => {
-    if (menuItems.length === 0) return menuItems;
+    if (menuItems.length === 0) {
+      return [
+        { id: "shop-static", label: "Shop", type: "custom", url: "/shop", children: [] },
+        { id: "new-static", label: "New arrivals", type: "custom", url: "/categories/new-arrivals", children: [] },
+        { id: "cart-static", label: "Cart", type: "custom", url: "/cart", children: [] },
+      ];
+    }
 
     return [
       ...menuItems,
