@@ -1,5 +1,26 @@
 export type Product = { id: string; slug: string; name: string; category: string; categorySlug: string; price: number; description: string; details: string[]; image: string; gallery: string[]; colors: string[]; sizes: string[]; badge?: string; featured?: boolean };
-export type CartLine = { productId: string; quantity: number; size?: string; color?: string };
+export type CartLine = { productId: string; quantity: number; size?: string; color?: string; product?: Product };
+
+export function mapApiProduct(record: any): Product {
+  const category = record.categories?.[0];
+  const images = (record.images ?? []).map((item: any) => item.url).filter(Boolean);
+  return {
+    id: String(record.id),
+    slug: record.slug,
+    name: record.title,
+    category: category?.name ?? "Collection",
+    categorySlug: category?.slug ?? "shop",
+    price: Number(record.price ?? 0),
+    description: record.description ?? record.shortDescription ?? "",
+    details: [],
+    image: images[0] ?? "/placeholder.svg",
+    gallery: images.length ? images : ["/placeholder.svg"],
+    colors: [],
+    sizes: [],
+    badge: record.isFeatured ? "Featured" : undefined,
+    featured: Boolean(record.isFeatured),
+  };
+}
 const image = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
 export const categories = [
   { name: "New arrivals", slug: "new-arrivals", description: "The latest pieces, considered for now.", image: image("photo-1483985988355-763728e1935b") },
