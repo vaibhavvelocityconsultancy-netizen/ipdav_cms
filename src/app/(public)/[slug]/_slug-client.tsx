@@ -207,7 +207,7 @@ export default function PreviewPage({
         const setStatus = (type: string, msg: string) => {
           if (!statusEl) return;
           statusEl.className =
-            "cms-form-status" + (type ? ` cms-form-status--${type}` : "");
+            "cms-form-status form-status" + (type ? ` cms-form-status--${type}` : "");
           statusEl.textContent = msg;
         };
 

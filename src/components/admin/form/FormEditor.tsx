@@ -1140,7 +1140,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
                 onChange={(e) =>
                   setData({ ...data, confirmationMessage: e.target.value })
                 }
-                className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="confirmation-message w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           ) : (

@@ -198,7 +198,7 @@ export function renderFormHtml(form: FormData): string {
         ${escapeHtml(form.submitButtonLabel ?? "Submit")}
       </button>
     </div>
-    <div class="cms-form-status" aria-live="polite"></div>
+    <div class="cms-form-status form-status" aria-live="polite"></div>
   </form>
 </div>`;
 }
