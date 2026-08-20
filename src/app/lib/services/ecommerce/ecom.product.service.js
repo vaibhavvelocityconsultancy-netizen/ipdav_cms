@@ -186,10 +186,8 @@ export async function getProductById(productId) {
     throw new Error("Product not found");
   }
 
-
   return product;
 }
-
 
 // ─────────────────────────────────────────────────────────
 // UPDATE
@@ -226,6 +224,15 @@ export async function updateProduct(id, input) {
     images,
   } = input;
 
+  const normalizedStatus =
+    typeof status === "string" ? status.trim().toUpperCase() : status;
+  if (
+    normalizedStatus !== undefined &&
+    !["DRAFT", "PUBLISHED", "ARCHIVED"].includes(normalizedStatus)
+  ) {
+    throw new Error("Invalid product status");
+  }
+
   let slug = existing.slug;
   if (inputSlug && slugify(inputSlug) !== existing.slug) {
     slug = await generateUniqueSlug(tenantId, inputSlug, id);
@@ -245,7 +252,7 @@ export async function updateProduct(id, input) {
       compareAtPrice: compareAtPrice ?? undefined,
       stockQuantity: stockQuantity ?? undefined,
       inStock: inStock ?? undefined,
-      status: status ?? undefined,
+      status: normalizedStatus ?? undefined,
       isFeatured: isFeatured ?? undefined,
       isVariable: isVariable ?? undefined,
       seoData: seoData ?? undefined,
@@ -291,7 +298,6 @@ export async function updateProduct(id, input) {
     },
   });
 }
-
 
 // ─────────────────────────────────────────────────────────
 // DELETE

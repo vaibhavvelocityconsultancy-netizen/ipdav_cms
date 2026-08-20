@@ -197,13 +197,6 @@ const adminNavItems: NavItem[] = [
         description: "Styling & themes",
         href: "/admin/setting/global-css",
       },
-      // {
-      //   id: "navbar-config",
-      //   label: "Navbar Config",
-      //   icon: Code,
-      //   description: "Navbar configuration",
-      //   href: "/admin/customize/navbar-config",
-      // },
     ],
   },
 
@@ -215,38 +208,6 @@ const adminNavItems: NavItem[] = [
     // modulePermission: "plans_manage",
     href: "/admin/plan-management",
   },
-
-  // {
-  //   id: "user-management",
-  //   label: "Users Management",
-  //   icon: User,
-  //   description: "Access control",
-  //   children: [
-  //     {
-  //       id: "permissions",
-  //       label: "Permissions",
-  //       icon: Settings,
-  //       description: "Roles & permissions",
-  //       modulePermission: "settings_manage",
-  //       href: "/admin/permissions",
-  //     },
-  //     {
-  //       id: "customers",
-  //       label: "Customers",
-  //       icon: Users,
-  //       description: "Manage customers",
-  //       modulePermission: "customers_view",
-  //       href: "/admin/customers",
-  //     },
-  //     {
-  //       id: "profile",
-  //       label: "Profile",
-  //       icon: User,
-  //       description: "Your account",
-  //       href: "/admin/profile",
-  //     },
-  //   ],
-  // },
 
   {
     id: "files-manager",
@@ -263,6 +224,57 @@ const adminNavItems: NavItem[] = [
     description: "Manage file categories",
     modulePermission: "subscriber_upload_files_info",
     href: "/admin/files-category",
+  },
+  {
+    id: "ecommerce",
+    label: "E-commerce",
+    icon: ShoppingBag,
+    children: [
+      {
+        id: "products",
+        label: "Products",
+        icon: ShoppingBag,
+        description: "Manage products",
+        href: "/admin/ecommerce/products",
+      },
+      {
+        id: "orders",
+        label: "Orders",
+        icon: ShoppingBag,
+        description: "Manage orders",
+        href: "/admin/ecommerce/orders",
+
+      },
+      {
+        id: "coupons",
+        label: "Coupons",
+        icon: ShoppingBag,
+        description: "Manage coupons",
+        href: "/admin/ecommerce/coupons",
+      },
+      {
+        id: "shipping",
+        label: "Shipping",
+        icon: Truck,
+        description: "Manage shipping",
+        href: "/admin/ecommerce/shipping",
+      },
+      {
+        id: "taxes",
+        label: "Taxes",
+        icon: Percent,
+        description: "Manage taxes",
+        href: "/admin/ecommerce/taxes",
+      },
+      {
+        id: "payment-gateways",
+        label: "Payment Gateways",
+        icon: CreditCard,
+        description: "Manage payment gateways",
+        href: "/admin/ecommerce/payment-gateways",
+      },
+
+    ]
   },
 
   {
@@ -487,7 +499,7 @@ export function Sidebar({ userRole }: SidebarProps) {
   const shouldRenderItem = (item: NavItem) => {
     if (isSubscriber) return true;
     // Module-toggle gating (from Site Settings → Modules section)
-    if (item.id === "ecommerce" && !moduleFlags.ecommerceEnabled) return false;
+    // if (item.id === "ecommerce" && !moduleFlags.ecommerceEnabled) return false;
     if (item.modulePermission)
       return visibleModules[item.modulePermission] === true;
     return true;
