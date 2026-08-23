@@ -141,27 +141,6 @@ export default function SiteLayout({
   }, [settings]);
 
   useEffect(() => {
-    const style = document.getElementById(
-      "global-cms-css",
-    ) as HTMLStyleElement | null;
-
-    if (!globalCss) {
-      style?.remove();
-      return;
-    }
-
-    if (style) {
-      style.textContent = globalCss;
-      return;
-    }
-
-    const nextStyle = document.createElement("style");
-    nextStyle.id = "global-cms-css";
-    nextStyle.textContent = globalCss;
-    document.head.appendChild(nextStyle);
-  }, [globalCss]);
-
-  useEffect(() => {
     const existing = document.getElementById("global-cms-js");
 
     if (!globalJs) {
@@ -209,6 +188,13 @@ export default function SiteLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
+      {globalCss && (
+        <style
+          id="global-cms-css"
+          dangerouslySetInnerHTML={{ __html: globalCss }}
+        />
+      )}
+
       <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
 
       {breadcrumbSettings?.customCss && (
