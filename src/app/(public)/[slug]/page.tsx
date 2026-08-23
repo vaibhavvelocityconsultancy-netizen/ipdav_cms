@@ -11,6 +11,7 @@ import { fetchers } from "@/src/lib/fetchers";
 import { log404Error } from "@/src/lib/redirectMiddleware";
 import { SchemaRenderer } from "@/src/components/admin/pages/SchemaOutput";
 import { processPublicPageHtml } from "@/src/lib/public-page-html";
+import { enrichHtmlWithMediaDimensions } from "@/src/lib/media-dimensions.server";
 
 export async function generateMetadata({
   params,
@@ -132,7 +133,7 @@ export default async function Page({
         baseUrl: serverBaseUrl,
         context: { isHome: false, is404: false, isSearch: false },
       });
-      initialProcessedHtml = html;
+      initialProcessedHtml = await enrichHtmlWithMediaDimensions(html);
       initialHasForms = hasForms;
     } catch (error) {
       console.error("Server-side page HTML processing failed:", error);

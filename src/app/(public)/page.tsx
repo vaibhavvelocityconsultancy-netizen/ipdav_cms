@@ -7,6 +7,7 @@ import HomeClient from "./_home-client";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 import { processPublicPageHtml } from "@/src/lib/public-page-html";
+import { enrichHtmlWithMediaDimensions } from "@/src/lib/media-dimensions.server";
 
 export default async function Page() {
   const queryClient = new QueryClient();
@@ -86,7 +87,7 @@ export default async function Page() {
         baseUrl: serverBaseUrl,
         context: { isHome: true, is404: false, isSearch: false },
       });
-      initialProcessedHtml = html;
+      initialProcessedHtml = await enrichHtmlWithMediaDimensions(html);
       initialHasForms = hasForms;
     } catch (error) {
       console.error("Server-side page HTML processing failed:", error);
