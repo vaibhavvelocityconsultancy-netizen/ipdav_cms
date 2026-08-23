@@ -3,6 +3,8 @@ import path from "path";
 import { getTenantUploadDir } from "@/src/app/lib/utils/uploadconfig";
 import { prisma } from "@/src/app/lib/prisma";
 
+export const runtime = "nodejs";
+
 export async function GET(req, { params }) {
   const { id } = await params;
 
