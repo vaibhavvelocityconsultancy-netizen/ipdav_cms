@@ -38,7 +38,7 @@ export function generateLlmsTxtContent(baseUrl, pages, posts) {
     pages.forEach((page) => {
       const date = new Date(page.updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, page.slug, "page");
-      content += `- **${page.title}** (Updated: ${date})\n  ${url}\n\n`;
+      content += `- [${page.title}](${url}): Updated ${date}\n\n`;
     });
   } else {
     content += `(No pages)\n\n`;
@@ -51,7 +51,7 @@ export function generateLlmsTxtContent(baseUrl, pages, posts) {
       const updatedAt = post.updatedAt || post.publishedAt || new Date();
       const date = new Date(updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, post.slug, "post");
-      content += `- **${post.title}** (Updated: ${date})\n  ${url}\n\n`;
+      content += `- [${post.title}](${url}): Updated ${date}\n\n`;
     });
   } else {
     content += `(No posts)\n\n`;

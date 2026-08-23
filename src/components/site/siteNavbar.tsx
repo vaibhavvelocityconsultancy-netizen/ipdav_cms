@@ -523,6 +523,7 @@ function escapeRegex(str) {
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-hidden={!isMobileMenuOpen}
+        inert={!isMobileMenuOpen}
       >
         <div className="flex min-h-[92px] items-center justify-between border-b border-black/5 bg-[#f7f7f7] px-6">
           <Link
