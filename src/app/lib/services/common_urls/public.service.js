@@ -188,19 +188,27 @@ export async function getPublicBootstrapData(tenantId) {
   const settings = await getPublicSettings(tenantId);
   const resolvedTenantId = tenantId ?? settings.tenantId;
 
-  const menus = await getPublicMenus(resolvedTenantId);
-  const footerSettings = await getPublicFooterSettings(resolvedTenantId);
-  const homepage =
+  const [
+    menus,
+    footerSettings,
+    homepage,
+    breadcrumbSettings,
+    navbarConfig,
+    footerConfig,
+    analyticsSettings,
+  ] = await Promise.all([
+    getPublicMenus(resolvedTenantId),
+    getPublicFooterSettings(resolvedTenantId),
     settings.homepageType === "page" && settings.homepagePageId
-      ? await getPublicPageById(settings.homepagePageId, resolvedTenantId)
-      : null;
-  const breadcrumbSettings = await prisma.breadcrumbSettings.findUnique({
-    where: { tenantId: resolvedTenantId },
-  });
-  const navbarConfig = await getPublicNavbarConfig(resolvedTenantId);
-  const footerConfig = await getPublicFooterConfig(resolvedTenantId);
-  const analyticsSettings = await getPublicAnalyticsSettings(resolvedTenantId);
-  
+      ? getPublicPageById(settings.homepagePageId, resolvedTenantId)
+      : Promise.resolve(null),
+    prisma.breadcrumbSettings.findUnique({
+      where: { tenantId: resolvedTenantId },
+    }),
+    getPublicNavbarConfig(resolvedTenantId),
+    getPublicFooterConfig(resolvedTenantId),
+    getPublicAnalyticsSettings(resolvedTenantId),
+  ]);
 
   return {
     settings,

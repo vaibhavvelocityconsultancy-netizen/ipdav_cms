@@ -5,7 +5,7 @@ export default async function PublicRouteLayout({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}) {  
   const bootstrap = await getPublicBootstrapData();
 
   return (
