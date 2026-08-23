@@ -36,35 +36,40 @@ const DEFAULT_BREADCRUMB_SETTINGS = {
   customCss: "",
 };
 
+export interface PublicBootstrapData {
+  data: {
+    settings: any;
+    homepage: any;
+    menus: any[];
+    footerMenus: any[];
+    footerSettings: any;
+    footerConfig?: any;
+    navbarConfig?: any;
+    assets: { css?: string; js?: string };
+    breadcrumbSettings?: any;
+    analyticsSettings?: any;
+  };
+}
+
 interface SiteLayoutProps {
   children: React.ReactNode;
   pageId?: string | number | null;
   editUrl?: string;
+  initialBootstrapData: PublicBootstrapData;
 }
 
 export default function SiteLayout({
   children,
   pageId,
   editUrl,
+  initialBootstrapData,
 }: SiteLayoutProps) {
   const { user } = useCurrentUser();
 
-  const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<{
-    data: {
-      settings: any;
-      homepage: any;
-      menus: any[];
-      footerMenus: any[];
-      footerSettings: any;
-      footerConfig?: any;
-      navbarConfig?: any;
-      assets: { css?: string; js?: string };
-      breadcrumbSettings?: any;
-      analyticsSettings?: any;
-    };
-  }>({
+  const { data: bootstrapData } = useQuery<PublicBootstrapData>({
     queryKey: ["public", "bootstrap"],
     queryFn: fetchers.publicBootstrap,
+    initialData: initialBootstrapData,
     staleTime: 60_000,
   });
 
@@ -201,23 +206,6 @@ export default function SiteLayout({
 
     return () => style.remove();
   }, [highlightAutoLinks]);
-
-  const hasBootstrap = !!bootstrapData?.data;
-  const isInitialLoad = !hasBootstrap;
-
-  if (isInitialLoad) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-500 animate-spin" />
-          </div>
-          <p className="text-gray-500 font-medium">Loading your site...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
