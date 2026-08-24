@@ -1,4 +1,3 @@
-import { Content } from "next/font/google";
 import { prisma } from "../../prisma";
 
 const SETTINGS_ID = 1;

@@ -3,6 +3,8 @@ import { ApiError } from "@/src/app/lib/utils/ApiError";
 import { ApiResponse } from "@/src/app/lib/utils/ApiResponse";
 import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
 
+export const runtime = "nodejs";
+
 export const POST = asyncHandler(async (req) => {
   const formData = await req.formData();
 

@@ -740,7 +740,7 @@ export async function startTrial(userId, planId) {
   return subscription;
 }
 
-const DEFAULT_TRIAL_DAYS = 14;
+const DEFAULT_TRIAL_DAYS = 15;
 
 export async function startDefaultTrial(userId, tenantId) {
   const alreadyUsedTrial = await hasUserEverSubscribed(userId);

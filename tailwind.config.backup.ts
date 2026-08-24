@@ -8,14 +8,13 @@ const ALL_VARIANTS = [...RESPONSIVE, ...INTERACTIVE]
 const config: Config = {
   darkMode: ["class"],
   content: [
-  "./src/app/**/*.{ts,tsx}",
-  "./src/components/**/*.{ts,tsx}",
-  "./src/hooks/**/*.{ts,tsx}",
-  "./src/lib/**/*.{ts,tsx}",
-  "./src/services/**/*.{ts,tsx}",
-  "./src/ui/**/*.{ts,tsx}",
-  "./src/tailwind-cms-content.html",
-],
+    "./src/app/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
+    "./src/hooks/**/*.{ts,tsx}",
+    "./src/lib/**/*.{ts,tsx}",
+    "./src/services/**/*.{ts,tsx}",
+    "./src/ui/**/*.{ts,tsx}",
+  ],
   safelist: [
     // ===== Literal one-off classes =====
     "container", "group", "peer", "sr-only", "not-sr-only",

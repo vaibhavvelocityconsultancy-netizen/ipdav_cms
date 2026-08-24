@@ -397,7 +397,7 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
           <div className="topbar relative flex items-center justify-between">
             <Link href="/" className="brand" aria-label={`${siteName} home`}>
               {logo ? (
-                <img src={logo} alt={siteName} />
+                <img src={logo} alt={siteName} width="450" height="64" />
               ) : (
                 <span className="text-2xl font-semibold text-[#152539]">
                   {siteName}
@@ -552,6 +552,7 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-hidden={!isMobileMenuOpen}
+        inert={!isMobileMenuOpen}
       >
         <div className="flex min-h-[92px] items-center justify-between border-b border-black/5 bg-[#f7f7f7] px-6">
           <Link
@@ -564,6 +565,8 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
               <img
                 src={logo}
                 alt={siteName}
+                width="450"
+                height="64"
                 className="max-h-14 w-auto object-contain"
               />
             ) : (

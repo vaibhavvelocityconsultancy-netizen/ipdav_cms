@@ -37,35 +37,40 @@ const DEFAULT_BREADCRUMB_SETTINGS = {
   customCss: "",
 };
 
+export interface PublicBootstrapData {
+  data: {
+    settings: any;
+    homepage: any;
+    menus: any[];
+    footerMenus: any[];
+    footerSettings: any;
+    footerConfig?: any;
+    navbarConfig?: any;
+    assets: { css?: string; js?: string };
+    breadcrumbSettings?: any;
+    analyticsSettings?: any;
+  };
+}
+
 interface SiteLayoutProps {
   children: React.ReactNode;
   pageId?: string | number | null;
   editUrl?: string;
+  initialBootstrapData: PublicBootstrapData;
 }
 
 export default function SiteLayout({
   children,
   pageId,
   editUrl,
+  initialBootstrapData,
 }: SiteLayoutProps) {
   const { user } = useCurrentUser();
 
-  const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<{
-    data: {
-      settings: any;
-      homepage: any;
-      menus: any[];
-      footerMenus: any[];
-      footerSettings: any;
-      footerConfig?: any;
-      navbarConfig?: any;
-      assets: { css?: string; js?: string };
-      breadcrumbSettings?: any;
-      analyticsSettings?: any;
-    };
-  }>({
+  const { data: bootstrapData } = useQuery<PublicBootstrapData>({
     queryKey: ["public", "bootstrap"],
     queryFn: fetchers.publicBootstrap,
+    initialData: initialBootstrapData,
     staleTime: 60_000,
   });
 
@@ -137,27 +142,6 @@ export default function SiteLayout({
   }, [settings]);
 
   useEffect(() => {
-    const style = document.getElementById(
-      "global-cms-css",
-    ) as HTMLStyleElement | null;
-
-    if (!globalCss) {
-      style?.remove();
-      return;
-    }
-
-    if (style) {
-      style.textContent = globalCss;
-      return;
-    }
-
-    const nextStyle = document.createElement("style");
-    nextStyle.id = "global-cms-css";
-    nextStyle.textContent = globalCss;
-    document.head.appendChild(nextStyle);
-  }, [globalCss]);
-
-  useEffect(() => {
     const existing = document.getElementById("global-cms-js");
 
     if (!globalJs) {
@@ -204,9 +188,15 @@ export default function SiteLayout({
   }, [highlightAutoLinks]);
 
   return (
-    <CartProvider>
-      <div className="min-h-screen flex flex-col">
-        <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
+    <div className="min-h-screen flex flex-col">
+      {globalCss && (
+        <style
+          id="global-cms-css"
+          dangerouslySetInnerHTML={{ __html: globalCss }}
+        />
+      )}
+
+      <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
 
       {breadcrumbSettings?.customCss && (
         <style

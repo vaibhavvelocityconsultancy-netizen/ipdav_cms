@@ -3,6 +3,8 @@ import { ApiError } from "../../lib/utils/ApiError";
 import { ApiResponse } from "../../lib/utils/ApiResponse";
 import { asyncHandler } from "../../lib/utils/asyncHandler";
 
+export const runtime = "nodejs";
+
 export const GET = asyncHandler(async (req) => {
   const { searchParams } = new URL(req.url);
 
