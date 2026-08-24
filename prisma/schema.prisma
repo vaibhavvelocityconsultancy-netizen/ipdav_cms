@@ -119,6 +119,7 @@ model tenant {
   attributes           Attribute[]
   products             Product[]
   orders               Order[]
+  carts                Cart[]
   coupons              Coupon[]
   shippingZones        ShippingZone[]
   taxClasses           TaxClass[]
@@ -254,6 +255,7 @@ model user {
   planEnrollments   PlanEnrollment[]
   customerAddresses CustomerAddress[]
   orders            Order[]
+  carts             Cart[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1276,6 +1278,7 @@ model Product {
   images     ProductImage[]
   variants   ProductVariant[]
   orderItems OrderItem[]
+  cartItems  CartItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1312,8 +1315,9 @@ model ProductVariant {
   attributeValues ProductVariantAttribute[]
   orderItems      OrderItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cartItems CartItem[]
 
   @@index([productId])
 }
@@ -1429,6 +1433,35 @@ model OrderNote {
   createdAt DateTime @default(now())
 
   @@index([orderId])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  sessionId String     @unique
+  userId    Int?
+  tenantId  Int
+  user      user?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model CartItem {
+  id        String          @id @default(cuid())
+  cartId    String
+  productId String
+  variantId String?
+  quantity  Int             @default(1)
+  cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([productId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

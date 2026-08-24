@@ -10,6 +10,7 @@ import { fetchers } from "@/src/lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { appUrl } from "@/src/lib/base-path";
 import { getBaseUrl } from "@/src/lib/config";
+import { useCart } from "@/src/lib/storefront/cart";
 
 type SiteSettings = {
   logo?: string;
@@ -93,6 +94,7 @@ function isActivePage(pathname: string, href: string): boolean {
 export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
   const pathname = usePathname();
   const { user } = useCurrentUser();
+  const { count: cartCount } = useCart();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -104,24 +106,24 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
   );
 
   function highlightMatch(text, query) {
-  if (!text || !query) return text;
+    if (!text || !query) return text;
 
-  const parts = text.split(new RegExp(`(${escapeRegex(query)})`, "gi"));
+    const parts = text.split(new RegExp(`(${escapeRegex(query)})`, "gi"));
 
-  return parts.map((part, i) =>
-    part.toLowerCase() === query.toLowerCase() ? (
-      <mark key={i} className="bg-yellow-200 text-inherit rounded-sm px-0.5">
-        {part}
-      </mark>
-    ) : (
-      part
-    ),
-  );
-}
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={i} className="bg-yellow-200 text-inherit rounded-sm px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      ),
+    );
+  }
 
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+  function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
   useEffect(() => {
     const query = searchValue.trim();
@@ -176,9 +178,27 @@ function escapeRegex(str) {
   const finalMenuItems = useMemo(() => {
     if (menuItems.length === 0) {
       return [
-        { id: "shop-static", label: "Shop", type: "custom", url: "/shop", children: [] },
-        { id: "new-static", label: "New arrivals", type: "custom", url: "/categories/new-arrivals", children: [] },
-        { id: "cart-static", label: "Cart", type: "custom", url: "/cart", children: [] },
+        {
+          id: "shop-static",
+          label: "Shop",
+          type: "custom",
+          url: "/shop",
+          children: [],
+        },
+        {
+          id: "new-static",
+          label: "New arrivals",
+          type: "custom",
+          url: "/categories/new-arrivals",
+          children: [],
+        },
+        {
+          id: "cart-static",
+          label: "Cart",
+          type: "custom",
+          url: "/cart",
+          children: [],
+        },
       ];
     }
 
@@ -413,6 +433,9 @@ function escapeRegex(str) {
               >
                 <span />
               </button>
+              <Link className="login-link" href="/cart">
+                Cart{cartCount > 0 ? ` (${cartCount})` : ""}
+              </Link>
             </div>
 
             <button
