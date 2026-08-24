@@ -1,6 +1,5 @@
 import "@/src/lib/fetch-patch"; // must be first import — patches fetch before anything else runs
 import type { Metadata } from "next";
-import { Inter, Space_Mono } from "next/font/google";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster as AppToaster } from "@/src/ui/toaster";
 import "../../styles/globals.css";
@@ -8,19 +7,6 @@ import QueryProvider from "../provider/QueryProvider";
 import { fetchers } from "@/src/lib/fetchers";
 
 export const revalidate = 0;
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-space-mono",
-  display: "swap",
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
@@ -57,7 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${spaceMono.variable}`}>
+      <body className="antialiased">
         <QueryProvider>
           {children}
           <AppToaster />
