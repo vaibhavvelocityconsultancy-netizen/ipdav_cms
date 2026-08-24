@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/extract-cms-classes.js",
     "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
