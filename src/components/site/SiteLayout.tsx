@@ -188,41 +188,38 @@ export default function SiteLayout({
   }, [highlightAutoLinks]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {globalCss && (
-        <style
-          id="global-cms-css"
-          dangerouslySetInnerHTML={{ __html: globalCss }}
-        />
-      )}
+    <CartProvider>
+      <div className="min-h-screen flex flex-col">
+        {globalCss && (
+          <style
+            id="global-cms-css"
+            dangerouslySetInnerHTML={{ __html: globalCss }}
+          />
+        )}
 
-      <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
+        <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
 
-      {breadcrumbSettings?.customCss && (
-        <style
-          id="breadcrumb-custom-css"
-          dangerouslySetInnerHTML={{ __html: breadcrumbSettings.customCss }}
-        />
-      )}
+        {breadcrumbSettings?.customCss && (
+          <style
+            id="breadcrumb-custom-css"
+            dangerouslySetInnerHTML={{ __html: breadcrumbSettings.customCss }}
+          />
+        )}
 
-      {showToolbar && (
-        <div
-          dangerouslySetInnerHTML={{
-            __html: buildAdminToolbarHtml({
-              pageId,
-              siteName: settings?.siteName,
-              editUrl,
-            }),
-          }}
-        />
-      )}
-      <SiteNavbar
-        settings={settings}
-        headerMenu={headerMenu}
-        config={navbarConfig}
-      />
+        {showToolbar && (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: buildAdminToolbarHtml({
+                pageId,
+                siteName: settings?.siteName,
+                editUrl,
+              }),
+            }}
+          />
+        )}
+        <SiteNavbar settings={settings} headerMenu={headerMenu} />
 
-      {children}
+        {children}
         <SiteFooter
           footer={footer}
           footerMenus={footerMenus}

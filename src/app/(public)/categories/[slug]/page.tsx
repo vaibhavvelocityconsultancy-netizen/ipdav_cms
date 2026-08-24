@@ -14,8 +14,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const category = (await fetchPublicCategories()).find(
-    (item) => item.slug === (await params).slug,
+    (item) => item.slug === slug,
   );
   return category
     ? {

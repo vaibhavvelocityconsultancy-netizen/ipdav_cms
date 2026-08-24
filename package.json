@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/extract-cms-classes.js",
     "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
@@ -107,6 +108,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@react-email/ui": "^6.9.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/multer": "^2.1.0",

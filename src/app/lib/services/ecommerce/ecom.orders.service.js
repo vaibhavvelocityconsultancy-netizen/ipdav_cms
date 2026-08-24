@@ -104,6 +104,22 @@ export async function getOrderById(id) {
   return order;
 }
 
+export async function getCustomerOrderById(id) {
+  const session = await requireAuth();
+  return prisma.order.findFirst({
+    where: {
+      id,
+      tenantId: Number(session.user.tenantId),
+      userId: Number(session.user.id),
+    },
+    include: {
+      items: {
+        select: { id: true, productTitle: true, quantity: true, total: true },
+      },
+    },
+  });
+}
+
 // ═══════════════════════════════════════════════════════════
 // CREATE  (called from checkout flow, not admin UI)
 // ═══════════════════════════════════════════════════════════
@@ -235,7 +251,7 @@ export async function createOrder(input) {
   const order = await prisma.order.create({
     data: {
       tenantId,
-      userId,
+      userId: Number(userId),
       orderNumber,
       status: "PENDING",
       paymentStatus: "PENDING",
