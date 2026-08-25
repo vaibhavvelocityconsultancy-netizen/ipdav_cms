@@ -137,11 +137,6 @@ export default function SiteLayout({
   const showToolbar = settings?.showAdminToolbar && isAdmin;
 
   useEffect(() => {
-    if (!settings) return;
-    document.title = settings.siteName || "";
-  }, [settings]);
-
-  useEffect(() => {
     const existing = document.getElementById("global-cms-js");
 
     if (!globalJs) {

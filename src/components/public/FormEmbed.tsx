@@ -31,6 +31,7 @@ interface PublicForm {
   submitButtonClass?: string;
   confirmationType: string;
   confirmationMessage: string;
+  confirmationMessageClass?: string;
   redirectUrl: string;
 }
 
@@ -123,7 +124,9 @@ export function FormEmbed({ slug }: { slug: string }) {
 
   if (submitted) {
     return (
-      <div className="py-10 text-center">
+      <div
+        className={`py-10 text-center ${form.confirmationMessageClass || ""}`}
+      >
         {form.confirmationMessage || "Thank you for your submission!"}
       </div>
     );

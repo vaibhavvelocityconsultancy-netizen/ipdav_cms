@@ -732,20 +732,21 @@ model form {
   slug   String
   fields Json
 
-  submitButtonLabel     String?  @default("Submit")
-  submitButtonClass     String?
-  confirmationType      String   @default("message")
-  confirmationMessage   String?  @db.Text
-  redirectUrl           String?
-  emails                Json?
-  status                String   @default("active")
-  hideRequiredIndicator Boolean  @default(false)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  tenantId              Int
-  layout                String   @default("default")
-  twoColumnHeading      String?  @db.Text
-  twoColumnParagraph    String?  @db.Text
+  submitButtonLabel        String?  @default("Submit")
+  submitButtonClass        String?
+  confirmationType         String   @default("message")
+  confirmationMessage      String?  @db.Text
+  confirmationMessageClass String?
+  redirectUrl              String?
+  emails                   Json?
+  status                   String   @default("active")
+  hideRequiredIndicator    Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  tenantId                 Int
+  layout                   String   @default("default")
+  twoColumnHeading         String?  @db.Text
+  twoColumnParagraph       String?  @db.Text
 
   tenant              tenant                @relation(fields: [tenantId], references: [id])
   formsubmission      formsubmission[]

@@ -41,6 +41,7 @@ export function PagesSection() {
   const [editingPage, setEditingPage] = useState<Page | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
+  const [homepagePageId, setHomepagePageId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNewPage, setIsNewPage] = useState(false);
@@ -181,8 +182,13 @@ export function PagesSection() {
   const fetchPages = async () => {
     try {
       setLoading(true);
-      const res = await pageService.getAll();
+      const [res, settingsRes] = await Promise.all([
+        pageService.getAll(),
+        fetch(apiPath("/api/setting")),
+      ]);
+      const settingsJson = await readJsonResponse(settingsRes);
       setPages(res.data);
+      setHomepagePageId(settingsJson.data?.homepagePageId ?? null);
       setError(null);
     } catch (error: any) {
       setError(error.message);
@@ -408,7 +414,10 @@ export function PagesSection() {
       cell: (page) => (
         <button
           onClick={() => {
-            window.open(`${process.env.NEXT_PUBLIC_SITE_URL}/${page.slug}`, "_blank");
+            window.open(
+              `${process.env.NEXT_PUBLIC_SITE_URL}/${page.slug}`,
+              "_blank",
+            );
           }}
           className="text-xs font-mono text-primary hover:underline cursor-pointer"
         >
@@ -416,7 +425,7 @@ export function PagesSection() {
         </button>
       ),
     },
-    { 
+    {
       key: "status",
       header: "Status",
       filterable: true,
@@ -529,6 +538,7 @@ export function PagesSection() {
       <PageEditor
         page={editingPage}
         pages={pages}
+        homepagePageId={homepagePageId}
         onChange={setEditingPage}
         onSave={savePage}
         onCancel={() => {

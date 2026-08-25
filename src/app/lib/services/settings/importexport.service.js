@@ -729,6 +729,7 @@ async function importForms(forms, strategy, report, tenantId) {
               twoColumnParagraph: form.twoColumnParagraph,
               confirmationType: form.confirmationType,
               confirmationMessage: form.confirmationMessage,
+              confirmationMessageClass: form.confirmationMessageClass,
               redirectUrl: form.redirectUrl,
               emails: form.emails,
               status: form.status,

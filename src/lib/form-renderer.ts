@@ -78,6 +78,7 @@ export interface FormData {
   submitButtonClass?: string;
   confirmationType?: "message" | "redirect";
   confirmationMessage?: string;
+  confirmationMessageClass?: string;
   redirectUrl?: string;
   status: string;
 }
@@ -154,6 +155,9 @@ export function renderFormHtml(form: FormData): string {
     form.confirmationType === "redirect" && form.redirectUrl
       ? `data-redirect="${escapeAttr(form.redirectUrl)}"`
       : `data-confirm-message="${escapeAttr(form.confirmationMessage ?? "Thank you! Your message has been received.")}"`;
+  const confirmationClass = ["cms-form-status", form.confirmationMessageClass]
+    .filter(Boolean)
+    .join(" ");
 
   return `
 <div class="cms-form-wrap" id="cms-form-${escapeAttr(form.slug)}">
@@ -198,7 +202,7 @@ export function renderFormHtml(form: FormData): string {
         ${escapeHtml(form.submitButtonLabel ?? "Submit")}
       </button>
     </div>
-    <div class="cms-form-status form-status" aria-live="polite"></div>
+    <div class="${escapeAttr(confirmationClass)} form-status" aria-live="polite"></div>
   </form>
 </div>`;
 }
@@ -395,7 +399,12 @@ export const FORM_SUBMIT_SCRIPT = `
   function setStatus(form, type, msg) {
     var statusEl = form.querySelector('.cms-form-status');
     if (!statusEl) return;
-    statusEl.className = 'cms-form-status' + (type ? ' cms-form-status--' + type : '');
+    statusEl.classList.remove(
+      'cms-form-status--loading',
+      'cms-form-status--success',
+      'cms-form-status--error'
+    );
+    if (type) statusEl.classList.add('cms-form-status--' + type);
     statusEl.textContent = msg;
   }
 

@@ -11,6 +11,7 @@ export default function AdminPageEditorRoute() {
   const router = useRouter();
   const [page, setPage] = useState<Page | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
+  const [homepagePageId, setHomepagePageId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,12 +19,15 @@ export default function AdminPageEditorRoute() {
     const loadPage = async () => {
       try {
         setLoading(true);
-        const [pageRes, pagesRes] = await Promise.all([
+        const [pageRes, pagesRes, settingsRes] = await Promise.all([
           pageService.getById(Number(params.id)),
           pageService.getAll(),
+          fetch("/api/setting"),
         ]);
+        const settingsJson = await settingsRes.json();
         setPage(pageRes.data?.data || pageRes.data || pageRes);
         setPages(pagesRes.data || []);
+        setHomepagePageId(settingsJson.data?.homepagePageId ?? null);
       } catch (err: any) {
         setError(err?.message || "Failed to load page");
       } finally {
@@ -67,6 +71,7 @@ export default function AdminPageEditorRoute() {
     <PageEditor
       page={page}
       pages={pages}
+      homepagePageId={homepagePageId}
       onChange={setPage}
       onSave={handleSave}
       onCancel={() => router.push("/admin")}

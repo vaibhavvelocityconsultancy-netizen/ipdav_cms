@@ -208,8 +208,12 @@ export default function PostsListPage({
 
         const setStatus = (type: string, msg: string) => {
           if (!statusEl) return;
-          statusEl.className =
-            "cms-form-status form-status" + (type ? ` cms-form-status--${type}` : "");
+          statusEl.classList.remove(
+            "cms-form-status--loading",
+            "cms-form-status--success",
+            "cms-form-status--error",
+          );
+          if (type) statusEl.classList.add(`cms-form-status--${type}`);
           statusEl.textContent = msg;
         };
 

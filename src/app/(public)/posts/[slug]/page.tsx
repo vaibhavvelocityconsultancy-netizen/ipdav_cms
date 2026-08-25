@@ -175,15 +175,6 @@ export default function PublicPostPage() {
   }, []);
 
   useEffect(() => {
-    if (!post) return;
-    const seo = post.seoData || {};
-    document.title =
-      seo.metaTitle || post.title
-        ? `${settings?.siteName || ""}`
-        : settings?.siteName || "";
-  }, [post, settings]);
-
-  useEffect(() => {
     if (post?.id) fetchComments(post.id);
   }, [post?.id, fetchComments]);
 

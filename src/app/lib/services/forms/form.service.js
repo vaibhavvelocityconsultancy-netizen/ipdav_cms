@@ -67,6 +67,7 @@ export async function getFormBySlug(slug, tenantId) {
       submitButtonLabel: true,
       confirmationType: true,
       confirmationMessage: true,
+      confirmationMessageClass: true,
       redirectUrl: true,
       status: true,
     },
@@ -105,6 +106,7 @@ export async function createForm(input) {
       confirmationType: input.confirmationType ?? "message",
       confirmationMessage:
         input.confirmationMessage ?? "Thank you for your submission.",
+      confirmationMessageClass: input.confirmationMessageClass ?? null,
       redirectUrl: input.redirectUrl ?? null,
       emails: input.emails ?? [],
       status: input.status ?? "active",
@@ -120,13 +122,27 @@ export async function updateForm(id, input) {
   const tenantId = session.user.tenantId;
   const { id: _, createdAt, updatedAt, ...data } = input;
 
+  const current = await prisma.form.findFirst({
+    where: { id: Number(id), tenantId },
+    select: { slug: true },
+  });
+  if (!current) throw new ApiError(404, "Form not found");
+
   // Handle slug uniqueness
   if (data.slug) {
-    data.slug = generateSlug(data.slug);
+    const submittedSlug = data.slug.trim();
+    data.slug =
+      submittedSlug === current.slug
+        ? current.slug
+        : generateSlug(submittedSlug);
     const existing = await prisma.form.findFirst({
-      where: { slug: data.slug, tenantId },
+      where: {
+        slug: data.slug,
+        tenantId,
+        NOT: { id: Number(id) },
+      },
     });
-    if (existing && existing.id !== Number(id)) {
+    if (existing) {
       throw new ApiError(400, `Slug "${data.slug}" is already taken`);
     }
   }
@@ -222,6 +238,7 @@ export async function submitForm(slug, data, ipAddress) {
     submission,
     confirmationType: form.confirmationType,
     confirmationMessage: form.confirmationMessage,
+    confirmationMessageClass: form.confirmationMessageClass,
     redirectUrl: form.redirectUrl,
   };
 }
