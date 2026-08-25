@@ -27,7 +27,7 @@ export function resolveSeoTemplate(
         ? `Page ${vars.page}`
         : ""
       : normalize(vars.page);
-  const separator = normalize(vars.separator ?? vars.sep);
+  const separator = normalize(vars.separator ?? vars.sep ?? "|");
   const siteName = normalize(vars.siteName ?? vars.sitename);
 
   let resolved = rawTemplate
@@ -47,19 +47,23 @@ export function resolveSeoTemplate(
   return resolved
     .replace(/\s+([|/\\:;,.!?])/g, " $1")
     .replace(/([|/\\:;,.!?])\s+/g, "$1 ")
-    .replace(/(?:^|\s)[|/\\:;,.!?](?=\s|$)/g, " ")
+    .replace(/^\s*[|/\\:;,.!?]\s*/, "")
+    .replace(/\s*[|/\\:;,.!?]\s*$/, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
 
 export function resolveSeoTitle(
-  seoData: {
-    metaTitle?: string | null;
-    titleTemplate?: string | null;
-    separator?: string | null;
-    ogTitle?: string | null;
-    twitterTitle?: string | null;
-  } | null | undefined,
+  seoData:
+    | {
+        metaTitle?: string | null;
+        titleTemplate?: string | null;
+        separator?: string | null;
+        ogTitle?: string | null;
+        twitterTitle?: string | null;
+      }
+    | null
+    | undefined,
   vars: Omit<SeoTemplateVariables, "separator" | "sep"> & {
     separator?: string | null;
   },

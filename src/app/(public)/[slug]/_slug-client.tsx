@@ -356,16 +356,6 @@ export default function PreviewPage({
     return () => main.removeEventListener("mouseover", handler);
   }, [page?.id, queryClient, router]);
 
-  // update page title on client navigation
-  useEffect(() => {
-    if (!page) return;
-    const seo = page.seoData || {};
-    document.title =
-      seo.metaTitle || page.title
-        ? `${settings?.siteName || ""}`
-        : settings?.siteName || "";
-  }, [page, settings]);
-
   // ── loading gate ──
   const isInitialLoading = pageLoading;
 
