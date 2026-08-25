@@ -9,6 +9,7 @@ import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 import { processPublicPageHtml } from "@/src/lib/public-page-html";
 import { enrichHtmlWithMediaDimensions } from "@/src/lib/media-dimensions.server";
+import { resolveSeoTemplate, resolveSeoTitle } from "@/src/lib/seo-template";
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
@@ -16,11 +17,17 @@ export async function generateMetadata(): Promise<Metadata> {
     const data = result?.data;
     const page =
       data?.homepage?.type === "page" ? data?.homepage?.page : null;
+    const settings = data?.settings;
 
     if (!page) return {};
 
     const seo = page.seoData || {};
-    const title = seo.metaTitle || page.title;
+    const title = resolveSeoTitle(seo, {
+      title: page.title,
+      page: page.title,
+      separator: seo.separator,
+      siteName: settings?.siteName,
+    });
     const description = seo.metaDescription || undefined;
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
@@ -44,13 +51,25 @@ export async function generateMetadata(): Promise<Metadata> {
         "max-image-preview": seo.maxImagePreview || "large",
       },
       openGraph: {
-        title: seo.ogTitle || title,
+        title: seo.ogTitle
+          ? resolveSeoTemplate(seo.ogTitle, {
+              title: page.title,
+              page: page.title,
+              separator: seo.separator,
+              siteName: settings?.siteName,
+            })
+          : title,
         description: seo.ogDescription || description,
         images: seo.ogImage ? [seo.ogImage] : undefined,
       },
       twitter: {
         card: "summary_large_image",
-        title: seo.twitterTitle || seo.ogTitle || title,
+        title: resolveSeoTemplate(seo.twitterTitle || seo.ogTitle || title, {
+          title: page.title,
+          page: page.title,
+          separator: seo.separator,
+          siteName: settings?.siteName,
+        }),
         description: seo.twitterDescription || seo.ogDescription || description,
         images:
           seo.twitterImage || seo.ogImage

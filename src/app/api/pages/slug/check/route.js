@@ -1,7 +1,7 @@
-import { isSlugAvailable } from "../../../../../lib/services/pages/page.service.js";
-import { ApiError } from "../../../../../lib/utils/ApiError.js";
-import { ApiResponse } from "../../../../../lib/utils/ApiResponse.js";
-import { asyncHandler } from "../../../../../lib/utils/asyncHandler.js";
+import { isSlugAvailable } from "../../../../lib/services/pages/page.service.js";
+import { ApiError } from "../../../../lib/utils/ApiError.js";
+import { ApiResponse } from "../../../../lib/utils/ApiResponse.js";
+import { asyncHandler } from "../../../../lib/utils/asyncHandler.js";
 
 export const POST = asyncHandler(async (request) => {
   const body = await request.json();

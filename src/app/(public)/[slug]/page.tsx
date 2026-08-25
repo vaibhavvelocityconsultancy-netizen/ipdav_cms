@@ -12,6 +12,7 @@ import { log404Error } from "@/src/lib/redirectMiddleware";
 import { SchemaRenderer } from "@/src/components/admin/pages/SchemaOutput";
 import { processPublicPageHtml } from "@/src/lib/public-page-html";
 import { enrichHtmlWithMediaDimensions } from "@/src/lib/media-dimensions.server";
+import { resolveSeoTemplate, resolveSeoTitle } from "@/src/lib/seo-template";
 
 export async function generateMetadata({
   params,
@@ -21,10 +22,22 @@ export async function generateMetadata({
   const { slug } = await params;
 
   try {
-    const result = await fetchers.publicPageBySlug(slug);
+    const [result, bootstrapResult] = await Promise.all([
+      fetchers.publicPageBySlug(slug),
+      fetchers.publicBootstrap(),
+    ]);
     const page = result?.data;
+
+    if (!page) return {};
+
+    const settings = bootstrapResult?.data?.settings;
     const seo = page?.seoData || {};
-    const title = seo.metaTitle || page?.title;
+    const title = resolveSeoTitle(seo, {
+      title: page?.title,
+      page: page?.title,
+      separator: seo.separator,
+      siteName: settings?.siteName,
+    });
     const description = seo.metaDescription || undefined;
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
@@ -34,8 +47,6 @@ export async function generateMetadata({
 
     const canonical =
       seo.canonicalUrl || `${siteUrl}${slug === "home" ? "" : `/${slug}`}`;
-
-    if (!page) return {};
 
     return {
       title,
@@ -52,13 +63,25 @@ export async function generateMetadata({
         "max-image-preview": seo.maxImagePreview || "large",
       },
       openGraph: {
-        title: seo.ogTitle || title,
+        title: seo.ogTitle
+          ? resolveSeoTemplate(seo.ogTitle, {
+              title: page?.title,
+              page: page?.title,
+              separator: seo.separator,
+              siteName: settings?.siteName,
+            })
+          : title,
         description: seo.ogDescription || description,
         images: seo.ogImage ? [seo.ogImage] : undefined,
       },
       twitter: {
         card: "summary_large_image",
-        title: seo.twitterTitle || seo.ogTitle || title,
+        title: resolveSeoTemplate(seo.twitterTitle || seo.ogTitle || title, {
+          title: page?.title,
+          page: page?.title,
+          separator: seo.separator,
+          siteName: settings?.siteName,
+        }),
         description: seo.twitterDescription || seo.ogDescription || description,
         images:
           seo.twitterImage || seo.ogImage

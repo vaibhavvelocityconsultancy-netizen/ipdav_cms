@@ -24,6 +24,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { resolveSeoTemplate } from "@/src/lib/seo-template";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,19 +384,6 @@ function stripHtml(html: string) {
 }
 
 const SEPARATOR_OPTIONS = ["-", "|", "•", "–", "—", "·", "*", "~", "»"];
-
-function resolveTitleTemplate(
-  template: string,
-  vars: { title: string; page?: number; sep: string; sitename: string },
-) {
-  return template
-    .replace(/%title%/gi, vars.title)
-    .replace(/%page%/gi, vars.page && vars.page > 1 ? `Page ${vars.page}` : "")
-    .replace(/%sep%/gi, vars.sep)
-    .replace(/%sitename%/gi, vars.sitename)
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
 
 function countWords(text: string) {
   return text.split(/\s+/).filter(Boolean).length;
@@ -1029,11 +1017,11 @@ export function SeoPanel({
   const update = (patch: Partial<SeoData>) =>
     setSeo((prev) => ({ ...prev, ...patch }));
 
-  const autoTitle = resolveTitleTemplate(seo.titleTemplate, {
+  const autoTitle = resolveSeoTemplate(seo.titleTemplate, {
     title: pageTitle || "Page Title",
     page: pageNumber,
-    sep: seo.separator,
-    sitename: siteName,
+    separator: seo.separator,
+    siteName,
   });
 
   useEffect(() => {
@@ -1052,7 +1040,15 @@ export function SeoPanel({
 
   const focusKw = seo.focusKeywords[0] ?? "";
 
-  const serpTitle = seo.metaTitle || pageTitle || "Page Title";
+  const serpTitle =
+    resolveSeoTemplate(seo.metaTitle || autoTitle, {
+      title: pageTitle || "Page Title",
+      page: pageNumber,
+      separator: seo.separator,
+      siteName,
+    }) ||
+    pageTitle ||
+    "Page Title";
   const serpSlug = slug || "page-slug";
   const serpDesc =
     seo.metaDescription ||
