@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Globe,
   ChevronDown,
@@ -25,6 +26,7 @@ import {
   Check,
 } from "lucide-react";
 import { resolveSeoTemplate } from "@/src/lib/seo-template";
+import { fetchers } from "@/src/lib/fetchers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -991,10 +993,21 @@ export function SeoPanel({
   siteName = "Your Site",
   onChange,
 }: SeoPanelProps) {
+  const { data: settingsData } = useQuery({
+    queryKey: ["public", "settings"],
+    queryFn: fetchers.publicSettings,
+    staleTime: 60_000,
+  });
+  const configuredSiteName = settingsData?.data?.siteName?.trim() || siteName;
+
   const [tab, setTab] = useState<
     "general" | "advanced" | "schema" | "social" | "image"
   >("general");
-  const [seo, setSeo] = useState<SeoData>({ ...DEFAULT_SEO, ...initialData });
+  const [seo, setSeo] = useState<SeoData>({
+    ...DEFAULT_SEO,
+    ...initialData,
+    metaTitle: initialData?.metaTitle?.trim() || DEFAULT_SEO.titleTemplate,
+  });
   const [kwInput, setKwInput] = useState("");
   const [serpEdit, setSerpEdit] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">(
@@ -1021,7 +1034,7 @@ export function SeoPanel({
     title: pageTitle || "Page Title",
     page: pageNumber,
     separator: seo.separator,
-    siteName,
+    siteName: configuredSiteName,
   });
 
   useEffect(() => {
@@ -1045,7 +1058,7 @@ export function SeoPanel({
       title: pageTitle || "Page Title",
       page: pageNumber,
       separator: seo.separator,
-      siteName,
+      siteName: configuredSiteName,
     }) ||
     pageTitle ||
     "Page Title";
@@ -1220,14 +1233,21 @@ export function SeoPanel({
             {serpEdit && (
               <div className="space-y-3 pt-1">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium">Title Template</label>
+                  <div className="flex justify-between">
+                    <label className="text-xs font-medium">
+                      SEO Title (override)
+                    </label>
+                    <span
+                      className={`text-xs ${titleLen > 60 ? "text-red-500" : titleLen >= 50 ? "text-emerald-600" : "text-muted-foreground"}`}
+                    >
+                      {titleLen}/60
+                    </span>
+                  </div>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={seo.titleTemplate}
-                      onChange={(e) =>
-                        update({ titleTemplate: e.target.value })
-                      }
+                      value={seo.metaTitle}
+                      onChange={(e) => update({ metaTitle: e.target.value })}
                       placeholder="%title% %sep% %sitename%"
                       className="flex-1 border border-border rounded px-3 py-1.5 text-sm bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary"
                     />
@@ -1250,26 +1270,6 @@ export function SeoPanel({
                     <code className="bg-muted px-1 rounded">%sep%</code>{" "}
                     <code className="bg-muted px-1 rounded">%sitename%</code>
                   </p>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <label className="text-xs font-medium">
-                      SEO Title (override)
-                    </label>
-                    <span
-                      className={`text-xs ${titleLen > 60 ? "text-red-500" : titleLen >= 50 ? "text-emerald-600" : "text-muted-foreground"}`}
-                    >
-                      {titleLen}/60
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    value={seo.metaTitle}
-                    onChange={(e) => update({ metaTitle: e.target.value })}
-                    placeholder={pageTitle || "Enter SEO title…"}
-                    className="w-full border border-border rounded px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
                   <PixelMeter
                     px={titlePx}
                     max={TITLE_PX_MAX}
