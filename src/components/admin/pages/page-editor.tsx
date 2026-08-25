@@ -11,6 +11,7 @@ import { SeoPanel } from "./seo-pannel";
 interface PageEditorProps {
   page: Page;
   pages: Page[];
+  homepagePageId: number | null;
   onChange: (page: Page) => void;
   onSave: (pageToSave?: Page) => Promise<void>;
   onCancel: () => void;
@@ -50,6 +51,7 @@ interface PageWithSeo extends Page {
 export function PageEditor({
   page,
   pages,
+  homepagePageId,
   onChange,
   onSave,
   onCancel,
@@ -92,6 +94,7 @@ export function PageEditor({
     <div className="flex flex-col bg-background font-sans">
       <PageEditorHeader
         page={page}
+        homepagePageId={homepagePageId}
         onChange={onChange}
         onCancel={onCancel}
         onSave={handleSave}

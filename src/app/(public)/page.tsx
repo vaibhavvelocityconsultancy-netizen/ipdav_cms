@@ -3,11 +3,65 @@ import {
   HydrationBoundary,
   QueryClient,
 } from "@tanstack/react-query";
+import type { Metadata } from "next";
 import HomeClient from "./_home-client";
 import { fetchers } from "@/src/lib/fetchers";
 import { queryKeys } from "@/src/lib/query-key";
 import { processPublicPageHtml } from "@/src/lib/public-page-html";
 import { enrichHtmlWithMediaDimensions } from "@/src/lib/media-dimensions.server";
+
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const result = await fetchers.publicBootstrap();
+    const data = result?.data;
+    const page =
+      data?.homepage?.type === "page" ? data?.homepage?.page : null;
+
+    if (!page) return {};
+
+    const seo = page.seoData || {};
+    const title = seo.metaTitle || page.title;
+    const description = seo.metaDescription || undefined;
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "https://next-crm-momemtums.vercel.app");
+    const canonical = seo.canonicalUrl || siteUrl;
+
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      robots: {
+        index: seo.robotsIndex ?? true,
+        follow: seo.robotsFollow ?? true,
+        noarchive: seo.robotsNoArchive || undefined,
+        nosnippet: seo.robotsNoSnippet || undefined,
+        noimageindex: seo.robotsNoImageIndex || undefined,
+        "max-snippet": seo.maxSnippet ?? -1,
+        "max-video-preview": seo.maxVideoPreview ?? -1,
+        "max-image-preview": seo.maxImagePreview || "large",
+      },
+      openGraph: {
+        title: seo.ogTitle || title,
+        description: seo.ogDescription || description,
+        images: seo.ogImage ? [seo.ogImage] : undefined,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seo.twitterTitle || seo.ogTitle || title,
+        description: seo.twitterDescription || seo.ogDescription || description,
+        images:
+          seo.twitterImage || seo.ogImage
+            ? [seo.twitterImage || seo.ogImage]
+            : undefined,
+      },
+    };
+  } catch {
+    return {};
+  }
+}
 
 export default async function Page() {
   const queryClient = new QueryClient();

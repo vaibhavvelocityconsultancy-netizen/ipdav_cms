@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/src/components/theme-toggle";
 
 interface PageEditorHeaderProps {
   page: Page;
+  homepagePageId: number | null;
   onChange: (page: Page) => void;
   onCancel: () => void;
   onSave: () => void;
@@ -15,6 +16,7 @@ interface PageEditorHeaderProps {
 
 export function PageEditorHeader({
   page,
+  homepagePageId,
   onChange,
   onCancel,
   onSave,
@@ -29,21 +31,25 @@ export function PageEditorHeader({
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
+  const isHomepage = Number(page.id) === Number(homepagePageId);
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+  const permalinkBase = siteUrl ? `${siteUrl}/` : "/";
+
   const handleTitleChange = (value: string) => {
-    const newSlug = generateSlug(value);
+    const newSlug = isHomepage ? "" : generateSlug(value);
     setSlugInput(newSlug);
     onChange({ ...page, title: value, slug: newSlug });
   };
 
   const handleSlugSave = () => {
-    const clean = generateSlug(slugInput);
+    const clean = slugInput.trim() ? generateSlug(slugInput) : "";
     setSlugInput(clean);
     onChange({ ...page, slug: clean });
     setSlugEditing(false);
   };
 
   const openPreview = () => {
-    window.open(`/${page.slug}`, "_blank");
+    window.open(page.slug ? `/${page.slug}` : "/", "_blank");
   };
 
   return (
@@ -98,18 +104,13 @@ export function PageEditorHeader({
           <span className="font-medium">Permalink:</span>
           {slugEditing ? (
             <div className="flex items-center gap-2">
-              <span className="text-primary">
-                {typeof window !== "undefined"
-                  ? `${process.env.NEXT_PUBLIC_SITE_URL}/`
-                  : "/"}
-              </span>
+              <span className="text-primary">{permalinkBase}</span>
               <input
                 value={slugInput}
                 onChange={(e) => setSlugInput(e.target.value)}
                 className="border border-primary bg-background px-2 py-0.5 text-sm text-foreground rounded focus:outline-none"
                 autoFocus
               />
-              <span className="text-primary">/</span>
               <button
                 onClick={handleSlugSave}
                 className="px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
@@ -129,14 +130,12 @@ export function PageEditorHeader({
           ) : (
             <>
               <a
-                href={`/${page.slug}`}
+                href={page.slug ? `/${page.slug}` : "/"}
                 target="_blank"
                 className="text-primary hover:underline"
               >
-                {typeof window !== "undefined"
-                  ? `${process.env.NEXT_PUBLIC_SITE_URL}/`
-                  : "/"}
-                <span className="font-medium">{page.slug}</span>/
+                {permalinkBase}
+                <span className="font-medium">{page.slug}</span>
               </a>
               <button
                 onClick={() => setSlugEditing(true)}

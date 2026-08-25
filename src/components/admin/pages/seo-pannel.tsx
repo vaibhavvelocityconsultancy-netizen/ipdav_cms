@@ -1367,6 +1367,7 @@ export function SeoPanel({
                 type="text"
                 value={kwInput}
                 onChange={(e) => setKwInput(e.target.value)}
+                onBlur={() => addKeyword(kwInput)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === ",") {
                     e.preventDefault();
@@ -1390,7 +1391,7 @@ export function SeoPanel({
               <kbd className="px-1 py-0.5 bg-muted border border-border rounded text-[10px]">
                 ,
               </kbd>{" "}
-              to add
+              to add, or leave the field
             </p>
 
             <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
