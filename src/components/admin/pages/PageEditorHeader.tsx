@@ -10,9 +10,7 @@ interface PageEditorHeaderProps {
   onChange: (page: Page) => void;
   onCancel: () => void;
   onSave: () => void;
-  activeTab: "general" | "seo";
   isSaving: boolean;
-  
 }
 
 export function PageEditorHeader({

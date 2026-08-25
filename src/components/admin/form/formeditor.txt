@@ -631,7 +631,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
     emails: (form.emails || []) as EmailConfig[],
     status: form.status || "active",
     hideRequiredIndicator: form.hideRequiredIndicator === true,
-    layout: form.layout || "default",
+    layout: form.layout || "default",fo
     twoColumnHeading: form.twoColumnHeading || "",
     twoColumnParagraph: form.twoColumnParagraph || "",
   });
