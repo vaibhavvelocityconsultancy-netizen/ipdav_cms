@@ -1,6 +1,6 @@
 // import { getPagesSitemap } from "@/services/sitemap.js";
 
-import { getTagsSitemap } from "../../../lib/services/seo/sitemap.service";
+import { getTagsSitemap } from "../../../lib/services/seo/sitemap.service.js";
 
 // import { getPagesSitemap } from "@/src/app/lib/services/seo/sitemap.service";
 
