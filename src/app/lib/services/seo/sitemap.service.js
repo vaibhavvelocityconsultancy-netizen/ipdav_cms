@@ -123,7 +123,6 @@ async function getTagUrls(tenantId) {
   const tags = await prisma.tag.findMany({
     where: {
       tenantId,
-      sitemapEnabled: true,
     },
     select: {
       slug: true,
@@ -189,11 +188,17 @@ ${xml}
 // Generate Sitemap Index (lists all sitemaps)
 function generateSitemapIndex(siteUrl, sitemaps) {
   const basePath = getBasePath();
+  const sitemapPaths = {
+    pages: "page-sitemap.xml",
+    posts: "post-sitemap.xml",
+    category: "sitemap-category.xml",
+    tags: "post_tag-sitemap.xml",
+  };
   const xml = sitemaps
     .map(
       (sitemap) => `
   <sitemap>
-    <loc>${siteUrl}/${sitemap.type === "pages" ? "page" : "post"}-sitemap.xml</loc>
+    <loc>${siteUrl}/${sitemapPaths[sitemap.type] || `${sitemap.type}-sitemap.xml`}</loc>
     <lastmod>${sitemap.lastmod.toISOString()}</lastmod>
   </sitemap>`,
     )
@@ -429,24 +434,24 @@ export async function getSitemapStats(tenantId) {
   };
 }
 
-export async function getSitemapPreview(tenantId) {
+export async function getSitemapPreview(tenantId, type) {
   const settings = await getSiteSettings(tenantId);
 
   const urls = [];
 
-  if (settings.includePages) {
+  if ((!type || type === "pages") && settings.includePages) {
     urls.push(...(await getPageUrls(tenantId)));
   }
 
-  if (settings.includePosts) {
+  if ((!type || type === "posts") && settings.includePosts) {
     urls.push(...(await getPostUrls(tenantId)));
   }
 
-  if (settings.includeCategories) {
+  if ((!type || type === "categories") && settings.includeCategories) {
     urls.push(...(await getCategoryUrls(tenantId)));
   }
 
-  if (settings.includeTags) {
+  if ((!type || type === "tags") && settings.includeTags) {
     urls.push(...(await getTagUrls(tenantId)));
   }
 
@@ -454,7 +459,7 @@ export async function getSitemapPreview(tenantId) {
   //   urls.push(...(await getCourseUrls(tenantId)));
   // }
 
-  return urls.slice(0, 15);
+  return urls.slice(0, type ? undefined : 15);
 }
 
 export async function regenerateSitemap(tenantId) {

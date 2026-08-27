@@ -147,20 +147,13 @@ const fetchSitemapStats = async (): Promise<SitemapStats> => {
 const fetchSitemapPreview = async (
   module?: MenuItemType,
 ): Promise<SitemapPreview> => {
-  const response = await fetch(apiPath("/api/seo/sitemap/preview"));
+  const response = await fetch(
+    `${apiPath("/api/seo/sitemap/preview")}?type=${module}`,
+  );
   const json = await response.json();
   if (!response.ok) throw new Error(json.message);
 
-  const entries = (json.data as SitemapPreviewEntry[]).filter((entry) => {
-    if (!module || module === "general") return true;
-    if (module === "pages")
-      return !/^\/(blog|category|tag|courses)(\/|$)/.test(entry.url);
-    if (module === "posts") return entry.url.startsWith("/blog/");
-    if (module === "categories") return entry.url.startsWith("/category/");
-    if (module === "tags") return entry.url.startsWith("/tag/");
-    if (module === "courses") return entry.url.startsWith("/courses/");
-    return false;
-  });
+  const entries = json.data as SitemapPreviewEntry[];
 
   return {
     entries,
@@ -281,10 +274,10 @@ export default function SitemapSettingsPage() {
     if (module === "pages") return absoluteUrl(appUrl("/page-sitemap.xml"));
     if (module === "posts") return absoluteUrl(appUrl("/post-sitemap.xml"));
     if (module === "categories")
-      return absoluteUrl(appUrl("/api/seo/sitemap-category.xml"));
+      return absoluteUrl(appUrl("/sitemap-category.xml"));
     if (module === "tags") return absoluteUrl(appUrl("/post_tag-sitemap.xml"));
     if (module === "courses")
-      return absoluteUrl(appUrl("/api/seo/sitemap-courses.xml"));
+      return absoluteUrl(appUrl("/sitemap-courses.xml"));
 
     return absoluteUrl(
       settingsData?.sitemapCustomUrl || appUrl("/sitemap_index.xml"),
