@@ -5,7 +5,7 @@ import { generateLlmsTxtContent } from "../lib/services/seo/llmsTxtContent";
 
 export const dynamic = "force-dynamic";
 
-async function generateContent() {
+async function generateContent(baseUrl) {
   const tenant = await prisma.tenant.findFirst({ select: { id: true } });
   if (!tenant) throw new Error("No tenant found");
 
@@ -37,24 +37,27 @@ async function generateContent() {
       })
     : [];
 
-  return generateLlmsTxtContent(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://example.com",
-    pages,
-    posts,
-  );
+  return generateLlmsTxtContent(baseUrl, pages, posts);
 }
 
-export async function GET() {
+export async function GET(request) {
   const filePath = path.join(process.cwd(), "data", "llms.txt");
+  const requestUrl = new URL(request.url);
+  const requestBaseUrl = requestUrl.origin;
 
   try {
     let content;
     try {
       content = await fs.readFile(filePath, "utf8");
     } catch {
-      content = await generateContent();
+      content = await generateContent(requestBaseUrl);
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, content, "utf8");
+    }
+
+    const storedBaseUrl = content.match(/^\*\*Site:\*\*\s*(\S+)/m)?.[1];
+    if (storedBaseUrl && storedBaseUrl !== requestBaseUrl) {
+      content = content.split(storedBaseUrl).join(requestBaseUrl);
     }
 
     return new Response(content, {
