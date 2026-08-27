@@ -1,17 +1,61 @@
 # AI & LLM Content Index
 
-**Generated:** 2026-08-23T16:06:36.202Z
+**Generated:** 2026-08-27T06:29:40.935Z
 **Site:** http://localhost:3000
 
 ---
 
-## Pages (3)
+## Pages (10)
 
-- [Contact ](http://localhost:3000/contact): Updated 2026-08-01
+- [iPDAV](http://localhost:3000/): Updated 2026-08-25
+  Title: iPDAV
+  Meta Title: Intellectual Property Protection & Document Archive %sep% %sitename%
+  Meta Description: Protect and securely archive your patents, copyrights, trademarks, creative works, and important documents with iPDAV's secure digital vault.
 
-- [About](http://localhost:3000/about): Updated 2026-08-01
+- [New Page](http://localhost:3000/new-page): Updated 2026-08-25
+  Title: New Page
+  Meta Title: 
+  Meta Description: 
 
-- [Home](http://localhost:3000): Updated 2026-08-01
+- [Pricing and package](http://localhost:3000/pricing-and-packages): Updated 2026-08-18
+  Title: Pricing and package
+  Meta Title: 
+  Meta Description: 
+
+- [Contact Us](http://localhost:3000/contact-us): Updated 2026-08-17
+  Title: Contact Us
+  Meta Title: 
+  Meta Description: 
+
+- [About ](http://localhost:3000/about): Updated 2026-08-13
+  Title: About 
+  Meta Title: 
+  Meta Description: 
+
+- [FAQ](http://localhost:3000/faq): Updated 2026-08-13
+  Title: FAQ
+  Meta Title: 
+  Meta Description: 
+
+- [Resources](http://localhost:3000/resources): Updated 2026-08-13
+  Title: Resources
+  Meta Title: 
+  Meta Description: 
+
+- [Patents & Trademark](http://localhost:3000/patents-trademark): Updated 2026-08-13
+  Title: Patents & Trademark
+  Meta Title: 
+  Meta Description: 
+
+- [Partnership](http://localhost:3000/partnership): Updated 2026-08-13
+  Title: Partnership
+  Meta Title: 
+  Meta Description: 
+
+- [Product and Services](http://localhost:3000/product-and-services): Updated 2026-08-13
+  Title: Product and Services
+  Meta Title: 
+  Meta Description: 
 
 ---
 
@@ -23,7 +67,7 @@
 
 ## Summary
 
-- Total Pages: 3
+- Total Pages: 10
 - Total Posts: 0
-- Total Items: 3
+- Total Items: 10
 - Site: http://localhost:3000

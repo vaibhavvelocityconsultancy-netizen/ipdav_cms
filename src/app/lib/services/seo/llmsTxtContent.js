@@ -2,7 +2,11 @@ import fs from "fs";
 import path from "path";
 
 function normalizeBaseUrl(baseUrl) {
-  return (process.env.NEXT_PUBLIC_SITE_URL || "https://example.com").replace(/\/$/, "");
+  return (
+    baseUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://example.com"
+  ).replace(/\/$/, "");
 }
 
 function buildContentUrl(baseUrl, slug, type = "page") {
@@ -14,7 +18,7 @@ function buildContentUrl(baseUrl, slug, type = "page") {
   }
 
   if (!slug || slug === "home" || slug === "/") {
-    return safeBaseUrl;
+    return `${safeBaseUrl}/`;
   }
 
   return `${safeBaseUrl}/${slug.replace(/^\/+|\/+$/g, "")}`;
@@ -38,7 +42,18 @@ export function generateLlmsTxtContent(baseUrl, pages, posts) {
     pages.forEach((page) => {
       const date = new Date(page.updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, page.slug, "page");
-      content += `- [${page.title}](${url}): Updated ${date}\n\n`;
+      const metaTitle =
+        page.seoData && typeof page.seoData === "object"
+          ? page.seoData.metaTitle || ""
+          : "";
+      const metaDescription =
+        page.seoData && typeof page.seoData === "object"
+          ? page.seoData.metaDescription || ""
+          : "";
+      content += `- [${page.title}](${url}): Updated ${date}\n`;
+      content += `  Title: ${page.title}\n`;
+      content += `  Meta Title: ${metaTitle}\n`;
+      content += `  Meta Description: ${metaDescription}\n\n`;
     });
   } else {
     content += `(No pages)\n\n`;

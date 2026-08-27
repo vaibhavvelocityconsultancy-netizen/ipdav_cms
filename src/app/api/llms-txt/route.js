@@ -44,6 +44,7 @@ export const GET = asyncHandler(async (req, res) => {
         select: {
           title: true,
           slug: true,
+          seoData: true,
           updatedAt: true,
         },
         orderBy: { updatedAt: "desc" },

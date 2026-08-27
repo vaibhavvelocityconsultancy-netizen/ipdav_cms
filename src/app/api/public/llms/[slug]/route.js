@@ -74,7 +74,9 @@ async function getSourceMetadata(content) {
       slug: page.slug,
       type: "page",
       updated: new Date(page.updatedAt).toISOString().split("T")[0],
-      url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://example.com"}/${page.slug}`,
+      url: page.slug
+        ? `${(process.env.NEXT_PUBLIC_SITE_URL || "https://example.com").replace(/\/$/, "")}/${page.slug}`
+        : `${(process.env.NEXT_PUBLIC_SITE_URL || "https://example.com").replace(/\/$/, "")}/`,
     };
   }
 
@@ -117,18 +119,31 @@ async function getSourceMetadata(content) {
   return null;
 }
 
-async function withMetadata(content) {
-  if (/^---\r?\n[\s\S]*?\r?\n---\r?\n/.test(content.markdown)) {
+async function withMetadata(content, refreshHomepage = false) {
+  const metadata = await getSourceMetadata(content);
+  if (!metadata) return content.markdown;
+
+  if (
+    !refreshHomepage &&
+    /^---\r?\n[\s\S]*?\r?\n---\r?\n/.test(content.markdown)
+  ) {
     return content.markdown;
   }
 
-  const metadata = await getSourceMetadata(content);
-  if (!metadata) return content.markdown;
+  const body = content.markdown.replace(
+    /^---\r?\n[\s\S]*?\r?\n---\r?\n\s*/i,
+    "",
+  );
+  const normalizedBody = refreshHomepage
+    ? body
+        .replace(/^\*\*URL:\*\*.*$/m, `**URL:** ${metadata.url}`)
+        .replace(/^\*\*Canonical:\*\*.*$/m, `**Canonical:** ${metadata.url}`)
+    : body;
 
   return (
     buildFrontmatter(metadata) +
     replaceDescriptionWithMeta(
-      content.markdown,
+      normalizedBody,
       metadata.metaTitle,
       metadata.metaDescription,
     )
@@ -143,14 +158,26 @@ export const GET = asyncHandler(async (_req, context) => {
     .replace(/\.md$/i, "")
     .replace(/^\/+|\/+$/g, "");
 
-  if (!slug) {
+  const isHomepageMarkdown = rawSlug === "";
+
+  if (!slug && !isHomepageMarkdown) {
     throw new ApiError(400, "Invalid markdown slug");
   }
 
+  const homepage = isHomepageMarkdown
+    ? await prisma.page.findFirst({
+        where: { slug: "", status: "PUBLISHED" },
+        select: { id: true },
+      })
+    : null;
+
   const content = await prisma.AICrawlContent.findFirst({
-    where: {
-      slug,
-    },
+    where: isHomepageMarkdown
+      ? {
+          contentType: "page",
+          contentId: String(homepage?.id ?? -1),
+        }
+      : { slug },
     orderBy: {
       updatedAt: "desc",
     },
@@ -160,12 +187,14 @@ export const GET = asyncHandler(async (_req, context) => {
     throw new ApiError(404, "Markdown not found");
   }
 
-  const markdown = await withMetadata(content);
+  const markdown = await withMetadata(content, isHomepageMarkdown);
 
   return new Response(markdown, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": isHomepageMarkdown
+        ? "no-store, no-cache, must-revalidate"
+        : "public, max-age=300",
     },
   });
 });
