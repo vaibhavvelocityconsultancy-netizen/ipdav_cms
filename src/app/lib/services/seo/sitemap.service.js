@@ -193,7 +193,7 @@ function generateSitemapIndex(siteUrl, sitemaps) {
     .map(
       (sitemap) => `
   <sitemap>
-    <loc>${siteUrl}/api/seo/sitemap-${sitemap.type}.xml</loc>
+    <loc>${siteUrl}/${sitemap.type === "pages" ? "page" : "post"}-sitemap.xml</loc>
     <lastmod>${sitemap.lastmod.toISOString()}</lastmod>
   </sitemap>`,
     )

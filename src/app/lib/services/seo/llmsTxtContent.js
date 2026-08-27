@@ -82,6 +82,7 @@ export function generateLlmsTxtContent(baseUrl, pages, posts) {
 }
 
 export function writeLlmsTxtFile(content) {
-  const filePath = path.join(process.cwd(), "public", "llms.txt");
+  const filePath = path.join(process.cwd(), "data", "llms.txt");
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, "utf8");
 }

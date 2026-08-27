@@ -1,5 +1,8 @@
-import { GET as getLlmsTxt } from "../llms.txt/route";
-
 export const dynamic = "force-dynamic";
 
-export const GET = getLlmsTxt;
+export async function GET(request) {
+  const url = new URL(request.url);
+  url.pathname = url.pathname.replace(/\/llm\.txt$/, "/llms.txt");
+
+  return Response.redirect(url, 308);
+}
