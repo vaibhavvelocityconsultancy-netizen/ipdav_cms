@@ -71,6 +71,11 @@ type MenuItemType =
 
 const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
+const absoluteUrl = (path: string) => {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return new URL(path, siteUrl).toString();
+};
+
 // Menu configuration
 interface MenuItem {
   id: MenuItemType;
@@ -273,13 +278,17 @@ export default function SitemapSettingsPage() {
   };
 
   const getSitemapUrl = (module: MenuItemType = "general") => {
-    if (module === "pages") return appUrl("/page-sitemap.xml");
-    if (module === "posts") return appUrl("/post-sitemap.xml");
-    if (module === "categories") return appUrl("/api/seo/sitemap-category.xml");
-    if (module === "tags") return appUrl("/post_tag-sitemap.xml");
-    if (module === "courses") return appUrl("/api/seo/sitemap-courses.xml");
+    if (module === "pages") return absoluteUrl(appUrl("/page-sitemap.xml"));
+    if (module === "posts") return absoluteUrl(appUrl("/post-sitemap.xml"));
+    if (module === "categories")
+      return absoluteUrl(appUrl("/api/seo/sitemap-category.xml"));
+    if (module === "tags") return absoluteUrl(appUrl("/post_tag-sitemap.xml"));
+    if (module === "courses")
+      return absoluteUrl(appUrl("/api/seo/sitemap-courses.xml"));
 
-    return settingsData?.sitemapCustomUrl || appUrl("/sitemap_index.xml");
+    return absoluteUrl(
+      settingsData?.sitemapCustomUrl || appUrl("/sitemap_index.xml"),
+    );
   };
 
   const activeItem = MENU_ITEMS.find((item) => item.id === activeMenu);
