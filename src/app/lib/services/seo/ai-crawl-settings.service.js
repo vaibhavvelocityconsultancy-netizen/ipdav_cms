@@ -147,13 +147,14 @@ async function generateLlmsTxt(tenantId, settings) {
         select: {
           title: true,
           slug: true,
+          seoData: true,
           updatedAt: true,
         },
         orderBy: { publishedAt: "desc" },
       });
     }
 
-    const content = generateLlmsTxtContent(baseUrl, pages, posts);
+    const content = generateLlmsTxtContent(baseUrl, pages, posts, siteSettings);
     writeLlmsTxtFile(content);
 
     console.log(

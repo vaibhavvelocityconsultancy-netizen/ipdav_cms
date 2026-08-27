@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { resolveSeoTemplate } from "../../../../lib/seo-template";
 
 function normalizeBaseUrl(baseUrl) {
   return (
@@ -24,7 +25,7 @@ function buildContentUrl(baseUrl, slug, type = "page") {
   return `${safeBaseUrl}/${slug.replace(/^\/+|\/+$/g, "")}`;
 }
 
-export function generateLlmsTxtContent(baseUrl, pages, posts) {
+export function generateLlmsTxtContent(baseUrl, pages, posts, siteSettings) {
   const resolvedBaseUrl = normalizeBaseUrl(baseUrl);
 
   let content = `# AI & LLM Content Index
@@ -42,18 +43,26 @@ export function generateLlmsTxtContent(baseUrl, pages, posts) {
     pages.forEach((page) => {
       const date = new Date(page.updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, page.slug, "page");
-      const metaTitle =
+      const rawMetaTitle =
         page.seoData && typeof page.seoData === "object"
           ? page.seoData.metaTitle || ""
           : "";
+      const metaTitle = resolveSeoTemplate(rawMetaTitle, {
+        title: page.title,
+        page: page.title,
+        separator: page.seoData?.separator || siteSettings?.separator || "|",
+        siteName: siteSettings?.siteName,
+      });
       const metaDescription =
         page.seoData && typeof page.seoData === "object"
           ? page.seoData.metaDescription || ""
           : "";
       content += `- [${page.title}](${url}): Updated ${date}\n`;
       content += `  Title: ${page.title}\n`;
-      content += `  Meta Title: ${metaTitle}\n`;
-      content += `  Meta Description: ${metaDescription}\n\n`;
+      if (metaTitle) content += `  Meta Title: ${metaTitle}\n`;
+      if (metaDescription)
+        content += `  Meta Description: ${metaDescription}\n`;
+      content += "\n";
     });
   } else {
     content += `(No pages)\n\n`;
@@ -66,7 +75,26 @@ export function generateLlmsTxtContent(baseUrl, pages, posts) {
       const updatedAt = post.updatedAt || post.publishedAt || new Date();
       const date = new Date(updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, post.slug, "post");
-      content += `- [${post.title}](${url}): Updated ${date}\n\n`;
+      const rawMetaTitle =
+        post.seoData && typeof post.seoData === "object"
+          ? post.seoData.metaTitle || ""
+          : "";
+      const metaTitle = resolveSeoTemplate(rawMetaTitle, {
+        title: post.title,
+        page: post.title,
+        separator: post.seoData?.separator || siteSettings?.separator || "|",
+        siteName: siteSettings?.siteName,
+      });
+      const metaDescription =
+        post.seoData && typeof post.seoData === "object"
+          ? post.seoData.metaDescription || ""
+          : "";
+      content += `- [${post.title}](${url}): Updated ${date}\n`;
+      content += `  Title: ${post.title}\n`;
+      if (metaTitle) content += `  Meta Title: ${metaTitle}\n`;
+      if (metaDescription)
+        content += `  Meta Description: ${metaDescription}\n`;
+      content += "\n";
     });
   } else {
     content += `(No posts)\n\n`;

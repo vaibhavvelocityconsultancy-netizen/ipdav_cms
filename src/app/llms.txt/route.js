@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "../lib/prisma";
 import { generateLlmsTxtContent } from "../lib/services/seo/llmsTxtContent";
 
@@ -10,6 +8,9 @@ async function generateContent(baseUrl) {
   if (!tenant) throw new Error("No tenant found");
 
   const settings = await prisma.AICrawlSettings.findUnique({
+    where: { tenantId: tenant.id },
+  });
+  const siteSettings = await prisma.sitesettings.findFirst({
     where: { tenantId: tenant.id },
   });
   const includePages = settings?.includePages ?? true;
@@ -37,28 +38,15 @@ async function generateContent(baseUrl) {
       })
     : [];
 
-  return generateLlmsTxtContent(baseUrl, pages, posts);
+  return generateLlmsTxtContent(baseUrl, pages, posts, siteSettings);
 }
 
 export async function GET(request) {
-  const filePath = path.join(process.cwd(), "data", "llms.txt");
   const requestUrl = new URL(request.url);
   const requestBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
 
   try {
-    let content;
-    try {
-      content = await fs.readFile(filePath, "utf8");
-    } catch {
-      content = await generateContent(requestBaseUrl);
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, content, "utf8");
-    }
-
-    const storedBaseUrl = content.match(/^\*\*Site:\*\*\s*(\S+)/m)?.[1];
-    if (storedBaseUrl && storedBaseUrl !== requestBaseUrl) {
-      content = content.split(storedBaseUrl).join(requestBaseUrl);
-    }
+    const content = await generateContent(requestBaseUrl);
 
     return new Response(content, {
       status: 200,
