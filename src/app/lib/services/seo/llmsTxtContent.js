@@ -28,10 +28,7 @@ function buildContentUrl(baseUrl, slug, type = "page") {
 export function generateLlmsTxtContent(baseUrl, pages, posts, siteSettings) {
   const resolvedBaseUrl = normalizeBaseUrl(baseUrl);
 
-  let content = `# AI & LLM Content Index
-
-**Generated:** ${new Date().toISOString()}
-**Site:** ${resolvedBaseUrl}
+  let content = `**Site:** ${resolvedBaseUrl}
 
 ---
 
@@ -41,7 +38,6 @@ export function generateLlmsTxtContent(baseUrl, pages, posts, siteSettings) {
 
   if (pages.length > 0) {
     pages.forEach((page) => {
-      const date = new Date(page.updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, page.slug, "page");
       const rawMetaTitle =
         page.seoData && typeof page.seoData === "object"
@@ -57,7 +53,7 @@ export function generateLlmsTxtContent(baseUrl, pages, posts, siteSettings) {
         page.seoData && typeof page.seoData === "object"
           ? page.seoData.metaDescription || ""
           : "";
-      content += `- [${page.title}](${url}): Updated ${date}\n`;
+      content += `- [${page.title}](${url})\n`;
       content += `  Title: ${page.title}\n`;
       if (metaTitle) content += `  Meta Title: ${metaTitle}\n`;
       if (metaDescription)
@@ -72,8 +68,6 @@ export function generateLlmsTxtContent(baseUrl, pages, posts, siteSettings) {
 
   if (posts.length > 0) {
     posts.forEach((post) => {
-      const updatedAt = post.updatedAt || post.publishedAt || new Date();
-      const date = new Date(updatedAt).toISOString().split("T")[0];
       const url = buildContentUrl(resolvedBaseUrl, post.slug, "post");
       const rawMetaTitle =
         post.seoData && typeof post.seoData === "object"
@@ -89,7 +83,7 @@ export function generateLlmsTxtContent(baseUrl, pages, posts, siteSettings) {
         post.seoData && typeof post.seoData === "object"
           ? post.seoData.metaDescription || ""
           : "";
-      content += `- [${post.title}](${url}): Updated ${date}\n`;
+      content += `- [${post.title}](${url})\n`;
       content += `  Title: ${post.title}\n`;
       if (metaTitle) content += `  Meta Title: ${metaTitle}\n`;
       if (metaDescription)
