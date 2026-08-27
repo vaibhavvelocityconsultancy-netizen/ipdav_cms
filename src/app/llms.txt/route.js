@@ -43,7 +43,7 @@ async function generateContent(baseUrl) {
 export async function GET(request) {
   const filePath = path.join(process.cwd(), "data", "llms.txt");
   const requestUrl = new URL(request.url);
-  const requestBaseUrl = requestUrl.origin;
+  const requestBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
 
   try {
     let content;
