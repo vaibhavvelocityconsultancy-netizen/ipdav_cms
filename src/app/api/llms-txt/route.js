@@ -29,7 +29,7 @@ export const GET = asyncHandler(async (req, res) => {
       where: { tenantId },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+    const baseUrl = new URL(req.url).origin;
     let pages = [];
     let posts = [];
 
