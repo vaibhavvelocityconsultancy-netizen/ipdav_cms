@@ -4,12 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "prebuild": "node scripts/extract-cms-classes.js",
     "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
-    "email:dev": "email dev --dir emails"
+    "email:dev": "email dev --dir emails",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -74,12 +75,15 @@
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
     "date-fns": "4.1.0",
+    "dompurify": "^3.4.14",
     "embla-carousel-react": "8.6.0",
     "fflate": "^0.8.3",
+    "file-type": "^22.0.2",
     "form-data": "^4.0.5",
     "framer-motion": "^12.38.0",
     "input-otp": "1.4.2",
     "jose": "^6.2.3",
+    "jsdom": "^29.1.1",
     "lucide-react": "^0.564.0",
     "mailgun.js": "^13.0.1",
     "multer": "^2.1.1",
@@ -108,7 +112,6 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@react-email/ui": "^6.9.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/multer": "^2.1.0",
