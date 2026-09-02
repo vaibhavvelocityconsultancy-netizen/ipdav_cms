@@ -12,7 +12,7 @@ export default async function OrderDetailPage({
   return (
     <main className="mx-auto max-w-3xl px-5 py-16 md:px-10">
       <Link
-        href="/account/orders"
+        href="/ecommerce/account/orders"
         className="text-xs text-muted-foreground hover:text-foreground"
       >
         ← Order history

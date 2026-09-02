@@ -1,4 +1,4 @@
-// src/lib/ecom/useModuleFlags.ts
+// src/lib/core/useModuleFlags.ts
 "use client";
 
 import useSWR from "swr";

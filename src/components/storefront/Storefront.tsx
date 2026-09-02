@@ -73,7 +73,7 @@ export function CategoryStrip({
       {categories.map((category) => (
         <Link
           key={category.slug}
-          href={`/categories/${category.slug}`}
+          href={`/ecommerce/categories/${category.slug}`}
           className="group relative min-h-64 overflow-hidden bg-muted"
         >
           <img

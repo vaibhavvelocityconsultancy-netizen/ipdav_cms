@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
 import { buildAdminToolbarHtml } from "@/src/lib/admin-toolbar";
@@ -9,7 +10,15 @@ import SiteNavbar from "./siteNavbar";
 import SiteFooter from "./SiteFooter";
 
 import AnalyticsScripts from "./AnalyticsScripts";
-import { CartProvider } from "@/src/lib/storefront/cart";
+import { isModuleInstalled } from "@/src/lib/core/isModuleInstalled";
+
+const EcommerceCartProvider = dynamic(
+  () =>
+    import("@/src/lib/storefront/cart").then(
+      ({ CartProvider }) => CartProvider,
+    ),
+  { ssr: false },
+);
 
 const DEFAULT_FOOTER_SETTINGS = {
   footerLogo: "",
@@ -66,6 +75,7 @@ export default function SiteLayout({
   initialBootstrapData,
 }: SiteLayoutProps) {
   const { user } = useCurrentUser();
+  const ecommerceInstalled = isModuleInstalled("ecommerce");
 
   const { data: bootstrapData } = useQuery<PublicBootstrapData>({
     queryKey: ["public", "bootstrap"],
@@ -182,45 +192,49 @@ export default function SiteLayout({
     return () => style.remove();
   }, [highlightAutoLinks]);
 
-  return (
-    <CartProvider>
-      <div className="min-h-screen flex flex-col">
-        {globalCss && (
-          <style
-            id="global-cms-css"
-            dangerouslySetInnerHTML={{ __html: globalCss }}
-          />
-        )}
-
-        <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
-
-        {breadcrumbSettings?.customCss && (
-          <style
-            id="breadcrumb-custom-css"
-            dangerouslySetInnerHTML={{ __html: breadcrumbSettings.customCss }}
-          />
-        )}
-
-        {showToolbar && (
-          <div
-            dangerouslySetInnerHTML={{
-              __html: buildAdminToolbarHtml({
-                pageId,
-                siteName: settings?.siteName,
-                editUrl,
-              }),
-            }}
-          />
-        )}
-        <SiteNavbar settings={settings} headerMenu={headerMenu} />
-
-        {children}
-        <SiteFooter
-          footer={footer}
-          footerMenus={footerMenus}
-          config={footerConfig}
+  const content = (
+    <div className="min-h-screen flex flex-col">
+      {globalCss && (
+        <style
+          id="global-cms-css"
+          dangerouslySetInnerHTML={{ __html: globalCss }}
         />
-      </div>
-    </CartProvider>
+      )}
+
+      <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
+
+      {breadcrumbSettings?.customCss && (
+        <style
+          id="breadcrumb-custom-css"
+          dangerouslySetInnerHTML={{ __html: breadcrumbSettings.customCss }}
+        />
+      )}
+
+      {showToolbar && (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: buildAdminToolbarHtml({
+              pageId,
+              siteName: settings?.siteName,
+              editUrl,
+            }),
+          }}
+        />
+      )}
+      <SiteNavbar settings={settings} headerMenu={headerMenu} />
+
+      {children}
+      <SiteFooter
+        footer={footer}
+        footerMenus={footerMenus}
+        config={footerConfig}
+      />
+    </div>
+  );
+
+  return ecommerceInstalled ? (
+    <EcommerceCartProvider>{content}</EcommerceCartProvider>
+  ) : (
+    content
   );
 }

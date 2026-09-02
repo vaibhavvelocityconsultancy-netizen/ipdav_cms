@@ -188,7 +188,7 @@ function EcommerceCheckout() {
     const result = await response.json();
     if (!response.ok || !result.success)
       throw new Error(result.message || "Unable to complete order");
-    router.replace(`/account/orders/${result.data.id}`);
+    router.replace(`/ecommerce/account/orders/${result.data.id}`);
   };
 
   const submit = (event: FormEvent) => {

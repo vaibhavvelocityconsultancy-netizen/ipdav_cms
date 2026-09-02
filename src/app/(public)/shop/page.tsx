@@ -47,7 +47,7 @@ export default async function ShopPage() {
             </h2>
           </div>
           <Link
-            href="/categories/new-arrivals"
+            href="/ecommerce/categories/new-arrivals"
             className="text-sm underline underline-offset-4"
           >
             View new arrivals

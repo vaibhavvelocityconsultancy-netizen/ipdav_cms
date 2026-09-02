@@ -14,7 +14,7 @@ export default function AccountPage() {
             Sign in to view saved details and order history.
           </p>
           <Link
-            href="/account/orders"
+            href="/ecommerce/account/orders"
             className="mt-6 inline-block text-sm underline underline-offset-4"
           >
             View orders
@@ -35,7 +35,7 @@ export default function AccountPage() {
           Recent order
         </p>
         <Link
-          href={`/account/orders/${accountOrders[0].id}`}
+          href={`/ecommerce/account/orders/${accountOrders[0].id}`}
           className="mt-5 flex items-center justify-between text-sm"
         >
           <span>

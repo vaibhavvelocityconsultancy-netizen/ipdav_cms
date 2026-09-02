@@ -354,9 +354,9 @@ export const normalizeCart = (lines: CartLine[]) =>
       ...line,
       quantity: Math.min(10, Math.floor(line.quantity)),
     }));
-export const accountUrl = "/account";
+export const accountUrl = "/ecommerce/account";
 export const footerLinks = [
   { label: "Shipping & returns", href: "/search?q=shipping" },
   { label: "Contact", href: "/search?q=contact" },
-  { label: "Account", href: "/account" },
+  { label: "Account", href: "/ecommerce/account" },
 ];

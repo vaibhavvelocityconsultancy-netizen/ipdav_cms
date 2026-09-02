@@ -4,7 +4,7 @@ export default function OrdersPage() {
   return (
     <main className="mx-auto max-w-5xl px-5 py-16 md:px-10">
       <Link
-        href="/account"
+        href="/ecommerce/account"
         className="text-xs text-muted-foreground hover:text-foreground"
       >
         ← Account
@@ -14,7 +14,7 @@ export default function OrdersPage() {
         {accountOrders.map((order) => (
           <Link
             key={order.id}
-            href={`/account/orders/${order.id}`}
+            href={`/ecommerce/account/orders/${order.id}`}
             className="flex items-center justify-between gap-4 py-6 text-sm hover:bg-muted/40"
           >
             <div>

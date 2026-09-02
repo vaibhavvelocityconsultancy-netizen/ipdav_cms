@@ -50,7 +50,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authApi } from "@/src/lib/auth";
 import { getApiBaseUrl } from "@/src/lib/axios";
 import { getBaseUrl } from "@/src/lib/config";
-import { useModuleFlags } from "@/src/lib/ecom/useModuleFlags";
+import { useModuleFlags } from "@/src/lib/core/useModuleFlags";
 import {
   Sidebar as UISidebar,
   SidebarContent,
@@ -243,7 +243,6 @@ const adminNavItems: NavItem[] = [
         icon: ShoppingBag,
         description: "Manage orders",
         href: "/admin/ecommerce/orders",
-
       },
       {
         id: "coupons",
@@ -273,8 +272,7 @@ const adminNavItems: NavItem[] = [
         description: "Manage payment gateways",
         href: "/admin/ecommerce/payment-gateways",
       },
-
-    ]
+    ],
   },
 
   {
@@ -670,7 +668,7 @@ export function Sidebar({ userRole }: SidebarProps) {
               tooltip="Visit Site"
               className="h-auto rounded-xl py-2"
             >
-              <a href={appUrl('/')} target="_blank" rel="noreferrer">
+              <a href={appUrl("/")} target="_blank" rel="noreferrer">
                 <ExternalLink size={18} strokeWidth={1.5} />
                 <span className="flex-1 overflow-hidden text-left">
                   <span className="block truncate text-sm font-medium">
