@@ -1,0 +1,459 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────mod────────────────────────────────────────────────
+
+enum rolepermission_role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  AUTHOR
+  VIEWER
+  SUBSCRIBER
+}
+
+enum user_role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  AUTHOR
+  VIEWER
+  SUBSCRIBER
+}
+
+enum status {
+  DRAFT
+  PUBLISHED
+
+  @@map("post_status")
+}
+
+enum sitemapChangeFrequency {
+  ALWAYS
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  NEVER
+}
+
+model tenant {
+  id   Int    @id @default(autoincrement())
+  name String
+  slug String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                user[]
+  pages                page[]
+  menus                menu[]
+  posts                post[]
+  collections          collection[]
+  sitesettings         sitesettings?
+  footersettings       footersettings[]
+  categories           category[]
+  tags                 tag[]
+  media                media[]
+  NavbarConfig         NavbarConfig?
+  footerConfig         FooterConfig?
+  trackingSettings     TrackingSettings?
+  pageElementOverrides PageElementOverride[]
+}
+
+model user {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  name      String?
+  role      user_role @default(SUBSCRIBER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  tenantId  Int
+  tenant    tenant    @relation(fields: [tenantId], references: [id])
+
+  // CMS relations
+  collection     collection[]
+  post           post[]
+  userpermission userpermission[]
+
+  // Billing relations
+}
+
+model permission {
+  id             Int              @id @default(autoincrement())
+  name           String           @unique
+  description    String?          @db.Text
+  isVisible      Boolean          @default(true)
+  rolepermission rolepermission[]
+  userpermission userpermission[]
+
+  @@index([name])
+}
+
+model rolepermission {
+  id           Int                 @id @default(autoincrement())
+  role         rolepermission_role
+  permissionId Int
+  isVisible    Boolean             @default(true)
+  permission   permission          @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([permissionId])
+  @@index([role])
+}
+
+model userpermission {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  permissionId Int
+  allowed      Boolean    @default(true)
+  permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user         user       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([permissionId])
+  @@index([userId])
+}
+
+model page {
+  id                Int     @id @default(autoincrement())
+  title             String
+  slug              String
+  html              String  @db.Text
+  css               String? @db.Text
+  js                String? @db.Text
+  jsxCode           String? @db.Text
+  pageType          String  @default("html")
+  status            status  @default(PUBLISHED)
+  seoData           Json?
+  sitemapEnabled    Boolean @default(true)
+  componentSettings Json?
+  searchText        String? @db.Text
+
+  sitemapPriority      Decimal                @default(0.8) @db.Decimal(2, 1)
+  sitemapChangeFreq    sitemapChangeFrequency @default(WEEKLY)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  tenant               tenant                 @relation(fields: [tenantId], references: [id])
+  tenantId             Int
+  pageElementOverrides PageElementOverride[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model PageElementOverride {
+  id        String   @id @default(cuid())
+  pageId    Int
+  editorId  String
+  styles    Json?
+  classes   String?
+  text      String?
+  link      String?
+  tenantId  Int
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  page   page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, editorId])
+  @@index([tenantId])
+  @@index([pageId])
+}
+
+model post {
+  id            String    @id
+  title         String
+  slug          String
+  excerpt       String?   @db.Text
+  content       String    @db.Text
+  featuredImage String?
+  status        status    @default(PUBLISHED)
+  authorId      Int?
+  seoData       Json?
+  publishedAt   DateTime?
+
+  searchText String? @db.Text
+
+  sitemapEnabled Boolean @default(true)
+
+  sitemapPriority   Decimal                @default(0.8) @db.Decimal(2, 1)
+  sitemapChangeFreq sitemapChangeFrequency @default(WEEKLY)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  format            String                 @default("standard")
+  tenantId          Int
+
+  user     user?      @relation(fields: [authorId], references: [id])
+  category category[] @relation("categorytopost")
+  tag      tag[]      @relation("posttotag")
+  tenant   tenant     @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([authorId])
+  @@index([tenantId])
+}
+
+model category {
+  id          String  @id
+  name        String
+  slug        String
+  description String? @db.Text
+  parentId    String?
+  tenantId    Int
+
+  tenant         tenant     @relation(fields: [tenantId], references: [id])
+  category       category?  @relation("categoryTocategory", fields: [parentId], references: [id])
+  other_category category[] @relation("categoryTocategory")
+  post           post[]     @relation("categorytopost")
+  sitemapEnabled Boolean    @default(true)
+
+  sitemapPriority Decimal @default(0.5) @db.Decimal(2, 1)
+
+  sitemapChangeFreq sitemapChangeFrequency @default(WEEKLY)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model tag {
+  id       String @id
+  name     String
+  slug     String
+  tenantId Int
+
+  tenant tenant @relation(fields: [tenantId], references: [id])
+  post   post[] @relation("posttotag")
+
+  sitemapEnabled Boolean @default(false)
+
+  sitemapPriority Decimal @default(0.8) @db.Decimal(2, 1)
+
+  sitemapChangeFreq sitemapChangeFrequency @default(WEEKLY)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model media {
+  id           Int      @id @default(autoincrement())
+  fileName     String
+  originalName String
+  url          String
+  publicId     String?  @db.VarChar(255)
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  altText      String?
+  title        String?
+  caption      String?  @db.Text
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+  tenantId     Int
+  collectionId Int?
+
+  tenant     tenant      @relation(fields: [tenantId], references: [id])
+  collection collection? @relation(fields: [collectionId], references: [id])
+
+  @@index([tenantId])
+  @@index([collectionId])
+}
+
+model collection {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?  @db.Text
+  userId      Int
+  tenantId    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   user    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant tenant  @relation(fields: [tenantId], references: [id])
+  media  media[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model menu {
+  id       Int    @id @default(autoincrement())
+  name     String
+  location String @default("none")
+  tenantId Int
+
+  tenant   tenant     @relation(fields: [tenantId], references: [id])
+  menuitem menuitem[]
+}
+
+model menuitem {
+  id       Int     @id @default(autoincrement())
+  label    String
+  type     String
+  slug     String?
+  url      String?
+  order    Int
+  menuId   Int
+  parentId Int?
+
+  menu           menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  menuitem       menuitem?  @relation("menuitemTomenuitem", fields: [parentId], references: [id])
+  other_menuitem menuitem[] @relation("menuitemTomenuitem")
+
+  @@index([menuId])
+  @@index([parentId])
+}
+
+model sitesettings {
+  id                     Int       @id @default(1)
+  siteName               String?
+  siteTagline            String?
+  logo                   String?
+  favicon                String?
+  defaultMetaTitle       String?
+  defaultMetaDescription String?   @db.Text
+  postsPerPage           Int       @default(10)
+  homepageType           String    @default("posts")
+  homepagePageId         Int?
+  postsPageId            Int?
+  globalCss              String?   @db.Text
+  globalJs               String?   @db.Text
+  showAdminToolbar       Boolean   @default(true)
+  tenantId               Int       @unique
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  // Sitemap
+  sitemapEnabled         Boolean   @default(true)
+  sitemapCacheMinutes    Int       @default(10)
+  sitemapLastGeneratedAt DateTime?
+  sitemapCustomUrl       String?
+
+  includePages      Boolean @default(true)
+  includePosts      Boolean @default(true)
+  includeCategories Boolean @default(true)
+  includeTags       Boolean @default(false)
+
+  pingSearchEngines Boolean @default(false)
+
+  cachedSitemapXml       String?
+  cachedSitemapExpiresAt DateTime?
+  highlightAutoLinks     Boolean   @default(false)
+
+  // ── Module toggles (UI-only feature gating for now) ─────────
+  seoEnabled Boolean @default(false)
+
+  tenant             tenant  @relation(fields: [tenantId], references: [id])
+  robotsEnabled      Boolean @default(false)
+  robotsContent      String? @db.Text
+  customCrawlerRules String? @db.Text
+}
+
+model TrackingSettings {
+  id Int @id @default(autoincrement())
+
+  tenantId Int    @unique
+  tenant   tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  gtmId String?
+
+  gaMeasurementId String?
+
+  facebookPixelId String?
+
+  googleAdsId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model footersettings {
+  id       Int    @id @default(autoincrement())
+  key      String @unique
+  tenantId Int
+  value    Json
+
+  tenant tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model NavbarConfig {
+  id       String @id @default(cuid())
+  tenantId Int    @unique
+
+  // colors
+  bgColor        String @default("#0B0F1A")
+  bgOpacity      Int    @default(90)
+  linkColor      String @default("#cbd5e1")
+  linkHoverColor String @default("#ffffff")
+  accentColor    String @default("#22d3ee")
+  dropdownBg     String @default("#111827")
+
+  // behavior
+  sticky Boolean @default(true)
+  blur   Boolean @default(true)
+
+  // buttons
+  showLogin    Boolean @default(true)
+  showSignup   Boolean @default(true)
+  showPricing  Boolean @default(true)
+  loginLabel   String  @default("Log In")
+  signupLabel  String  @default("Sign Up")
+  pricingLabel String  @default("Pricing")
+
+  // advanced
+  customCss String? @db.Text
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model FooterConfig {
+  id       String @id @default(cuid())
+  tenantId Int    @unique
+
+  bgColor       String @default("#0B0F1A")
+  borderColor   String @default("#ffffff") // used with low opacity, see opacity field
+  borderOpacity Int    @default(8) // 0-100, maps to /5 or /10 style borders
+
+  headingColor    String @default("#ffffff")
+  textColor       String @default("#cbd5e1") // slate-300
+  mutedTextColor  String @default("#94a3b8") // slate-400
+  bottomTextColor String @default("#64748b") // slate-500
+
+  accentColor      String @default("#22d3ee") // cyan-400
+  accentHoverColor String @default("#67e8f9") // cyan-300
+  ctaTextColor     String @default("#0f172a") // slate-900, text on accent buttons
+
+  eyebrowText String  @default("Let's Start a Conversation")
+  headline    String  @default("Ready to grow your business?")
+  showCta     Boolean @default(true)
+
+  customCss String? @db.Text
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,26 @@
+{
+  "name": "seo",
+  "version": "1.0.0",
+  "description": "SEO module - redirects, sitemap, internal linking, breadcrumbs, AI crawl content for CMSKit",
+  "schemaFragment": "schema.seo.prisma",
+  "npmDependencies": [
+    "react-markdown",
+    "remark-gfm"
+  ],
+  "dependencies": [],
+  "targetPaths": {
+    "src/app/admin/seo": "src/app/admin/seo",
+    "src/app/api/seo": "src/app/api/seo",
+    "src/app/api/redirects": "src/app/api/redirects",
+    "src/app/api/internal-link-rules": "src/app/api/internal-link-rules",
+    "src/app/api/breadcramps": "src/app/api/breadcramps",
+    "src/app/api/llms-txt": "src/app/api/llms-txt",
+    "src/app/api/ai-crawl-content": "src/app/api/ai-crawl-content",
+    "src/app/api/ai-crawl-settings": "src/app/api/ai-crawl-settings",
+    "src/app/api/regenerate-markdown": "src/app/api/regenerate-markdown",
+    "src/app/llms": "src/app/llms",
+    "src/app/sitemap.xml": "src/app/sitemap.xml",
+    "src/app/sitemap.xsl": "src/app/sitemap.xsl",
+    "src/components/admin/seo": "src/components/admin/seo"
+  }
+}

@@ -1,0 +1,13 @@
+SCHEMA SPLIT VALIDATION
+============================================================
+Original model/enum count: 79
+Found across all fragments: 79
+Missing (lost in split):    NONE
+Extra (shouldn't exist):    NONE
+
+tenant model original relation-like lines: 30
+user model original relation-like lines:   16
+
+Run merge_schema.py with ALL modules listed, then diff the model/enum
+names in the output against this list to do a final live check:
+AICrawlContent, AICrawlSettings, AddressType, Attribute, AttributeValue, BillingCycle, Brand, BreadcrumbSettings, Cart, CartItem, Coupon, CustomerAddress, DiscountType, EcommerceSettings, EmailLog, EmailSettings, EmailTemplate, FileCategory, FileShareFile, FileShareLink, FooterConfig, InternalLinkRule, NavbarConfig, NotFoundLog, Order, OrderItem, OrderNote, OrderPaymentStatus, OrderStatus, PageElementOverride, Payment, PaymentMethod, PaymentStatus, Plan, PlanEnrollment, PlanFeature, PlanSettings, PlanSubscription, Product, ProductCategory, ProductImage, ProductStatus, ProductVariant, ProductVariantAttribute, Redirect, RedirectImport, ShippingRate, ShippingZone, Subscription, SubscriptionStatus, TaxClass, TaxRate, TrackingSettings, UploadedFile, analyticsSettings, category, collection, comment, comment_status, footersettings, form, formsubmission, media, menu, menuitem, page, permission, post, pricingPageSettings, rolepermission, rolepermission_role, sitemapChangeFrequency, sitesettings, status, tag, tenant, user, user_role, userpermission

@@ -1,0 +1,110 @@
+{
+  "analytics-ai": {
+    "models": [
+      "analyticsSettings",
+      "AICrawlSettings",
+      "AICrawlContent"
+    ],
+    "count": 3,
+    "dependencies": []
+  },
+  "comments": {
+    "models": [
+      "comment_status",
+      "comment"
+    ],
+    "count": 2,
+    "dependencies": []
+  },
+  "ecommerce": {
+    "models": [
+      "ProductStatus",
+      "OrderStatus",
+      "OrderPaymentStatus",
+      "PaymentMethod",
+      "DiscountType",
+      "AddressType",
+      "Brand",
+      "ProductCategory",
+      "Attribute",
+      "AttributeValue",
+      "Product",
+      "ProductImage",
+      "ProductVariant",
+      "ProductVariantAttribute",
+      "CustomerAddress",
+      "Order",
+      "OrderItem",
+      "OrderNote",
+      "Cart",
+      "CartItem",
+      "Coupon",
+      "ShippingZone",
+      "ShippingRate",
+      "TaxClass",
+      "TaxRate",
+      "EcommerceSettings"
+    ],
+    "count": 26,
+    "dependencies": []
+  },
+  "emails": {
+    "models": [
+      "EmailTemplate",
+      "EmailSettings",
+      "EmailLog"
+    ],
+    "count": 3,
+    "dependencies": []
+  },
+  "file-sharing": {
+    "models": [
+      "FileCategory",
+      "UploadedFile",
+      "FileShareLink",
+      "FileShareFile"
+    ],
+    "count": 4,
+    "dependencies": []
+  },
+  "forms": {
+    "models": [
+      "form",
+      "formsubmission"
+    ],
+    "count": 2,
+    "dependencies": [
+      "subscription-billing"
+    ]
+  },
+  "seo": {
+    "models": [
+      "BreadcrumbSettings",
+      "Redirect",
+      "NotFoundLog",
+      "RedirectImport",
+      "InternalLinkRule"
+    ],
+    "count": 5,
+    "dependencies": []
+  },
+  "subscription-billing": {
+    "models": [
+      "BillingCycle",
+      "PaymentStatus",
+      "SubscriptionStatus",
+      "Payment",
+      "Subscription",
+      "Plan",
+      "PlanSettings",
+      "PlanFeature",
+      "PlanSubscription",
+      "PlanEnrollment",
+      "pricingPageSettings"
+    ],
+    "count": 11,
+    "dependencies": [
+      "forms"
+    ]
+  }
+}

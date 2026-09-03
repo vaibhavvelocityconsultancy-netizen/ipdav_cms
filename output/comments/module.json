@@ -1,0 +1,13 @@
+{
+  "name": "comments",
+  "version": "1.0.0",
+  "description": "Comments module for CMSKit",
+  "schemaFragment": "schema.comments.prisma",
+  "npmDependencies": [],
+  "dependencies": [],
+  "targetPaths": {
+    "src/app/admin/comments": "src/app/admin/comments",
+    "src/app/api/comments": "src/app/api/comments",
+    "src/components/admin/comments": "src/components/admin/comments"
+  }
+}

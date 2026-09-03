@@ -1,0 +1,13 @@
+{
+  "name": "emails",
+  "version": "1.0.0",
+  "description": "Email templates, settings, and logs module for CMSKit",
+  "schemaFragment": "schema.emails.prisma",
+  "npmDependencies": [],
+  "dependencies": [],
+  "targetPaths": {
+    "src/app/admin/emails": "src/app/admin/emails",
+    "src/app/api/emails": "src/app/api/emails",
+    "src/app/lib/email": "src/app/lib/email"
+  }
+}

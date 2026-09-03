@@ -1,0 +1,23 @@
+{
+  "name": "ecommerce",
+  "version": "1.0.0",
+  "description": "Ecommerce module - catalog, cart, orders for CMSKit",
+  "schemaFragment": "schema.ecommerce.prisma",
+  "npmDependencies": [
+    "@paypal/react-paypal-js"
+  ],
+  "dependencies": [],
+  "targetPaths": {
+    "src/app/admin/ecommerce": "src/app/admin/ecommerce",
+    "src/app/api/ecommerce": "src/app/api/ecommerce",
+    "src/app/(public)/cart": "src/app/(public)/cart",
+    "src/app/(public)/checkout": "src/app/(public)/checkout",
+    "src/app/(public)/product": "src/app/(public)/product",
+    "src/app/(public)/products": "src/app/(public)/products",
+    "src/app/(public)/shop": "src/app/(public)/shop",
+    "src/components/admin/ecommerce": "src/components/admin/ecommerce",
+    "src/components/storefront": "src/components/storefront",
+    "src/lib/ecom": "src/lib/ecom",
+    "src/lib/storefront": "src/lib/storefront"
+  }
+}

@@ -1,0 +1,188 @@
+// ── subscription-billing module ─────────────────────────────────────────
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+  LIFETIME
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELED
+  PENDING
+}
+
+model Payment {
+  id                   String        @id @default(cuid())
+  userId               Int
+  courseId             Int?
+  planId               Int?
+  billingCycle         BillingCycle  @default(LIFETIME)
+  paypalOrderId        String?       @unique
+  paypalCaptureId      String?       @unique
+  paypalSubscriptionId String?
+  amount               Int
+  currency             String        @default("INR")
+  status               PaymentStatus @default(PENDING)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  plan Plan? @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([planId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id               Int                @id @default(autoincrement())
+  userId           Int
+  courseId         Int
+  billingCycle     BillingCycle       @default(MONTHLY)
+  status           SubscriptionStatus @default(TRIAL)
+  startsAt         DateTime
+  currentPeriodEnd DateTime
+  canceledAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+
+  @@unique([userId, courseId]) // one active subscription per user per course
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+  @@index([currentPeriodEnd]) // for renewal/expiry cron jobs
+}
+
+model Plan {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  title        String
+  slug         String
+  tagline      String?
+  description  String?
+  monthlyPrice Decimal? @db.Decimal(10, 2)
+  yearlyPrice  Decimal? @db.Decimal(10, 2)
+
+  allowMonthly        Boolean  @default(true)
+  allowYearly         Boolean  @default(true)
+  billingPeriodDays   Int?
+  paypalMonthlyPlanId String?
+  paypalYearlyPlanId  String?
+  trialDays           Int? // null = use global default; 0 = no trial for this plan
+  isFeatured          Boolean  @default(false)
+  isPublished         Boolean  @default(true)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  features      PlanFeature[]
+  payments      Payment[]
+  subscriptions PlanSubscription[]
+  enrollments   PlanEnrollment[]
+
+  @@unique([slug, tenantId])
+  @@index([tenantId])
+}
+
+model PlanSettings {
+  id               Int      @id @default(autoincrement())
+  tenantId         Int      @unique
+  defaultTrialDays Int      @default(7)
+  updatedAt        DateTime @updatedAt
+
+}
+
+model PlanFeature {
+  id        Int    @id @default(autoincrement())
+  title     String
+  sortOrder Int    @default(0)
+  plan      Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId    Int
+
+  @@index([planId])
+}
+
+model PlanSubscription {
+  id                   Int                @id @default(autoincrement())
+  userId               Int
+  planId               Int
+  billingCycle         BillingCycle       @default(MONTHLY)
+  status               SubscriptionStatus @default(TRIAL)
+  startsAt             DateTime
+  currentPeriodEnd     DateTime
+  trialEndsAt          DateTime?
+  paypalSubscriptionId String?            @unique
+  canceledAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, planId])
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+model PlanEnrollment {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  planId      Int
+  purchasedAt DateTime @default(now())
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, planId])
+  @@index([userId])
+  @@index([planId])
+}
+
+model pricingPageSettings {
+  id        Int      @id @default(autoincrement())
+  formId    Int?
+  tenantId  Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+
+}
+
+
+// ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
+
+// INJECT_INTO:tenant
+  plans                Plan[]
+// END_INJECT:tenant
+// INJECT_INTO:tenant
+  planSettings         PlanSettings?
+// END_INJECT:tenant
+// INJECT_INTO:tenant
+  pricingPageSettings  pricingPageSettings?
+// END_INJECT:tenant
+// INJECT_INTO:user
+  payments          Payment[]
+// END_INJECT:user
+// INJECT_INTO:user
+  subscriptions     Subscription[]
+// END_INJECT:user
+// INJECT_INTO:user
+  planSubscriptions PlanSubscription[]
+// END_INJECT:user
+// INJECT_INTO:user
+  planEnrollments   PlanEnrollment[]
+// END_INJECT:user
+// INJECT_INTO:form
+  pricingPageSettings pricingPageSettings[]
+// END_INJECT:form

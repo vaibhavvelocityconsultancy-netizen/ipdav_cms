@@ -1,0 +1,18 @@
+{
+  "name": "analytics-ai",
+  "version": "1.0.0",
+  "description": "Analytics and AI crawl settings module for CMSKit",
+  "schemaFragment": "schema.analytics-ai.prisma",
+  "npmDependencies": [
+    "@google/generative-ai"
+  ],
+  "dependencies": [],
+  "targetPaths": {
+    "src/app/api/analytics": "src/app/api/analytics",
+    "src/app/api/logs": "src/app/api/logs",
+    "src/app/admin/ai-llm": "src/app/admin/ai-llm",
+    "src/app/api/google-models": "src/app/api/google-models",
+    "src/app/api/google-test": "src/app/api/google-test",
+    "src/app/api/openai-test": "src/app/api/openai-test"
+  }
+}

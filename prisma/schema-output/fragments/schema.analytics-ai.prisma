@@ -1,0 +1,84 @@
+// ── analytics-ai module ─────────────────────────────────────────
+
+model analyticsSettings {
+  id Int @id @default(autoincrement())
+
+  tenantId Int    @unique
+  tenant   tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Google Tag Manager
+  gtmId         String?
+  gtmHeadScript String? @db.Text
+  gtmBodyScript String? @db.Text
+
+  // Google Analytics 4
+  gaMeasurementId String?
+  gaHeadScript    String? @db.Text
+
+  // Facebook Pixel
+  facebookPixelId    String?
+  facebookHeadScript String? @db.Text
+
+  // Google Ads
+  googleAdsId         String?
+  googleAdsHeadScript String? @db.Text
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  autoGenerateScripts Boolean  @default(true)
+}
+
+model AICrawlSettings {
+  id Int @id @default(autoincrement())
+
+  tenantId Int    @unique
+  tenant   tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Markdown Generation
+  enableMarkdownGeneration Boolean @default(true)
+  includePages             Boolean @default(true)
+  includePosts             Boolean @default(true)
+  excludeDrafts            Boolean @default(true)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  autoGenerateScripts Boolean  @default(true)
+}
+
+model AICrawlContent {
+  id Int @id @default(autoincrement())
+
+  tenantId Int
+  tenant   tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Type: "page" or "post"
+  contentType String
+  contentId   String // page.id or post.id (stored as string)
+  slug        String
+  title       String
+
+  // Generated markdown
+  markdown String @db.Text
+
+  // Stats
+  wordCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, contentType, contentId])
+  @@index([tenantId])
+  @@index([contentType])
+}
+
+// ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
+
+// INJECT_INTO:tenant
+analyticsSettings    analyticsSettings?
+// END_INJECT:tenant
+// INJECT_INTO:tenant
+aicrawlSettings      AICrawlSettings?
+// END_INJECT:tenant
+// INJECT_INTO:tenant
+aicrawlContents      AICrawlContent[]
+// END_INJECT:tenant

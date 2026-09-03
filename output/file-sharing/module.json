@@ -1,0 +1,20 @@
+{
+  "name": "file-sharing",
+  "version": "1.0.0",
+  "description": "File upload and sharing module for CMSKit",
+  "schemaFragment": "schema.file-sharing.prisma",
+  "npmDependencies": [],
+  "dependencies": [],
+  "targetPaths": {
+    "src/app/lib/file_sharing": "src/app/lib/file_sharing",
+    "src/app/api/files": "src/app/api/files",
+    "src/app/api/file-category": "src/app/api/file-category",
+    "src/app/api/shared": "src/app/api/shared",
+    "src/app/shared": "src/app/shared",
+    "src/app/subscription/file-sharing": "src/app/subscription/file-sharing",
+    "src/app/subscription/files": "src/app/subscription/files",
+    "src/app/admin/files": "src/app/admin/files",
+    "src/app/admin/files-category": "src/app/admin/files-category",
+    "src/components/subscription/file-sharing": "src/components/subscription/file-sharing"
+  }
+}

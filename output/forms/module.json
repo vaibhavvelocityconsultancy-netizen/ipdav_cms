@@ -1,0 +1,19 @@
+{
+  "name": "forms",
+  "version": "1.0.0",
+  "description": "Form builder module for CMSKit",
+  "schemaFragment": "schema.forms.prisma",
+  "npmDependencies": [
+    "@dnd-kit/core",
+    "@dnd-kit/sortable",
+    "@dnd-kit/utilities"
+  ],
+  "dependencies": [
+    "subscription-billing"
+  ],
+  "targetPaths": {
+    "src/app/admin/forms": "src/app/admin/forms",
+    "src/app/api/form": "src/app/api/form",
+    "src/components/admin/form": "src/components/admin/form"
+  }
+}

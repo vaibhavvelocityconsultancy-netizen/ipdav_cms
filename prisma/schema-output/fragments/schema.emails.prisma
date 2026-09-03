@@ -1,0 +1,51 @@
+// ── emails module ─────────────────────────────────────────
+
+model EmailTemplate {
+  id            String   @id @default(cuid())
+  triggerEvent  String
+  recipientType String
+  name          String
+  subject       String
+  bodyHtml      String   @db.Text
+  isActive      Boolean  @default(true)
+  variables     Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  logs EmailLog[]
+
+  @@unique([triggerEvent, recipientType])
+}
+
+model EmailSettings {
+  id             String    @id @default("singleton")
+  senderName     String    @default("")
+  fromEmail      String    @default("")
+  replyToEmail   String?
+  adminEmail     String    @default("")
+  lastTestStatus String? // "SUCCESS" | "FAILED"
+  lastTestAt     DateTime?
+  lastTestError  String?   @db.Text
+  updatedAt      DateTime  @updatedAt
+}
+
+model EmailLog {
+  id            String    @id @default(cuid())
+  templateId    String?
+  triggerEvent  String
+  recipientType String
+  emailTo       String
+  subject       String
+  status        String
+  provider      String
+  error         String?   @db.Text
+  metadata      Json?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([triggerEvent])
+  @@index([templateId])
+}

@@ -1,0 +1,109 @@
+// ── file-sharing module ─────────────────────────────────────────
+
+model FileCategory {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String
+  description String? @db.Text
+  parentId    String?
+  tenantId    Int
+  tenant      tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  parent   FileCategory?  @relation("FileCategoryHierarchy", fields: [parentId], references: [id])
+  children FileCategory[] @relation("FileCategoryHierarchy")
+
+  files UploadedFile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model UploadedFile {
+  id          String  @id @default(cuid())
+  title       String
+  shortDesc   String? @db.Text // short description shown on file card
+  description String? @db.Text // long description
+  isShareable Boolean @default(true)
+
+  tags String? @db.Text // ← NEW — comma-separated, e.g. "invoice,2026,urgent"
+
+  fileName     String
+  originalName String
+  url          String
+  mimeType     String
+  size         Int
+
+  uploadedBy Int
+  tenantId   Int
+
+  categoryId String?
+  category   FileCategory? @relation(fields: [categoryId], references: [id])
+  tenant     tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader   user          @relation(fields: [uploadedBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shareFiles FileShareFile[]
+
+  @@index([tenantId])
+  @@index([uploadedBy])
+  @@index([categoryId])
+}
+
+model FileShareLink {
+  id String @id @default(cuid())
+
+  sharedWith String
+  message    String? @db.Text
+  password   String
+
+  createdBy Int
+  token     String @unique @default(cuid())
+
+  viewedAt        DateTime?
+  zipDownloadedAt DateTime?
+
+  createdAt DateTime @default(now())
+  creator   user     @relation(fields: [createdBy], references: [id])
+
+  files FileShareFile[]
+
+  @@index([token])
+  @@index([createdBy])
+}
+
+model FileShareFile {
+  id String @id @default(cuid())
+
+  shareLinkId String
+  fileId      String
+
+  downloadedAt DateTime?
+
+  shareLink FileShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  file      UploadedFile  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([shareLinkId, fileId])
+  @@index([shareLinkId])
+  @@index([fileId])
+}
+
+// ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
+
+// INJECT_INTO:tenant
+uploadedFiles        UploadedFile[]
+// END_INJECT:tenant
+// INJECT_INTO:tenant
+fileCategories       FileCategory[]
+// END_INJECT:tenant
+// INJECT_INTO:user
+uploadedFiles     UploadedFile[]
+// END_INJECT:user
+// INJECT_INTO:user
+fileShares        FileShareLink[]
+// END_INJECT:user

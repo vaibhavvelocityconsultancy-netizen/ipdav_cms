@@ -1,0 +1,42 @@
+// ── comments module ─────────────────────────────────────────
+
+enum comment_status {
+  PENDING
+  APPROVED
+  SPAM
+  TRASH
+}
+
+model comment {
+  id          String         @id @default(uuid())
+  content     String         @db.Text
+  authorName  String
+  authorEmail String
+  authorUrl   String?
+  ipAddress   String?
+  userAgent   String?
+  status      comment_status @default(PENDING)
+  postId      String
+  userId      Int?
+  parentId    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  comment       comment?  @relation("commentTocomment", fields: [parentId], references: [id])
+  other_comment comment[] @relation("commentTocomment")
+  post          post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          user?     @relation(fields: [userId], references: [id])
+
+  @@index([parentId])
+  @@index([postId])
+  @@index([userId])
+}
+
+// ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
+
+// INJECT_INTO:user
+comment        comment[]
+// END_INJECT:user
+// INJECT_INTO:post
+comment  comment[]
+// END_INJECT:post

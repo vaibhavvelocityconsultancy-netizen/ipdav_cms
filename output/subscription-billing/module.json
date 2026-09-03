@@ -1,0 +1,29 @@
+{
+  "name": "subscription-billing",
+  "version": "1.0.0",
+  "description": "Subscription and billing module (plans, payments, PayPal) for CMSKit",
+  "schemaFragment": "schema.subscription-billing.prisma",
+  "npmDependencies": [],
+  "dependencies": [
+    "forms"
+  ],
+  "targetPaths": {
+    "src/app/admin/subscription": "src/app/admin/subscription",
+    "src/app/admin/plan-management": "src/app/admin/plan-management",
+    "src/app/api/subscription": "src/app/api/subscription",
+    "src/app/api/subscription-user": "src/app/api/subscription-user",
+    "src/app/api/plans": "src/app/api/plans",
+    "src/app/api/plan-payment": "src/app/api/plan-payment",
+    "src/app/api/payment": "src/app/api/payment",
+    "src/app/api/webhooks": "src/app/api/webhooks",
+    "src/app/api/subscriber-dashbaord": "src/app/api/subscriber-dashbaord",
+    "src/app/api/pricing-page-settings": "src/app/api/pricing-page-settings",
+    "src/app/subscription": "src/app/subscription",
+    "src/app/(public)/pricing": "src/app/(public)/pricing",
+    "src/app/courses": "src/app/courses",
+    "src/app/api/enrollments": "src/app/api/enrollments",
+    "src/components/admin/plans": "src/components/admin/plans",
+    "src/lib/subscription": "src/lib/subscription",
+    "src/components/subscription": "src/components/subscription"
+  }
+}
