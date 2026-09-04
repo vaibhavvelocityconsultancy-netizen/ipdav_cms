@@ -79,6 +79,11 @@ model tenant {
   shippingZones        ShippingZone[]
   taxClasses           TaxClass[]
   ecommerceSettings    EcommerceSettings?
+  redirects            Redirect[]
+  notFoundLogs         NotFoundLog[]
+  redirectImports      RedirectImport[]
+  breadcrumbSettings   BreadcrumbSettings?
+  internalLinkRules    InternalLinkRule[]
 forms                form[]
   plans                Plan[]
   planSettings         PlanSettings?
@@ -907,6 +912,132 @@ model EcommerceSettings {
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
+// ── seo module ─────────────────────────────────────────
+
+model BreadcrumbSettings {
+  id       String @id @default(cuid())
+  tenantId Int    @unique
+
+  enabled Boolean @default(true)
+
+  homeLabel String  @default("Home")
+  homeUrl   String?
+
+  separator String @default("/")
+
+  showHome    Boolean @default(true)
+  showCurrent Boolean @default(true)
+  showParent  Boolean @default(true)
+
+  pagesEnabled      Boolean @default(true)
+  postsEnabled      Boolean @default(true)
+  categoriesEnabled Boolean @default(true)
+  tagsEnabled       Boolean @default(true)
+
+  hideOnHome   Boolean @default(true)
+  hideOn404    Boolean @default(true)
+  hideOnSearch Boolean @default(false)
+
+  schemaEnabled Boolean @default(true)
+
+  cssClass       String?
+  customCss      String? @db.Text
+  linkColor      String  @default("#4b5563")
+  linkHoverColor String  @default("#111827")
+  currentColor   String  @default("#6b7280")
+  separatorColor String  @default("#9ca3af")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Redirect {
+  id             String    @id @default(cuid())
+  sourceUrl      String    @unique
+  destinationUrl String
+  statusCode     Int       @default(301)
+  isActive       Boolean   @default(true)
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdBy      String?
+  isAutoDetected Boolean   @default(false)
+  hitCount       Int       @default(0)
+  lastUsedAt     DateTime?
+  tenantId       Int
+
+  @@index([sourceUrl])
+  @@index([isActive])
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model NotFoundLog {
+  id           String   @id @default(cuid())
+  path         String
+  referrer     String?
+  userAgent    String?
+  ipAddress    String?
+  suggestedUrl String?
+  redirectId   String?
+  isResolved   Boolean  @default(false)
+  occurredAt   DateTime @default(now())
+  tenantId     Int
+
+  @@index([path])
+  @@index([isResolved])
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model RedirectImport {
+  id           String   @id @default(cuid())
+  filename     String
+  totalCount   Int
+  successCount Int
+  failureCount Int
+  errors       String?
+  importedBy   String
+  importedAt   DateTime @default(now())
+  tenantId     Int
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model InternalLinkRule {
+  id String @id @default(cuid())
+
+  tenantId Int
+
+  keyword String
+
+  // destination
+  destinationType String? // page | post | category | tag | course | custom
+  destinationId   String?
+  destinationUrl  String
+
+  // link output
+  linkTitle    String?
+  openInNewTab Boolean @default(false)
+
+  // behaviour
+  enabled             Boolean @default(true)
+  wholeWordOnly       Boolean @default(true)
+  caseSensitive       Boolean @default(false)
+  firstOccurrenceOnly Boolean @default(false)
+  ignoreHeadings      Boolean @default(true)
+  ignoreExistingLinks Boolean @default(true)
+
+  maxLinksPerPage Int @default(1)
+
+  priority Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([keyword])
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
 
 // ── forms module ─────────────────────────────────────────
 
