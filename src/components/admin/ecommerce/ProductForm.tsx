@@ -55,12 +55,14 @@ import {
 import { toast } from "@/src/hooks/use-toast";
 import { fetchers } from "@/src/lib/fetchers";
 import { apiMutations } from "@/src/lib/apimutation";
-import {
-  SeoFieldsBlock,
-  type SeoData,
-} from "@/src/components/admin/seo/SeoFieldsBlock";
 
 type ProductStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+interface SeoData {
+  metaTitle: string;
+  metaDescription: string;
+  [key: string]: unknown;
+}
 
 interface ProductImage {
   url: string;
@@ -842,14 +844,6 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 )}
               </CardContent>
             </Card>
-
-            {/* SEO — reusable block */}
-            <SeoFieldsBlock
-              value={form.seoData}
-              onChange={(next) => update("seoData", next)}
-              entityLabel="product"
-              previewPath={form.slug ? `products/${form.slug}` : "products"}
-            />
           </div>
 
           {/* ── Sidebar column ──────────────────────────── */}
