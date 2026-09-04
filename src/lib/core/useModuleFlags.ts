@@ -1,43 +1,17 @@
-// src/lib/core/useModuleFlags.ts
 "use client";
 
-import useSWR from "swr";
-import { fetchers } from "@/src/lib/fetchers";
+import { useEffect, useState } from "react";
+import { getBaseUrl } from "@/src/lib/config";
 
-/**
- * Reads sitesettings module toggles from /api/setting.
- * Used by the sidebar (and any future feature gating) to hide/show
- * modules based on admin preferences. Failures are silent — if the
- * settings endpoint is unavailable we treat all modules as OFF so
- * we don't accidentally leak unfinished modules.
- */
-export interface ModuleFlags {
-  coursesEnabled: boolean;
-  seoEnabled: boolean;
-  ecommerceEnabled: boolean;
-}
+export function useModuleFlags(): Record<string, boolean> {
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
 
-const fallback: ModuleFlags = {
-  coursesEnabled: false,
-  seoEnabled: false,
-  ecommerceEnabled: false,
-};
+  useEffect(() => {
+    fetch(`${getBaseUrl()}/api/modules/active`)
+      .then((res) => res.json())
+      .then((data) => setFlags(data.activeModules || {}))
+      .catch(() => setFlags({}));
+  }, []);
 
-export function useModuleFlags(): ModuleFlags {
-  const { data } = useSWR(
-    "module-flags",
-    async () => {
-      const json = await fetchers.settings();
-      return json?.data as Partial<ModuleFlags> | null;
-    },
-    { revalidateOnFocus: false, shouldRetryOnError: false },
-  );
-
-  return {
-    coursesEnabled: Boolean(data?.coursesEnabled),
-    seoEnabled: Boolean(data?.seoEnabled),
-    ecommerceEnabled: Boolean(data?.ecommerceEnabled),
-    ...fallback, // sensible defaults if data missing
-    ...(data ?? {}),
-  } as ModuleFlags;
+  return flags;
 }

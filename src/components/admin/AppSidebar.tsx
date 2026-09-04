@@ -81,6 +81,7 @@ interface NavItem {
   href?: string;
   children?: NavItem[];
   modulePermission?: string;
+  requiresModule?: string;
   badge?: number;
 }
 
@@ -116,6 +117,7 @@ const adminNavItems: NavItem[] = [
         label: "Comments",
         icon: FileText,
         description: "View all comments",
+        requiresModule: "comments",
         href: "/admin/comments",
       },
       {
@@ -187,6 +189,7 @@ const adminNavItems: NavItem[] = [
     label: "Forms",
     icon: Form,
     description: "Manage forms",
+    requiresModule: "forms",
     // modulePermission: "forms_access",
     href: "/admin/forms",
   },
@@ -213,6 +216,7 @@ const adminNavItems: NavItem[] = [
     label: "Plan Management",
     icon: ShoppingBag,
     description: "Manage plans and subscriptions",
+    requiresModule: "subscription-billing",
     // modulePermission: "plans_manage",
     href: "/admin/plan-management",
   },
@@ -222,6 +226,7 @@ const adminNavItems: NavItem[] = [
     label: "User Management",
     icon: Share2,
     description: "Subscriber-info & uploaded files",
+    requiresModule: "file-sharing",
     modulePermission: "subscriber_upload_files_info",
     href: "/admin/files",
   },
@@ -230,6 +235,7 @@ const adminNavItems: NavItem[] = [
     label: "File Categories",
     icon: FolderOpen,
     description: "Manage file categories",
+    requiresModule: "file-sharing",
     modulePermission: "subscriber_upload_files_info",
     href: "/admin/files-category",
   },
@@ -237,6 +243,7 @@ const adminNavItems: NavItem[] = [
     id: "ecommerce",
     label: "E-commerce",
     icon: ShoppingBag,
+    requiresModule: "ecommerce",
     children: [
       {
         id: "products",
@@ -318,6 +325,7 @@ const adminNavItems: NavItem[] = [
     label: "SEO Settings",
     icon: Search,
     description: "SEO tools & optimization",
+    requiresModule: "seo",
     children: [
       {
         id: "analytics-settings",
@@ -504,8 +512,9 @@ export function Sidebar({ userRole }: SidebarProps) {
 
   const shouldRenderItem = (item: NavItem) => {
     if (isSubscriber) return true;
-    // Module-toggle gating (from Site Settings → Modules section)
-    // if (item.id === "ecommerce" && !moduleFlags.ecommerceEnabled) return false;
+
+    if (item.requiresModule && !moduleFlags[item.requiresModule]) return false;
+
     if (item.modulePermission)
       return visibleModules[item.modulePermission] === true;
     return true;

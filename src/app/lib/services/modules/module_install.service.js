@@ -262,13 +262,76 @@ export async function mergeSchemaFragment(moduleDir, schemaFragmentName) {
   await requirePermission("modules_install");
 
   const fragmentPath = path.join(moduleDir, schemaFragmentName);
-  const fragment = fs.readFileSync(fragmentPath, "utf-8");
-  fs.appendFileSync(SCHEMA_PATH, "\n" + fragment);
 
-  // NOTE: cross-module relation re-injection (e.g. tenant/user/post needing
-  // this module's models) is not handled here — wire in relations.json
-  // logic from the schema-split step if this module needs it.
+  if (!fs.existsSync(fragmentPath)) {
+    throw new Error(`Schema fragment not found: ${schemaFragmentName}`);
+  }
+
+  const fragment = fs.readFileSync(fragmentPath, "utf-8");
+  let schema = fs.readFileSync(SCHEMA_PATH, "utf-8");
+
+  // ---------------------------------------------------------
+  // 1. Extract INJECT_INTO blocks
+  // ---------------------------------------------------------
+
+  const injectionRegex =
+    /\/\/\s*INJECT_INTO:([A-Za-z0-9_]+)\s*\n([\s\S]*?)\/\/\s*END_INJECT:\1/g;
+
+  const injections = [];
+
+  let match;
+
+  while ((match = injectionRegex.exec(fragment)) !== null) {
+    injections.push({
+      model: match[1],
+      fields: match[2].trim(),
+    });
+  }
+
+  // ---------------------------------------------------------
+  // 2. Remove injection blocks from the fragment
+  // ---------------------------------------------------------
+
+  const modelsOnly = fragment
+    .replace(injectionRegex, "")
+    .trim();
+
+  // ---------------------------------------------------------
+  // 3. Add module marker + actual models
+  // ---------------------------------------------------------
+
+  if (modelsOnly) {
+    schema +=
+      `\n\n// --- MODULE:${path.basename(moduleDir)} START ---\n` +
+      modelsOnly +
+      `\n// --- MODULE:${path.basename(moduleDir)} END ---\n`;
+  }
+
+  // ---------------------------------------------------------
+  // 4. Inject fields inside their target Prisma models
+  // ---------------------------------------------------------
+
+  for (const injection of injections) {
+    const modelRegex = new RegExp(
+      `(model\\s+${injection.model}\\s*\\{)([\\s\\S]*?)(\\n\\})`,
+      "m",
+    );
+
+    if (!modelRegex.test(schema)) {
+      throw new Error(
+        `Cannot inject into Prisma model "${injection.model}" — model not found`,
+      );
+    }
+
+    schema = schema.replace(
+      modelRegex,
+      `$1$2\n\n  ${injection.fields.replace(/\n/g, "\n  ")}$3`,
+    );
+  }
+
+  fs.writeFileSync(SCHEMA_PATH, schema, "utf-8");
 }
+
 
 // ─── npm / prisma / build steps ─────────────────────────────
 
