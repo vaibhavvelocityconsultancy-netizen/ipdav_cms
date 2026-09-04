@@ -111,7 +111,10 @@ export async function restoreFromBackup({
     fs.rmSync(lockBackup);
   }
 
-  execSync("npm install", { cwd: PROJECT_ROOT, stdio: "pipe" });
+  execSync("npm install --ignore-scripts", {
+    cwd: PROJECT_ROOT,
+    stdio: "pipe",
+  });
 }
 
 export async function clearBackups({ schemaBackup, pkgBackup, lockBackup }) {
@@ -384,12 +387,20 @@ export async function installModule(moduleName, jobId) {
     await appendJobLog(jobId, `ERROR: ${err.message}`);
     await appendJobLog(jobId, "Rolling back...");
 
-    await removeCopiedFiles(copiedPaths);
-    await appendJobLog(jobId, "Removed copied files");
+    try {
+      await removeCopiedFiles(copiedPaths);
+      await appendJobLog(jobId, "Removed copied files");
 
-    if (backups) {
-      await restoreFromBackup(backups);
-      await appendJobLog(jobId, "Restored schema.prisma and package.json");
+      if (backups) {
+        await restoreFromBackup(backups);
+        await appendJobLog(jobId, "Restored schema.prisma and package.json");
+      }
+    } catch (rollbackErr) {
+      await appendJobLog(jobId, `ROLLBACK ERROR: ${rollbackErr.message}`);
+      await appendJobLog(
+        jobId,
+        "Manual cleanup may be needed — check schema.prisma and package.json backups in the project root",
+      );
     }
 
     if (migrationApplied) {
