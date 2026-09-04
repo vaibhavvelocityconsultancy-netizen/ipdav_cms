@@ -41,11 +41,7 @@ import {
   SelectValue,
 } from "@/src/ui/select";
 import { Switch } from "@/src/ui/switch";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/src/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +55,10 @@ import {
 import { toast } from "@/src/hooks/use-toast";
 import { fetchers } from "@/src/lib/fetchers";
 import { apiMutations } from "@/src/lib/apimutation";
-import { SeoFieldsBlock, type SeoData } from "@/src/components/admin/seo/SeoFieldsBlock";
+import {
+  SeoFieldsBlock,
+  type SeoData,
+} from "@/src/components/admin/seo/SeoFieldsBlock";
 
 type ProductStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
@@ -567,9 +566,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                     id="p-short"
                     rows={2}
                     value={form.shortDescription}
-                    onChange={(e) =>
-                      update("shortDescription", e.target.value)
-                    }
+                    onChange={(e) => update("shortDescription", e.target.value)}
                     placeholder="One-line summary shown on product cards"
                     data-testid="product-short-desc-input"
                   />
@@ -821,7 +818,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                         <div className="p-2 space-y-1.5">
                           <Input
                             value={img.altText || ""}
-                            onChange={(e) => updateImageAlt(idx, e.target.value)}
+                            onChange={(e) =>
+                              updateImageAlt(idx, e.target.value)
+                            }
                             placeholder="Alt text (accessibility)"
                             className="h-7 text-xs"
                           />
@@ -1050,11 +1049,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
         {/* Bottom save bar (mirror) */}
         <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={attemptCancel}
-          >
+          <Button type="button" variant="outline" onClick={attemptCancel}>
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>
