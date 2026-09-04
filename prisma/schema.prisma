@@ -48,48 +48,49 @@ enum sitemapChangeFrequency {
 }
 
 model tenant {
-  id   Int    @id @default(autoincrement())
-  name String
-  slug String @unique
-
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users                user[]
-  pages                page[]
-  menus                menu[]
-  posts                post[]
-  collections          collection[]
-  sitesettings         sitesettings?
-  footersettings       footersettings[]
-  categories           category[]
-  tags                 tag[]
-  media                media[]
-  NavbarConfig         NavbarConfig?
-  footerConfig         FooterConfig?
-  trackingSettings     TrackingSettings?
-  pageElementOverrides PageElementOverride[]
-  brands               Brand[]
-  productCategories    ProductCategory[]
-  attributes           Attribute[]
-  products             Product[]
-  orders               Order[]
-  carts                Cart[]
-  coupons              Coupon[]
-  shippingZones        ShippingZone[]
-  taxClasses           TaxClass[]
-  ecommerceSettings    EcommerceSettings?
-forms                form[]
-  plans                Plan[]
-  planSettings         PlanSettings?
-  pricingPageSettings  pricingPageSettings?
-uploadedFiles        UploadedFile[]
-fileCategories       FileCategory[]
-analyticsSettings    analyticsSettings?
-aicrawlSettings      AICrawlSettings?
-aicrawlContents      AICrawlContent[]
-}
+  users       user[]
+  pages       page[]
+  forms       form[]
+  menus       menu[]
+  posts       post[]
+  collections collection[]
+  sitesettings sitesettings?
+  footersettings footersettings[]
+  categories  category[]
+  tags        tag[]
+  media       media[]
 
+  NavbarConfig NavbarConfig?
+  footerConfig FooterConfig?
+  trackingSettings TrackingSettings?
+  analyticsSettings analyticsSettings?
+  aicrawlSettings AICrawlSettings?
+  aicrawlContents AICrawlContent[]
+
+  uploadedFiles UploadedFile[]
+  plans         Plan[]
+  planSettings  PlanSettings?
+  fileCategories FileCategory[]
+  pricingPageSettings pricingPageSettings?
+  pageElementOverrides PageElementOverride[]
+
+  brands            Brand[]
+  productCategories ProductCategory[]
+  attributes        Attribute[]
+  products          Product[]
+  orders            Order[]
+  carts             Cart[]
+  coupons           Coupon[]
+  shippingZones     ShippingZone[]
+  taxClasses        TaxClass[]
+  ecommerceSettings EcommerceSettings?
+}
 model user {
   id        Int       @id @default(autoincrement())
   email     String    @unique
@@ -114,9 +115,9 @@ model user {
   subscriptions     Subscription[]
   planSubscriptions PlanSubscription[]
   planEnrollments   PlanEnrollment[]
-uploadedFiles     UploadedFile[]
-fileShares        FileShareLink[]
-comment        comment[]
+  uploadedFiles     UploadedFile[]
+  fileShares        FileShareLink[]
+  comment           comment[]
 }
 
 model permission {
@@ -229,11 +230,11 @@ model post {
   category category[] @relation("categorytopost")
   tag      tag[]      @relation("posttotag")
   tenant   tenant     @relation(fields: [tenantId], references: [id])
+  comment  comment[]
 
   @@unique([tenantId, slug])
   @@index([authorId])
   @@index([tenantId])
-comment  comment[]
 }
 
 model category {
@@ -488,7 +489,6 @@ model FooterConfig {
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-
 // ── ecommerce module ─────────────────────────────────────────
 
 enum ProductStatus {
@@ -542,10 +542,10 @@ model Brand {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, slug])
   @@index([tenantId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model ProductCategory {
@@ -565,11 +565,11 @@ model ProductCategory {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@index([parentId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Attribute {
@@ -583,10 +583,10 @@ model Attribute {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, slug])
   @@index([tenantId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model AttributeValue {
@@ -631,12 +631,12 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@index([status])
   @@index([brandId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model ProductImage {
@@ -700,12 +700,11 @@ model CustomerAddress {
   country      String
   isDefault    Boolean     @default(false)
 
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Order {
@@ -736,14 +735,14 @@ model Order {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      user     @relation(fields: [userId], references: [id])
 
   @@index([tenantId])
   @@index([userId])
   @@index([status])
   @@index([paymentStatus])
   @@index([createdAt])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user user @relation(fields: [userId], references: [id])
 }
 
 model OrderItem {
@@ -786,11 +785,11 @@ model Cart {
   items     CartItem[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  user      user?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([userId])
-  user user? @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model CartItem {
@@ -823,10 +822,10 @@ model Coupon {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, code])
   @@index([tenantId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model ShippingZone {
@@ -840,9 +839,9 @@ model ShippingZone {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model ShippingRate {
@@ -868,9 +867,9 @@ model TaxClass {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model TaxRate {
@@ -887,8 +886,8 @@ model TaxRate {
 }
 
 model EcommerceSettings {
-  id       Int    @id @default(autoincrement())
-  tenantId Int    @unique
+  id       Int @id @default(autoincrement())
+  tenantId Int @unique
 
   currency             String  @default("INR")
   weightUnit           String  @default("kg")
@@ -904,9 +903,8 @@ model EcommerceSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
-
 
 // ── forms module ─────────────────────────────────────────
 
@@ -932,12 +930,12 @@ model form {
   twoColumnHeading         String?  @db.Text
   twoColumnParagraph       String?  @db.Text
 
-  tenant         tenant           @relation(fields: [tenantId], references: [id])
-  formsubmission formsubmission[]
+  tenant              tenant                @relation(fields: [tenantId], references: [id])
+  formsubmission      formsubmission[]
+  pricingPageSettings pricingPageSettings[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
-  pricingPageSettings pricingPageSettings[]
 }
 
 model formsubmission {
@@ -992,13 +990,13 @@ model Payment {
   updatedAt            DateTime      @updatedAt
 
   plan Plan? @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user user  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([courseId])
   @@index([planId])
   @@index([status])
   @@index([createdAt])
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
@@ -1012,14 +1010,13 @@ model Subscription {
   canceledAt       DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-
+  user             user               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId]) // one active subscription per user per course
   @@index([userId])
   @@index([courseId])
   @@index([status])
   @@index([currentPeriodEnd]) // for renewal/expiry cron jobs
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Plan {
@@ -1048,10 +1045,10 @@ model Plan {
   payments      Payment[]
   subscriptions PlanSubscription[]
   enrollments   PlanEnrollment[]
+  tenant        tenant             @relation(fields: [tenantId], references: [id])
 
   @@unique([slug, tenantId])
   @@index([tenantId])
-  tenant tenant @relation(fields: [tenantId], references: [id])
 }
 
 model PlanSettings {
@@ -1088,13 +1085,13 @@ model PlanSubscription {
   updatedAt            DateTime           @updatedAt
 
   plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, planId])
   @@index([userId])
   @@index([planId])
   @@index([status])
   @@index([currentPeriodEnd])
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PlanEnrollment {
@@ -1104,11 +1101,11 @@ model PlanEnrollment {
   purchasedAt DateTime @default(now())
 
   plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, planId])
   @@index([userId])
   @@index([planId])
-  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model pricingPageSettings {
@@ -1118,9 +1115,8 @@ model pricingPageSettings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-form form? @relation(fields: [formId], references: [id], onDelete: SetNull)
+  form   form?  @relation(fields: [formId], references: [id], onDelete: SetNull)
 }
 
 // ── file-sharing module ─────────────────────────────────────────

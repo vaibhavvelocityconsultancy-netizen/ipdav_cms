@@ -225,19 +225,24 @@ export async function copyModuleFiles(moduleDir, targetPaths) {
 
   const copiedPaths = [];
 
-  for (const [src, dest] of Object.entries(targetPaths || {})) {
-    const srcPath = path.join(moduleDir, src);
-    const destPath = path.join(PROJECT_ROOT, dest);
+  try {
+    for (const [src, dest] of Object.entries(targetPaths || {})) {
+      const srcPath = path.join(moduleDir, src);
+      const destPath = path.join(PROJECT_ROOT, dest);
 
-    if (fs.existsSync(destPath)) {
-      throw new Error(
-        `Target path already exists, refusing to overwrite: ${dest}`,
-      );
+      if (fs.existsSync(destPath)) {
+        throw new Error(
+          `Target path already exists, refusing to overwrite: ${dest}`,
+        );
+      }
+
+      fs.mkdirSync(path.dirname(destPath), { recursive: true });
+      fs.cpSync(srcPath, destPath, { recursive: true });
+      copiedPaths.push(destPath);
     }
-
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    fs.cpSync(srcPath, destPath, { recursive: true });
-    copiedPaths.push(destPath);
+  } catch (err) {
+    err.copiedPaths = copiedPaths;
+    throw err;
   }
 
   return copiedPaths;
@@ -386,6 +391,10 @@ export async function installModule(moduleName, jobId) {
   } catch (err) {
     await appendJobLog(jobId, `ERROR: ${err.message}`);
     await appendJobLog(jobId, "Rolling back...");
+
+    if (Array.isArray(err.copiedPaths)) {
+      copiedPaths = err.copiedPaths;
+    }
 
     try {
       await removeCopiedFiles(copiedPaths);
