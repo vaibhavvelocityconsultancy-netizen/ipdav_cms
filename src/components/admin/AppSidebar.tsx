@@ -173,6 +173,14 @@ const adminNavItems: NavItem[] = [
     modulePermission: "menus_manage",
     href: "/admin/menus",
   },
+  {
+    id: "plugins",
+    label: "Plugins",
+    icon: Menu,
+    description: "Manage plugins",
+    // modulePermission: "plugins_manage",
+    href: "/admin/plugin/installed",
+  },
 
   {
     id: "forms",
