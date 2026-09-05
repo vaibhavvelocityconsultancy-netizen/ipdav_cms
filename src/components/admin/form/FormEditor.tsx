@@ -88,6 +88,7 @@ interface FormEditorData {
   submitButtonClass: string;
   confirmationType: string;
   confirmationMessage: string;
+  confirmationMessageClass: string;
   redirectUrl: string;
   emails: EmailConfig[];
   status: string;
@@ -671,6 +672,7 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
     confirmationType: form.confirmationType || "message",
     confirmationMessage:
       form.confirmationMessage || "Thank you for your submission.",
+    confirmationMessageClass: form.confirmationMessageClass || "",
     redirectUrl: form.redirectUrl || "",
     emails: (form.emails || []) as EmailConfig[],
     status: form.status || "active",
@@ -697,6 +699,8 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
   const [showSubmitButtonClass, setShowSubmitButtonClass] = useState(
     Boolean(data.submitButtonClass),
   );
+  const [showConfirmationMessageClass, setShowConfirmationMessageClass] =
+    useState(Boolean(data.confirmationMessageClass));
 
   // ── Field operations ──
 
@@ -1142,6 +1146,45 @@ export function FormEditor({ form, isNew, onSave, onCancel }: FormEditorProps) {
                 }
                 className="confirmation-message w-full border border-border rounded-lg px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
+              {!showConfirmationMessageClass ? (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmationMessageClass(true)}
+                  className="mt-2 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  + Add custom CSS class
+                </button>
+              ) : (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-muted-foreground">
+                      Custom CSS class
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowConfirmationMessageClass(false);
+                        setData({ ...data, confirmationMessageClass: "" });
+                      }}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={data.confirmationMessageClass}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        confirmationMessageClass: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. thank-you-message another-class"
+                    className="w-full border border-border rounded px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div>

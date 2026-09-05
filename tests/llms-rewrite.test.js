@@ -14,3 +14,9 @@ test("rewrites markdown preview paths to the public llms API", async () => {
     ),
   );
 });
+
+test("does not rewrite the homepage markdown path as a normal slug", async () => {
+  const rewrites = await nextConfig.rewrites();
+
+  assert.ok(!rewrites.some((rule) => rule.source === "/.md"));
+});

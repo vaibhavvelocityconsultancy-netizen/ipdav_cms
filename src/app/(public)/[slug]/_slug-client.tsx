@@ -206,8 +206,12 @@ export default function PreviewPage({
 
         const setStatus = (type: string, msg: string) => {
           if (!statusEl) return;
-          statusEl.className =
-            "cms-form-status form-status" + (type ? ` cms-form-status--${type}` : "");
+          statusEl.classList.remove(
+            "cms-form-status--loading",
+            "cms-form-status--success",
+            "cms-form-status--error",
+          );
+          if (type) statusEl.classList.add(`cms-form-status--${type}`);
           statusEl.textContent = msg;
         };
 
@@ -351,16 +355,6 @@ export default function PreviewPage({
     main.addEventListener("mouseover", handler);
     return () => main.removeEventListener("mouseover", handler);
   }, [page?.id, queryClient, router]);
-
-  // update page title on client navigation
-  useEffect(() => {
-    if (!page) return;
-    const seo = page.seoData || {};
-    document.title =
-      seo.metaTitle || page.title
-        ? `${settings?.siteName || ""}`
-        : settings?.siteName || "";
-  }, [page, settings]);
 
   // ── loading gate ──
   const isInitialLoading = pageLoading;

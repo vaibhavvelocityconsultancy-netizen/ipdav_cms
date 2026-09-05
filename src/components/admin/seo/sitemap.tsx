@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// import { toast } from "sonner";
 import { Button } from "@/src/ui/button";
 import { Card } from "@/src/ui/card";
 import { Switch } from "@/src/ui/switch";
 import { Input } from "@/src/ui/input";
-import { Checkbox } from "@/src/ui/checkbox";
 import { Label } from "@/src/ui/label";
 import { Skeleton } from "@/src/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/src/ui/alert";
@@ -16,17 +14,16 @@ import {
   Eye,
   RefreshCw,
   Save,
-  RotateCcw,
   AlertTriangle,
   CheckCircle,
-  Clock,
   FileText,
   Link2,
   Globe,
   FileArchive,
   Layers,
+  ExternalLink,
+  Settings,
 } from "lucide-react";
-// import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { cn } from "@/src/lib/utils";
 import { toast } from "@/src/ui/use-toast";
@@ -69,15 +66,74 @@ interface SitemapPreview {
   total: number;
 }
 
+type MenuItemType =
+  "general" | "pages" | "posts" | "categories" | "tags" | "courses";
+
 const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
+
+const absoluteUrl = (path: string) => {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return new URL(path, siteUrl).toString();
+};
+
+// Menu configuration
+interface MenuItem {
+  id: MenuItemType;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  key: keyof SitemapSettings;
+  statKey: keyof SitemapStats;
+}
+
+const MENU_ITEMS: MenuItem[] = [
+  {
+    id: "pages",
+    label: "Pages",
+    icon: FileText,
+    description: "Change Sitemap settings of single pages.",
+    key: "includePages",
+    statKey: "pages",
+  },
+  {
+    id: "posts",
+    label: "Posts",
+    icon: FileArchive,
+    description: "Change Sitemap settings of single posts.",
+    key: "includePosts",
+    statKey: "posts",
+  },
+  {
+    id: "categories",
+    label: "Categories",
+    icon: Layers,
+    description: "Change Sitemap settings of single categories.",
+    key: "includeCategories",
+    statKey: "categories",
+  },
+  {
+    id: "tags",
+    label: "Tags",
+    icon: Globe,
+    description: "Change Sitemap settings of single tags.",
+    key: "includeTags",
+    statKey: "tags",
+  },
+  {
+    id: "courses",
+    label: "Courses",
+    icon: FileText,
+    description: "Change Sitemap settings of single courses.",
+    key: "includeCourses",
+    statKey: "courses",
+  },
+];
 
 // API Functions
 const fetchSitemapSettings = async () => {
   const response = await fetch(apiPath("/api/seo/sitemap"));
   const json = await response.json();
-
   if (!response.ok) throw new Error(json.message);
-
   return json.data;
 };
 
@@ -88,17 +144,23 @@ const fetchSitemapStats = async (): Promise<SitemapStats> => {
   return json.data;
 };
 
-const fetchSitemapPreview = async (): Promise<SitemapPreview> => {
-  const response = await fetch(apiPath("/api/seo/sitemap/preview"));
+const fetchSitemapPreview = async (
+  module?: MenuItemType,
+): Promise<SitemapPreview> => {
+  const response = await fetch(
+    `${apiPath("/api/seo/sitemap/preview")}?type=${module}`,
+  );
   const json = await response.json();
-
   if (!response.ok) throw new Error(json.message);
 
+  const entries = json.data as SitemapPreviewEntry[];
+
   return {
-    entries: json.data,
-    total: json.data.length,
+    entries,
+    total: entries.length,
   };
 };
+
 const updateSitemapSettings = async (data: Partial<SitemapSettings>) => {
   const response = await fetch(apiPath("/api/seo/sitemap"), {
     method: "PUT",
@@ -121,6 +183,7 @@ export default function SitemapSettingsPage() {
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState<Partial<SitemapSettings>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<MenuItemType>("pages");
 
   // Queries
   const {
@@ -135,12 +198,12 @@ export default function SitemapSettingsPage() {
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["sitemap-stats"],
     queryFn: fetchSitemapStats,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const { data: previewData, isLoading: previewLoading } = useQuery({
-    queryKey: ["sitemap-preview"],
-    queryFn: fetchSitemapPreview,
+    queryKey: ["sitemap-preview", activeMenu],
+    queryFn: () => fetchSitemapPreview(activeMenu),
     refetchInterval: 30000,
   });
 
@@ -184,7 +247,7 @@ export default function SitemapSettingsPage() {
     },
   });
 
-  // Initialize settings from data
+  // Initialize settings
   useEffect(() => {
     if (settingsData) {
       setSettings(settingsData);
@@ -203,79 +266,30 @@ export default function SitemapSettingsPage() {
     });
   };
 
-  // Handle save
   const handleSave = () => {
     updateMutation.mutate(settings);
   };
 
-  // Handle reset
-  const handleReset = () => {
-    if (settingsData) {
-      setSettings(settingsData);
-      setHasChanges(false);
-      toast({
-        title: "Settings reset to defaults",
-      });
-    }
-  };
+  const getSitemapUrl = (module: MenuItemType = "general") => {
+    if (module === "pages") return absoluteUrl(appUrl("/page-sitemap.xml"));
+    if (module === "posts") return absoluteUrl(appUrl("/post-sitemap.xml"));
+    if (module === "categories")
+      return absoluteUrl(appUrl("/sitemap-category.xml"));
+    if (module === "tags") return absoluteUrl(appUrl("/post_tag-sitemap.xml"));
+    if (module === "courses")
+      return absoluteUrl(appUrl("/sitemap-courses.xml"));
 
-  // Handle regenerate
-  const handleRegenerate = () => {
-    regenerateMutation.mutate();
-  };
-
-  // Handle copy URL
-  const handleCopyUrl = () => {
-    const url =
-      settingsData?.sitemapCustomUrl || `${window.location.origin}/sitemap.xml`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Sitemap URL copied",
-    });
-  };
-
-  // Get sitemap URL
-  const getSitemapUrl = () => {
-    return (
-      settingsData?.sitemapCustomUrl || appUrl("/sitemap.xml")
+    return absoluteUrl(
+      settingsData?.sitemapCustomUrl || appUrl("/sitemap_index.xml"),
     );
   };
 
-  // Validate settings
-  const getValidationWarnings = () => {
-    const warnings: string[] = [];
-    if (!settings.sitemapEnabled) {
-      warnings.push(
-        "Sitemap is currently disabled. Search engines won't be able to discover your content through sitemap.",
-      );
-    }
-    if (settings.sitemapEnabled) {
-      if (
-        !settings.includePages &&
-        !settings.includePosts &&
-        !settings.includeCategories &&
-        !settings.includeTags &&
-        !settings.includeCourses
-      ) {
-        warnings.push(
-          "No content types are selected for inclusion. Your sitemap will be empty.",
-        );
-      }
-      if (statsData && statsData.totalUrls === 0) {
-        warnings.push("Your sitemap is empty. No URLs are being included.");
-      }
-    }
-    return warnings;
-  };
+  const activeItem = MENU_ITEMS.find((item) => item.id === activeMenu);
 
-  const warnings = getValidationWarnings();
-
-  // Loading skeleton
   if (settingsLoading) {
     return <SitemapSettingsSkeleton />;
   }
 
-  // Error state
   if (settingsError) {
     return (
       <div className="p-6">
@@ -291,273 +305,296 @@ export default function SitemapSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 p-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sitemap</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your XML sitemap and control which content is included for
-            search engines.
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-64 bg-gray-100 border-r border-gray-300">
+        <div className="p-4 border-b border-gray-300">
+          <h1 className="text-lg font-semibold text-gray-900">Sitemap</h1>
+        </div>
+
+        <nav className="p-0">
+          {/* General Section */}
+          <div className="border-b border-gray-300">
+            <button
+              onClick={() => setActiveMenu("general" as MenuItemType)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors border-l-4",
+                activeMenu === "general"
+                  ? "bg-white border-l-blue-500 text-blue-600 font-medium"
+                  : "border-l-transparent text-gray-700 hover:bg-gray-200",
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              General
+            </button>
+          </div>
+
+          {/* Post Types Section */}
+          <div className="border-b border-gray-300">
+            <div className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase bg-gray-200">
+              Post Types:
+            </div>
+            <div>
+              {MENU_ITEMS.slice(0, 2).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveMenu(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-6 py-3 text-sm transition-colors border-l-4",
+                      activeMenu === item.id
+                        ? "bg-white border-l-blue-500 text-blue-600 font-medium"
+                        : "border-l-transparent text-gray-700 hover:bg-gray-200",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Taxonomies Section */}
+          <div>
+            <div className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase bg-gray-200">
+              Taxonomies:
+            </div>
+            <div>
+              {MENU_ITEMS.slice(2).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveMenu(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-6 py-3 text-sm transition-colors border-l-4",
+                      activeMenu === item.id
+                        ? "bg-white border-l-blue-500 text-blue-600 font-medium"
+                        : "border-l-transparent text-gray-700 hover:bg-gray-200",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 bg-white">
+        {activeMenu === "general" ? (
+          <GeneralSettingsPanel
+            settings={settings}
+            settingsData={settingsData}
+            onSettingChange={handleSettingChange}
+            onSave={handleSave}
+            onRegenerate={() => regenerateMutation.mutate()}
+            onCopyUrl={() => {
+              navigator.clipboard.writeText(getSitemapUrl());
+              toast({ title: "Sitemap URL copied" });
+            }}
+            getSitemapUrl={getSitemapUrl}
+            hasChanges={hasChanges}
+            isSaving={updateMutation.isPending}
+            isRegenerating={regenerateMutation.isPending}
+            statsData={statsData}
+            statsLoading={statsLoading}
+          />
+        ) : (
+          <ContentTypePanel
+            item={activeItem!}
+            settings={settings}
+            onSettingChange={handleSettingChange}
+            onSave={handleSave}
+            hasChanges={hasChanges}
+            isSaving={updateMutation.isPending}
+            getSitemapUrl={() => getSitemapUrl(activeMenu)}
+            previewData={previewData}
+            previewLoading={previewLoading}
+            statsData={statsData}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+// General Settings Panel
+function GeneralSettingsPanel({
+  settings,
+  settingsData,
+  onSettingChange,
+  onSave,
+  onRegenerate,
+  onCopyUrl,
+  getSitemapUrl,
+  hasChanges,
+  isSaving,
+  isRegenerating,
+  statsData,
+  statsLoading,
+}: {
+  settings: Partial<any>;
+  settingsData: any;
+  onSettingChange: (key: any, value: any) => void;
+  onSave: () => void;
+  onRegenerate: () => void;
+  onCopyUrl: () => void;
+  getSitemapUrl: () => string;
+  hasChanges: boolean;
+  isSaving: boolean;
+  isRegenerating: boolean;
+  statsData: any;
+  statsLoading: boolean;
+}) {
+  return (
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">General</h1>
+        <p className="text-gray-600">
+          Manage your XML sitemap and control search engine visibility.{" "}
+          <a href="#" className="text-blue-600 hover:underline">
+            Learn more.
+          </a>
+        </p>
+      </div>
+
+      <div className="border-t border-gray-300 pt-6 space-y-6">
+        {/* Sitemap URL */}
+        <div className="border-l-4 border-l-blue-500 bg-blue-50 p-4 rounded">
+          <p className="text-sm font-medium text-gray-900">Sitemap URL:</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-gray-600" />
+            <a
+              href={getSitemapUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline font-mono text-sm break-all"
+            >
+              {getSitemapUrl()}
+            </a>
+          </div>
+        </div>
+
+        {/* Enable Sitemap */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="enable-sitemap"
+              className="text-base font-medium cursor-pointer"
+            >
+              Enable Sitemap
+            </Label>
+            <Switch
+              id="enable-sitemap"
+              checked={settings.sitemapEnabled}
+              onCheckedChange={(checked) =>
+                onSettingChange("sitemapEnabled", checked)
+              }
+            />
+          </div>
+          <p className="text-gray-600 text-sm">
+            Enable XML sitemap generation for your website
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        {/* Cache Duration */}
+        <div className="space-y-2">
+          <Label htmlFor="cache-duration" className="text-base font-medium">
+            Cache Duration (Minutes)
+          </Label>
+          <Input
+            id="cache-duration"
+            type="number"
+            min={1}
+            max={1440}
+            value={settings.sitemapCacheMinutes || 60}
+            onChange={(e) =>
+              onSettingChange(
+                "sitemapCacheMinutes",
+                parseInt(e.target.value) || 60,
+              )
+            }
+            className="max-w-xs"
+          />
+          <p className="text-gray-600 text-sm">
+            How long to cache the sitemap (1-1440 minutes)
+          </p>
+        </div>
+
+        {/* Notify Search Engines */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="ping-search"
+              className="text-base font-medium cursor-pointer"
+            >
+              Notify Search Engines
+            </Label>
+            <Switch
+              id="ping-search"
+              checked={settings.pingSearchEngines}
+              onCheckedChange={(checked) =>
+                onSettingChange("pingSearchEngines", checked)
+              }
+            />
+          </div>
+          <p className="text-gray-600 text-sm">
+            Automatically notify search engines when sitemap changes
+          </p>
+        </div>
+
+        {/* Statistics */}
+        {!statsLoading && statsData && (
+          <div className="border-t border-gray-300 pt-6">
+            <p className="text-base font-medium text-gray-900 mb-4">
+              Sitemap Statistics
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <StatBox label="Total URLs" value={statsData.totalUrls || 0} />
+              <StatBox label="Pages" value={statsData.pages || 0} />
+              <StatBox label="Posts" value={statsData.posts || 0} />
+              <StatBox label="Categories" value={statsData.categories || 0} />
+              <StatBox label="Tags" value={statsData.tags || 0} />
+              <StatBox label="Courses" value={statsData.courses || 0} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Actions */}
+      <div className="border-t border-gray-300 pt-6 flex items-center justify-between">
+        <div className="flex gap-2">
           <Button
             variant="outline"
-            size="sm"
             onClick={() => window.open(getSitemapUrl(), "_blank")}
           >
             <Eye className="mr-2 h-4 w-4" />
             View Sitemap
           </Button>
+          <Button variant="outline" onClick={onCopyUrl}>
+            <Copy className="mr-2 h-4 w-4" />
+            Copy URL
+          </Button>
           <Button
             variant="outline"
-            size="sm"
-            onClick={handleRegenerate}
-            disabled={regenerateMutation.isPending}
+            onClick={onRegenerate}
+            disabled={isRegenerating}
           >
             <RefreshCw
-              className={cn(
-                "mr-2 h-4 w-4",
-                regenerateMutation.isPending && "animate-spin",
-              )}
+              className={cn("mr-2 h-4 w-4", isRegenerating && "animate-spin")}
             />
-            Regenerate Sitemap
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleCopyUrl}>
-            <Copy className="mr-2 h-4 w-4" />
-            Copy Sitemap URL
+            Regenerate
           </Button>
         </div>
-      </div>
 
-      {/* Section 1 - General Settings */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">General Settings</h2>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="enable-sitemap">Enable Sitemap</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable XML sitemap generation for your website
-              </p>
-            </div>
-            <Switch
-              id="enable-sitemap"
-              checked={settings.sitemapEnabled}
-              onCheckedChange={(checked) =>
-                handleSettingChange("sitemapEnabled", checked)
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cache-duration">Cache Duration (Minutes)</Label>
-            <Input
-              id="cache-duration"
-              type="number"
-              min={1}
-              max={1440}
-              value={settings.sitemapCacheMinutes || 60}
-              onChange={(e) =>
-                handleSettingChange(
-                  "sitemapCacheMinutes",
-                  parseInt(e.target.value) || 60,
-                )
-              }
-              className="max-w-[200px]"
-            />
-            <p className="text-sm text-muted-foreground">
-              How long to cache the sitemap (1-1440 minutes)
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="ping-search">Notify Search Engines</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically notify search engines when sitemap changes
-              </p>
-            </div>
-            <Switch
-              id="ping-search"
-              checked={settings.pingSearchEngines}
-              onCheckedChange={(checked) =>
-                handleSettingChange("pingSearchEngines", checked)
-              }
-            />
-          </div>
-
-          <div className="pt-4 border-t">
-            <p className="text-sm font-medium">Current Sitemap URL</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              <Link2 className="inline h-3 w-3 mr-1" />
-              {getSitemapUrl()}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Section 2 - Included Content */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Included Content</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { id: "includePages", label: "Pages", icon: FileText },
-            { id: "includePosts", label: "Posts", icon: FileArchive },
-            { id: "includeCategories", label: "Categories", icon: Layers },
-            { id: "includeTags", label: "Tags", icon: Globe },
-            // { id: "includeCourses", label: "Courses", icon: FileText },
-          ].map(({ id, label, icon: Icon }) => (
-            <div key={id} className="flex items-center space-x-2">
-              <Checkbox
-                id={id}
-                checked={settings[id as keyof SitemapSettings] as boolean}
-                onCheckedChange={(checked) =>
-                  handleSettingChange(id as keyof SitemapSettings, checked)
-                }
-              />
-              <Label
-                htmlFor={id}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Section 3 - Sitemap Statistics */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Sitemap Statistics</h2>
-        {statsLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard
-              label="Sitemap Status"
-              value={settings.sitemapEnabled ? "Enabled" : "Disabled"}
-              icon={CheckCircle}
-              className={
-                settings.sitemapEnabled ? "text-green-600" : "text-gray-400"
-              }
-            />
-            <StatCard
-              label="Total URLs"
-              value={statsData?.totalUrls || 0}
-              icon={Globe}
-            />
-            <StatCard
-              label="Pages"
-              value={statsData?.pages || 0}
-              icon={FileText}
-            />
-            <StatCard
-              label="Posts"
-              value={statsData?.posts || 0}
-              icon={FileArchive}
-            />
-            <StatCard
-              label="Categories"
-              value={statsData?.categories || 0}
-              icon={Layers}
-            />
-            <StatCard label="Tags" value={statsData?.tags || 0} icon={Globe} />
-            <StatCard
-              label="Courses"
-              value={statsData?.courses || 0}
-              icon={FileText}
-            />
-            <StatCard
-              label="Last Generated"
-              value={
-                statsData?.lastGenerated
-                  ? format(new Date(statsData.lastGenerated), "PPp")
-                  : "Never"
-              }
-              icon={Clock}
-            />
-          </div>
-        )}
-      </Card>
-
-      {/* Section 4 - Preview */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Preview</h2>
-        {previewLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-md border">
-              <div className="grid grid-cols-4 gap-4 p-3 bg-muted/50 font-medium text-sm">
-                <div>URL</div>
-                <div>Priority</div>
-                <div>Change Frequency</div>
-                <div>Last Modified</div>
-              </div>
-              {Array.isArray(previewData?.entries) &&
-                previewData.entries.map((entry, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      "grid grid-cols-4 gap-4 p-3 text-sm",
-                      index % 2 === 0 ? "bg-background" : "bg-muted/30",
-                    )}
-                  >
-                    <div className="font-mono truncate">{entry.url}</div>
-                    <div>{entry.priority}</div>
-                    <div className="capitalize">{entry.changeFreq}</div>
-                    <div>{format(new Date(entry.lastModified), "PPp")}</div>
-                  </div>
-                ))}
-            </div>
-            {previewData && previewData.total > 15 && (
-              <p className="text-sm text-muted-foreground text-center">
-                +{previewData.total - 15} more URLs...
-              </p>
-            )}
-          </div>
-        )}
-      </Card>
-
-      {/* Section 5 - Validation */}
-      {warnings.length > 0 && (
-        <div className="space-y-2">
-          {warnings.map((warning, index) => (
-            <Alert key={index} variant="warning">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>{warning}</AlertDescription>
-            </Alert>
-          ))}
-        </div>
-      )}
-
-      {/* Footer Actions */}
-      <div className="flex items-center justify-end gap-4 pt-6 border-t">
-        <Button
-          variant="outline"
-          onClick={handleReset}
-          disabled={!hasChanges || updateMutation.isPending}
-        >
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Reset to Defaults
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || updateMutation.isPending}
-        >
-          {updateMutation.isPending ? (
+        <Button onClick={onSave} disabled={!hasChanges || isSaving}>
+          {isSaving ? (
             <>
               <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
               Saving...
@@ -574,25 +611,157 @@ export default function SitemapSettingsPage() {
   );
 }
 
-// Stat Card Component
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  className,
+// Content Type Panel
+function ContentTypePanel({
+  item,
+  settings,
+  onSettingChange,
+  onSave,
+  hasChanges,
+  isSaving,
+  getSitemapUrl,
+  previewData,
+  previewLoading,
+  statsData,
 }: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  className?: string;
+  item: MenuItem;
+  settings: Partial<any>;
+  onSettingChange: (key: any, value: any) => void;
+  onSave: () => void;
+  hasChanges: boolean;
+  isSaving: boolean;
+  getSitemapUrl: () => string;
+  previewData: SitemapPreview | undefined;
+  previewLoading: boolean;
+  statsData: any;
 }) {
+  const Icon = item.icon;
+  const count = statsData ? statsData[item.statKey] || 0 : 0;
+
   return (
-    <div className="p-4 rounded-lg border bg-card">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">{item.label}</h1>
+        <p className="text-gray-600">
+          {item.description}{" "}
+          <a href="#" className="text-blue-600 hover:underline">
+            Learn more.
+          </a>
+        </p>
       </div>
-      <p className={cn("mt-1 text-2xl font-semibold", className)}>{value}</p>
+
+      <div className="border-t border-gray-300 pt-6 space-y-6">
+        {/* Sitemap URL */}
+        <div className="border-l-4 border-l-blue-500 bg-blue-50 p-4 rounded">
+          <p className="text-sm font-medium text-gray-900">
+            Sitemap URL:{" "}
+            <a href={getSitemapUrl()} className="text-blue-600 hover:underline">
+              {getSitemapUrl()}
+            </a>
+          </p>
+        </div>
+
+        {/* Include Toggle */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor={`include-${item.id}`}
+              className="text-base font-medium cursor-pointer"
+            >
+              Include in Sitemap
+            </Label>
+            <Switch
+              id={`include-${item.id}`}
+              checked={settings[item.key] as boolean}
+              onCheckedChange={(checked) => onSettingChange(item.key, checked)}
+            />
+          </div>
+          <p className="text-gray-600 text-sm">
+            Include this {item.label.toLowerCase()} in the XML sitemap.
+          </p>
+        </div>
+
+        {/* Preview */}
+        <div className="border-t border-gray-300 pt-6">
+          <p className="text-base font-medium text-gray-900 mb-4">
+            Preview ({count} URLs)
+          </p>
+
+          {previewLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10" />
+              ))}
+            </div>
+          ) : !previewData?.entries || previewData.entries.length === 0 ? (
+            <p className="text-gray-600">
+              No URLs available for this content type
+            </p>
+          ) : (
+            <div className="bg-gray-50 rounded border border-gray-300 overflow-hidden">
+              <div className="bg-gray-100 grid grid-cols-3 gap-4 p-3 text-sm font-medium text-gray-700 border-b border-gray-300">
+                <div>URL</div>
+                <div>Change Frequency</div>
+                <div>Priority</div>
+              </div>
+              {previewData.entries.slice(0, 10).map((entry, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "grid grid-cols-3 gap-4 p-3 text-sm border-b border-gray-200",
+                    index % 2 === 0 ? "bg-white" : "bg-gray-50",
+                  )}
+                >
+                  <div className="truncate">
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {entry.url}
+                    </a>
+                  </div>
+                  <div className="capitalize">{entry.changeFreq}</div>
+                  <div>{entry.priority}</div>
+                </div>
+              ))}
+              {previewData.total > 10 && (
+                <div className="p-3 bg-gray-100 text-sm text-gray-600 border-t border-gray-300">
+                  +{previewData.total - 10} more URLs...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="border-t border-gray-300 pt-6 flex items-center justify-end">
+        <Button onClick={onSave} disabled={!hasChanges || isSaving}>
+          {isSaving ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Stat Box Component
+function StatBox({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="border border-gray-300 rounded p-4 bg-white">
+      <p className="text-xs font-semibold text-gray-600 uppercase">{label}</p>
+      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
     </div>
   );
 }
@@ -600,73 +769,25 @@ function StatCard({
 // Loading Skeleton
 function SitemapSettingsSkeleton() {
   return (
-    <div className="space-y-6 p-6">
-      {/* Header Skeleton */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="flex min-h-screen bg-gray-50">
+      <aside className="w-64 bg-gray-100 border-r border-gray-300 p-4">
+        <Skeleton className="h-6 w-32 mb-4" />
         <div className="space-y-2">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-9 w-32" />
-        </div>
-      </div>
-
-      {/* General Settings Skeleton */}
-      <Card className="p-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-64" />
-            </div>
-            <Skeleton className="h-6 w-12" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-10 w-48" />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-3 w-64" />
-            </div>
-            <Skeleton className="h-6 w-12" />
-          </div>
-        </div>
-      </Card>
-
-      {/* Content Skeleton */}
-      <Card className="p-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Skeleton className="h-4 w-4" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Stats Skeleton */}
-      <Card className="p-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
-      </Card>
+      </aside>
 
-      {/* Footer Actions Skeleton */}
-      <div className="flex items-center justify-end gap-4 pt-6 border-t">
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-10 w-40" />
-      </div>
+      <main className="flex-1 bg-white p-8">
+        <Skeleton className="h-10 w-48 mb-4" />
+        <Skeleton className="h-6 w-96 mb-6" />
+        <div className="space-y-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+      </main>
     </div>
   );
 }

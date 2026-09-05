@@ -190,7 +190,7 @@ export async function GET() {
   return new Response(sitemapXsl, {
     headers: {
       "Content-Type": "application/xslt+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=604800",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
     },
   });
 }

@@ -29,7 +29,7 @@ export const GET = asyncHandler(async (req, res) => {
       where: { tenantId },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
     let pages = [];
     let posts = [];
 
@@ -44,6 +44,7 @@ export const GET = asyncHandler(async (req, res) => {
         select: {
           title: true,
           slug: true,
+          seoData: true,
           updatedAt: true,
         },
         orderBy: { updatedAt: "desc" },
@@ -61,6 +62,7 @@ export const GET = asyncHandler(async (req, res) => {
         select: {
           title: true,
           slug: true,
+          seoData: true,
           updatedAt: true,
           publishedAt: true,
         },

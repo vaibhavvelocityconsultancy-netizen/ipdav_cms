@@ -112,8 +112,11 @@ export async function createPage(input) {
 
   const { id: _, createdAt, updatedAt, ...cleanInput } = input;
 
-  const slug = cleanInput.slug?.trim()
-    ? generateSlug(cleanInput.slug)
+  const hasSlug = Object.prototype.hasOwnProperty.call(cleanInput, "slug");
+  const slug = hasSlug
+    ? cleanInput.slug.trim()
+      ? generateSlug(cleanInput.slug)
+      : ""
     : generateSlug(cleanInput.title);
 
   if (await isSlugTaken(slug, tenantId)) {
@@ -165,14 +168,21 @@ export async function updatePage(id, input) {
 
   const { id: _, createdAt, updatedAt, ...cleanInput } = input;
 
-  if (cleanInput.title && !cleanInput.slug) {
-    cleanInput.slug = generateSlug(cleanInput.title);
-  }
-
-  if (cleanInput.slug) {
-    if (await isSlugTaken(cleanInput.slug, tenantId, id)) {
-      throw new Error(`Slug "${cleanInput.slug}" is already taken`);
-    }
+  const hasSlug = Object.prototype.hasOwnProperty.call(cleanInput, "slug");
+  if (hasSlug) {
+    cleanInput.slug = cleanInput.slug.trim()
+      ? generateSlug(cleanInput.slug)
+      : "";
+  } else if (cleanInput.title) {
+    const settings = await prisma.sitesettings.findUnique({
+      where: { tenantId },
+      select: { homepageType: true, homepagePageId: true },
+    });
+    cleanInput.slug =
+      settings?.homepageType === "page" &&
+      Number(settings.homepagePageId) === Number(id)
+        ? ""
+        : generateSlug(cleanInput.title);
   }
 
   const existingPage = await prisma.page.findFirst({
@@ -188,7 +198,7 @@ export async function updatePage(id, input) {
   // TRACK OLD SLUG FOR REDIRECT
   const oldSlug = existingPage.slug;
 
-  if (cleanInput.slug) {
+  if (hasSlug || cleanInput.slug) {
     if (await isSlugTaken(cleanInput.slug, tenantId, id)) {
       throw new Error(`Slug "${cleanInput.slug}" is already taken`);
     }

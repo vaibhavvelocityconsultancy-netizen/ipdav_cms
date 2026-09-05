@@ -127,6 +127,7 @@ async function generateLlmsTxt(tenantId, settings) {
         select: {
           title: true,
           slug: true,
+          seoData: true,
           updatedAt: true,
         },
         orderBy: { updatedAt: "desc" },
@@ -146,13 +147,14 @@ async function generateLlmsTxt(tenantId, settings) {
         select: {
           title: true,
           slug: true,
+          seoData: true,
           updatedAt: true,
         },
         orderBy: { publishedAt: "desc" },
       });
     }
 
-    const content = generateLlmsTxtContent(baseUrl, pages, posts);
+    const content = generateLlmsTxtContent(baseUrl, pages, posts, siteSettings);
     writeLlmsTxtFile(content);
 
     console.log(
@@ -231,6 +233,7 @@ async function generateMarkdownFiles(tenantId, settings) {
             wordCount,
           },
           update: {
+            slug: page.slug,
             markdown: mdContent,
             wordCount,
             updatedAt: new Date(),
@@ -374,7 +377,10 @@ function getSeoDataValue(seoData, key) {
 }
 
 function generatePageMarkdown(page, baseUrl, siteSettings) {
-  const url = `${baseUrl}/${page.slug}`;
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+  const url = page.slug
+    ? `${normalizedBaseUrl}/${page.slug}`
+    : `${normalizedBaseUrl}/`;
   const date = new Date(page.updatedAt).toISOString().split("T")[0];
   const metaTitle =
     getSeoDataValue(page.seoData, "metaTitle") ||

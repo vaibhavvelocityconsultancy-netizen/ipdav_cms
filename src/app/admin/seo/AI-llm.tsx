@@ -44,6 +44,11 @@ const DEFAULT_SETTINGS: AICrawlSettings = {
 
 const apiPath = (path: string) => `${getApiBaseUrl()}${path}`;
 
+const markdownPath = (slug: string) => {
+  const normalizedSlug = slug.trim().replace(/^\/+|\/+$/g, "");
+  return appUrl(`/${normalizedSlug || "home"}.md`);
+};
+
 export default function AILLMSettingsPage() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<AICrawlSettings>(DEFAULT_SETTINGS);
@@ -456,7 +461,7 @@ function ContentSection({
                 className="flex items-center gap-1"
               >
                 <a
-                  href={appUrl(`/${item.slug}.md`)}
+                  href={markdownPath(item.slug)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
