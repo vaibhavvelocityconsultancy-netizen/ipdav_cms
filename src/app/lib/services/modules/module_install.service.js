@@ -17,19 +17,17 @@ const GITHUB_REPO = process.env.CMSKIT_MODULES_REPO;
 const GITHUB_TOKEN = process.env.CMSKIT_MODULES_TOKEN;
 
 function githubRepoPath() {
-  if (!GITHUB_REPO) return "";
+  const org = process.env.CMSKIT_MODULES_ORG;
+  const repo = process.env.CMSKIT_MODULES_REPO;
 
-  const configuredRepo = GITHUB_REPO.trim().replace(/\/+$/, "");
-  const repoUrlMatch = configuredRepo.match(
-    /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?$/i,
-  );
+  if (!org || !repo) {
+    throw new Error(
+      "CMSKIT_MODULES_ORG and CMSKIT_MODULES_REPO must be configured"
+    );
+  }
 
-  return (repoUrlMatch ? repoUrlMatch[1] : configuredRepo).replace(
-    /\.git$/,
-    "",
-  );
+  return `${org}/${repo}`;
 }
-
 // ─── Helpers ──────────────────────────────────────────────
 
 function statusFilePath(jobId) {
@@ -139,60 +137,100 @@ export async function backupDatabase(jobId) {
 
 // ─── GitHub fetch ──────────────────────────────────────────
 
-export async function downloadModuleTarball(moduleName, ref = "main") {
-  await requirePermission("modules_install");
-
+function githubRequest(url) {
   return new Promise((resolve, reject) => {
-    const url = `https://api.github.com/repos/${githubRepoPath() || `${GITHUB_ORG}/${GITHUB_REPO}`}/tarball/${ref}`;
-    const destPath = path.join(
-      PROJECT_ROOT,
-      "tmp",
-      `${moduleName}-${Date.now()}.tar.gz`,
-    );
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    const fileStream = fs.createWriteStream(destPath);
-
-    const request = (requestUrl) => {
-      https
-        .get(
-          requestUrl,
-          {
-            headers: {
-              Authorization: `Bearer ${GITHUB_TOKEN}`,
-              "User-Agent": "cmskit-installer",
-            },
+    https
+      .get(
+        url,
+        {
+          headers: {
+            Accept: "application/vnd.github+json",
+            Authorization: `Bearer ${GITHUB_TOKEN}`,
+            "User-Agent": "cmskit-installer",
+            "X-GitHub-Api-Version": "2022-11-28",
           },
-          (res) => {
-            if (
-              res.statusCode >= 300 &&
-              res.statusCode < 400 &&
-              res.headers.location
-            ) {
-              request(res.headers.location);
-              return;
-            }
-            if (res.statusCode !== 200) {
-              reject(
-                new Error(`GitHub tarball fetch failed: ${res.statusCode}`),
-              );
-              return;
-            }
-            res.pipe(fileStream);
-            fileStream.on("finish", () =>
-              fileStream.close(() => resolve(destPath)),
-            );
-          },
-        )
-        .on("error", reject);
-    };
-
-    request(url);
+        },
+        (res) => {
+          let body = "";
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => {
+            body += chunk;
+          });
+          res.on("end", () =>
+            resolve({ statusCode: res.statusCode || 0, body }),
+          );
+        },
+      )
+      .on("error", reject);
   });
 }
 
-export async function extractModuleTarball(tarPath, extractDir) {
-  fs.mkdirSync(extractDir, { recursive: true });
-  execSync(`tar -xzf "${tarPath}" -C "${extractDir}" --strip-components=1`);
+async function downloadGitHubDirectory(githubPath, destinationPath, ref = "main") {
+  const repoPath = githubRepoPath();
+  const url =
+      `https://api.github.com/repos/${repoPath}/tarball/${ref}`;
+  const response = await githubRequest(url);
+
+  if (response.statusCode !== 200) {
+    throw new Error(
+      `Failed to fetch ${githubPath}: ${response.statusCode} - ${response.body}`,
+    );
+  }
+
+  const items = JSON.parse(response.body);
+  if (!Array.isArray(items)) {
+    throw new Error(`GitHub path is not a directory: ${githubPath}`);
+  }
+
+  await fs.promises.mkdir(destinationPath, { recursive: true });
+
+  for (const item of items) {
+    const localPath = path.join(destinationPath, item.name);
+
+    if (item.type === "dir") {
+      await downloadGitHubDirectory(item.path, localPath, ref);
+      continue;
+    }
+
+    if (item.type !== "file") continue;
+
+    console.log(`Downloading: ${item.path}`);
+    const fileUrl = `${item.url}${item.url.includes("?") ? "&" : "?"}ref=${encodeURIComponent(ref)}`;
+    const fileResponse = await githubRequest(fileUrl);
+
+    if (fileResponse.statusCode !== 200) {
+      throw new Error(
+        `Failed to download ${item.path}: ${fileResponse.statusCode} - ${fileResponse.body}`,
+      );
+    }
+
+    const fileData = JSON.parse(fileResponse.body);
+    if (typeof fileData.content !== "string") {
+      throw new Error(`GitHub did not return file content for ${item.path}`);
+    }
+
+    await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
+    await fs.promises.writeFile(
+      localPath,
+      Buffer.from(fileData.content.replace(/\n/g, ""), "base64"),
+    );
+  }
+}
+
+export async function downloadModuleDirectory(moduleName, destinationPath, ref = "main") {
+  await requirePermission("modules_install");
+
+  console.log("========== MODULE DOWNLOAD ==========");
+  console.log("Module:", moduleName);
+  console.log("Repository:", githubRepoPath());
+  console.log(
+    "URL:",
+    `https://api.github.com/repos/${githubRepoPath()}/contents/modules/${encodeURIComponent(moduleName)}?ref=${encodeURIComponent(ref)}`,
+  );
+  console.log("=====================================");
+
+  await downloadGitHubDirectory(`modules/${moduleName}`, destinationPath, ref);
+  return destinationPath;
 }
 
 export async function readModuleManifest(moduleDir) {
@@ -399,11 +437,8 @@ export async function installModule(moduleName, jobId) {
     }
 
     await appendJobLog(jobId, `Downloading ${moduleName} from GitHub`);
-    const tarPath = await downloadModuleTarball(moduleName);
     const extractDir = path.join(PROJECT_ROOT, "tmp", `extract-${jobId}`);
-    await extractModuleTarball(tarPath, extractDir);
-
-    const moduleDir = path.join(extractDir, moduleName);
+    const moduleDir = await downloadModuleDirectory(moduleName, extractDir);
     const manifest = await readModuleManifest(moduleDir);
 
     await checkModuleDependencies(manifest);
@@ -443,8 +478,6 @@ export async function installModule(moduleName, jobId) {
     await clearBackups(backups);
 
     fs.rmSync(extractDir, { recursive: true, force: true });
-    fs.rmSync(tarPath, { force: true });
-
     const finalStatus = await readJobStatus(jobId);
     await writeJobStatus(jobId, { ...finalStatus, status: "success" });
     await appendJobLog(
@@ -517,8 +550,8 @@ export async function fetchModulesIndex() {
       repoPath = `${GITHUB_ORG}/${repoPath}`;
     }
 
-    const apiUrl = `https://api.github.com/repos/${repoPath}/contents/modules-index.json`;
-    const apiPath = new URL(apiUrl).pathname;
+    const apiUrl = `https://api.github.com/repos/${repoPath}/contents/module-index.json`;
+    const apiPath = new URL(apiUrl).pathname;   
 
     console.log("========== GITHUB MODULE INDEX DEBUG ==========");
     console.log("GITHUB_REPO:", GITHUB_REPO);
@@ -553,7 +586,7 @@ export async function fetchModulesIndex() {
           if (res.statusCode !== 200) {
             reject(
               new Error(
-                `Failed to fetch modules-index.json: ${res.statusCode} - ${data}`,
+                `Failed to fetch module-index.json: ${res.statusCode} - ${data}`,
               ),
             );
             return;
