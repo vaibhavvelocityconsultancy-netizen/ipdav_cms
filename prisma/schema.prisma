@@ -126,8 +126,7 @@ model user {
   planSubscriptions PlanSubscription[]
   planEnrollments   PlanEnrollment[]
   uploadedFiles     UploadedFile[]
-  fileShares        FileShareLink[]
-}
+  fileShares        FileShareLink[]}
 
 model permission {
   id             Int              @id @default(autoincrement())
@@ -238,9 +237,7 @@ model post {
   user     user?      @relation(fields: [authorId], references: [id])
   category category[] @relation("categorytopost")
   tag      tag[]      @relation("posttotag")
-  tenant   tenant     @relation(fields: [tenantId], references: [id])
-
-  @@unique([tenantId, slug])
+  tenant   tenant     @relation(fields: [tenantId], references: [id])@@unique([tenantId, slug])
   @@index([authorId])
   @@index([tenantId])
 }
@@ -1428,3 +1425,5 @@ model InternalLinkRule {
 
 // ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
 // --- MODULE:seo END ---
+
+

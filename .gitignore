@@ -11,3 +11,4 @@ credentials.json
 *.key
 .credentials
 public/uploads/
+tmp/module-operation-status.json

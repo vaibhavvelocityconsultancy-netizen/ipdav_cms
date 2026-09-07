@@ -30,8 +30,8 @@ function githubRepoPath() {
 }
 // ─── Helpers ──────────────────────────────────────────────
 
-function statusFilePath(jobId) {
-  return path.join(PROJECT_ROOT, "tmp", `install-${jobId}.json`);
+function statusFilePath() {
+  return path.join(PROJECT_ROOT, "tmp", "module-operation-status.json");
 }
 
 export function readInstalledModules() {
@@ -46,20 +46,20 @@ function writeInstalledModules(cfg) {
 // ─── Status / job logging ─────────────────────────────────
 
 export async function writeJobStatus(jobId, data) {
-  fs.mkdirSync(path.dirname(statusFilePath(jobId)), { recursive: true });
-  fs.writeFileSync(statusFilePath(jobId), JSON.stringify(data, null, 2));
+  fs.mkdirSync(path.dirname(statusFilePath()), { recursive: true });
+  fs.writeFileSync(statusFilePath(), JSON.stringify(data, null, 2));
 }
 
 export async function readJobStatus(jobId) {
-  if (!fs.existsSync(statusFilePath(jobId))) {
+  if (!fs.existsSync(statusFilePath())) {
     throw new Error("Job not found");
   }
-  return JSON.parse(fs.readFileSync(statusFilePath(jobId), "utf-8"));
+  return JSON.parse(fs.readFileSync(statusFilePath(), "utf-8"));
 }
 
 export async function appendJobLog(jobId, message) {
-  const current = fs.existsSync(statusFilePath(jobId))
-    ? JSON.parse(fs.readFileSync(statusFilePath(jobId), "utf-8"))
+  const current = fs.existsSync(statusFilePath())
+    ? JSON.parse(fs.readFileSync(statusFilePath(), "utf-8"))
     : { logs: [] };
 
   current.logs = current.logs || [];
@@ -301,7 +301,12 @@ export async function removeCopiedFiles(copiedPaths) {
   }
 }
 
-function cacheInstalledModuleManifest(moduleName, manifest, installedPaths) {
+function cacheInstalledModuleManifest(
+  moduleName,
+  manifest,
+  installedPaths,
+  schemaInjections = [],
+) {
   const cachePath = path.join(PROJECT_ROOT, "modules-cache", moduleName);
   fs.mkdirSync(cachePath, { recursive: true });
   fs.writeFileSync(
@@ -310,6 +315,7 @@ function cacheInstalledModuleManifest(moduleName, manifest, installedPaths) {
       {
         ...manifest,
         installedPaths,
+        schemaInjections,
       },
       null,
       2,
@@ -411,29 +417,63 @@ export async function mergeSchemaFragment(
   // 7. Inject fields into existing models
   // ---------------------------------------------------------
 
-  for (const injection of injections) {
-    const escapedModelName = injection.model.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&",
-    );
+  // ---------------------------------------------------------
+  // 7. Inject fields into existing models
+  // ---------------------------------------------------------
 
+  for (const injection of injections) {
+    const modelName = injection.model.trim();
+
+    const escapedModelName = modelName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Match ONLY the requested Prisma model.
+    // ^ ensures we start at a real `model xxx {` declaration.
+    // ^} ensures we stop at that model's closing brace.
     const modelRegex = new RegExp(
-      `(model\\s+${escapedModelName}\\s*\\{)([\\s\\S]*?)(\\n\\})`,
+      `(^model\\s+${escapedModelName}\\s*\\{)([\\s\\S]*?)(^\\})`,
       "m",
     );
 
-    if (!modelRegex.test(schema)) {
+    const match = schema.match(modelRegex);
+
+    if (!match) {
       throw new Error(
-        `Cannot inject into Prisma model "${injection.model}" — model not found`,
+        `Cannot inject into Prisma model "${modelName}" — model not found`,
       );
     }
 
-    schema = schema.replace(
-      modelRegex,
-      `$1$2\n\n  ${injection.fields.replace(/\n/g, "\n  ")}$3`,
+    const existingBody = match[2];
+
+    // Prevent duplicate injection
+    const fieldsToInject = injection.fields
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((field) => !existingBody.includes(field));
+
+    if (fieldsToInject.length === 0) {
+      console.log(
+        `All injected fields for "${modelName}" already exist. Skipping.`,
+      );
+      continue;
+    }
+
+    const formattedFields = fieldsToInject
+      .map((field) => `  ${field}`)
+      .join("\n");
+
+    const replacement =
+      `${match[1]}` +
+      `${existingBody}\n\n` +
+      `${formattedFields}\n` +
+      `${match[3]}`;
+
+    schema = schema.replace(modelRegex, replacement);
+
+    console.log(
+      `Injected ${fieldsToInject.length} field(s) into Prisma model "${modelName}"`,
     );
   }
-
   // ---------------------------------------------------------
   // 8. Save schema
   // ---------------------------------------------------------
@@ -444,6 +484,7 @@ export async function mergeSchemaFragment(
     alreadyInstalled: false,
     skipped: false,
     injectionTargets: injections.map((injection) => injection.model),
+    schemaInjections: injections,
   };
 }
 // ─── npm / prisma / build steps ─────────────────────────────
@@ -467,9 +508,15 @@ export async function runMigrations() {
   execSync("npx prisma migrate deploy", { cwd: PROJECT_ROOT, stdio: "pipe" });
 }
 
-export async function syncSchemaToDatabase() {
-  await requirePermission("modules_install");
-  execSync("npx prisma db push", { cwd: PROJECT_ROOT, stdio: "pipe" });
+export async function syncSchemaToDatabase({ acceptDataLoss = false } = {}) {
+  const command = acceptDataLoss
+    ? "npx prisma db push --accept-data-loss"
+    : "npx prisma db push";
+
+  execSync(command, {
+    cwd: PROJECT_ROOT,
+    stdio: "pipe",
+  });
 }
 
 export async function buildProject() {
@@ -692,7 +739,12 @@ export async function installModule(moduleName, jobId) {
     migrationApplied = true;
 
     await markModuleInstalled(moduleName);
-    cacheInstalledModuleManifest(moduleName, manifest, copiedPaths);
+    cacheInstalledModuleManifest(
+      moduleName,
+      manifest,
+      copiedPaths,
+      mergeResult?.schemaInjections || [],
+    );
     await clearBackups(backups);
 
     fs.rmSync(extractDir, { recursive: true, force: true });
@@ -903,21 +955,46 @@ export function isModuleActive(moduleName) {
 
 // ─── Uninstall ─────────────────────────────────────────────
 
-export async function removeSchemaFragment(moduleName) {
-  const content = fs.readFileSync(SCHEMA_PATH, "utf-8");
+export async function removeSchemaFragment(moduleName, schemaInjections = []) {
+  let schema = fs.readFileSync(SCHEMA_PATH, "utf-8");
   const escapedName = moduleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
+  const modulePattern = new RegExp(
     `\\n?// --- MODULE:${escapedName} START ---[\\s\\S]*?// --- MODULE:${escapedName} END ---\\n?`,
     "m",
   );
-  if (!pattern.test(content)) {
+  let removedInjectedFields = 0;
+
+  for (const injection of schemaInjections) {
+    const fields = String(injection.fields || "")
+      .split(/\r?\n/)
+      .map((field) => field.trim())
+      .filter(Boolean);
+
+    for (const field of fields) {
+      const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const fieldPattern = new RegExp(`^\\s*${escapedField}\\s*\\r?\\n?`, "gm");
+      const previousSchema = schema;
+      schema = schema.replace(fieldPattern, "");
+      if (schema !== previousSchema) removedInjectedFields += 1;
+    }
+  }
+
+  const hasModuleBlock = modulePattern.test(schema);
+  if (!hasModuleBlock && removedInjectedFields === 0) {
     throw new Error(
       `Could not find schema block for module "${moduleName}" — remove it manually from schema.prisma`,
     );
   }
 
-  fs.writeFileSync(SCHEMA_PATH, content.replace(pattern, "\n"), "utf-8");
-  console.log(`Removed Prisma schema block for module: ${moduleName}`);
+  if (hasModuleBlock) {
+    schema = schema.replace(modulePattern, "\n");
+    console.log(`Removed Prisma schema block for module: ${moduleName}`);
+  }
+
+  fs.writeFileSync(SCHEMA_PATH, schema, "utf-8");
+  console.log(
+    `Removed ${removedInjectedFields} injected Prisma field(s) for module: ${moduleName}`,
+  );
 }
 
 export async function checkNoDependents(moduleName) {
@@ -993,32 +1070,33 @@ export async function uninstallModule(
       await appendJobLog(jobId, "Module manifest fetched successfully");
     }
 
-    await appendJobLog(jobId, "Removing module files");
     const installedPaths = Array.isArray(manifest.installedPaths)
       ? manifest.installedPaths
       : Object.values(manifest.targetPaths || {}).map((dest) =>
           path.join(PROJECT_ROOT, dest),
         );
 
-    for (const installedPath of installedPaths) {
-      if (fs.existsSync(installedPath)) {
-        fs.rmSync(installedPath, { recursive: true, force: true });
-      }
-    }
-
     if (deleteData) {
       await appendJobLog(
         jobId,
         "Removing schema fragment (data will be dropped)",
       );
-      await removeSchemaFragment(moduleName);
+
+      await removeSchemaFragment(moduleName, manifest.schemaInjections || []);
       await appendJobLog(
         jobId,
         "Syncing schema — this DROPS this module's tables",
       );
-      await syncSchemaToDatabase();
-    } else {
-      await appendJobLog(jobId, "Keeping schema and data intact");
+
+      await syncSchemaToDatabase({
+        acceptDataLoss: true,
+      });
+    }
+    await appendJobLog(jobId, "Removing module files");
+    for (const installedPath of installedPaths) {
+      if (fs.existsSync(installedPath)) {
+        fs.rmSync(installedPath, { recursive: true, force: true });
+      }
     }
 
     const updatedCfg = readInstalledModules();
