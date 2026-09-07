@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "module": "seo",
+  "action": "activate",
+  "logs": [
+    "[2026-09-07T09:52:08.263Z] Starting build for seo. Module will remain inactive until build succeeds.",
+    "[2026-09-07T09:52:08.271Z] Running npm run build",
+    "[2026-09-07T09:54:13.004Z] Build completed successfully.",
+    "[2026-09-07T09:54:13.015Z] Module \"seo\" activated successfully.",
+    "[2026-09-07T09:54:13.021Z] Restarting application...",
+    "[2026-09-07T09:54:13.027Z] Application restart requested."
+  ],
+  "buildRequired": false,
+  "active": true
+}

@@ -27,6 +27,16 @@ interface UninstallTarget {
   files: string[];
 }
 
+interface BuildJobStatus {
+  jobId: string;
+  module: string;
+  status: "running" | "success" | "failed";
+  logs: string[];
+  error?: string;
+  buildRequired?: boolean;
+  active?: boolean;
+}
+
 export default function InstalledPluginsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<PluginViewMode>("table");
@@ -37,6 +47,9 @@ export default function InstalledPluginsPage() {
     useState<UninstallTarget | null>(null);
   const [deleteData, setDeleteData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [buildJobStatus, setBuildJobStatus] = useState<BuildJobStatus | null>(
+    null,
+  );
 
   const loadPlugins = async () => {
     setError("");
@@ -106,31 +119,100 @@ export default function InstalledPluginsPage() {
       return;
     }
 
-    if (!["activate", "deactivate"].includes(action)) return;
+    if (action === "activate-build") {
+      // Start the activate & build job
+      setIsSubmitting(true);
+      try {
+        const response = await fetch("/api/modules/activate-and-build", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ moduleName: plugin.id }),
+        });
+        const payload = await response.json();
+        if (!response.ok)
+          throw new Error(payload.error || "Unable to start build");
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/modules/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ moduleName: plugin.id }),
-      });
-      const payload = await response.json();
-      if (!response.ok)
-        throw new Error(payload.error || "Unable to update plugin status");
-      setPlugins((current) =>
-        current.map((item) =>
-          item.id === plugin.id
-            ? { ...item, status: action === "activate" ? "active" : "inactive" }
-            : item,
-        ),
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to update plugin status",
-      );
-    } finally {
-      setIsSubmitting(false);
+        // Set initial job status
+        setBuildJobStatus({
+          jobId: payload.jobId,
+          module: plugin.id,
+          status: "running",
+          logs: [],
+        });
+
+        // Poll for job status
+        let status = "running";
+        while (status === "running") {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const statusResponse = await fetch(
+            `/api/modules/install-status?jobId=${encodeURIComponent(payload.jobId)}`,
+            { cache: "no-store" },
+          );
+          const statusPayload = await statusResponse.json();
+          if (!statusResponse.ok)
+            throw new Error(
+              statusPayload.error || "Unable to read build status",
+            );
+
+          setBuildJobStatus(statusPayload);
+          status = statusPayload.status;
+
+          if (status === "success") {
+            // Update plugin to active
+            setPlugins((current) =>
+              current.map((item) =>
+                item.id === plugin.id ? { ...item, status: "active" } : item,
+              ),
+            );
+          }
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Unable to build and activate",
+        );
+        setBuildJobStatus((current) =>
+          current
+            ? {
+                ...current,
+                status: "failed",
+                error:
+                  err instanceof Error
+                    ? err.message
+                    : "Build and activation failed",
+              }
+            : null,
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (action === "deactivate") {
+      // Standard deactivate
+      setIsSubmitting(true);
+      try {
+        const response = await fetch(`/api/modules/${action}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ moduleName: plugin.id }),
+        });
+        const payload = await response.json();
+        if (!response.ok)
+          throw new Error(payload.error || "Unable to update plugin status");
+        setPlugins((current) =>
+          current.map((item) =>
+            item.id === plugin.id ? { ...item, status: "inactive" } : item,
+          ),
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Unable to update plugin status",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
   };
 
@@ -320,10 +402,12 @@ export default function InstalledPluginsPage() {
                     <>
                       <button
                         className="text-purple-600 hover:text-purple-700 font-medium"
-                        onClick={() => handlePluginAction(plugin, "activate")}
+                        onClick={() =>
+                          handlePluginAction(plugin, "activate-build")
+                        }
                         disabled={isSubmitting}
                       >
-                        Activate
+                        Activate & Build
                       </button>
                       <span className="text-gray-300">|</span>
                       <button
@@ -380,6 +464,93 @@ export default function InstalledPluginsPage() {
                 Yes, Uninstall files
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {buildJobStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+              <h2 className="text-lg font-semibold text-white">
+                {buildJobStatus.status === "running"
+                  ? `Building ${buildJobStatus.module}...`
+                  : buildJobStatus.status === "success"
+                    ? `✓ ${buildJobStatus.module} Activated`
+                    : `✗ Build Failed`}
+              </h2>
+            </div>
+
+            <div className="p-6">
+              {/* Build Progress */}
+              {buildJobStatus.status === "running" && (
+                <div className="mb-4">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-600 animate-pulse w-1/2"></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Building project...
+                  </p>
+                </div>
+              )}
+
+              {/* Status Icon */}
+              {buildJobStatus.status !== "running" && (
+                <div className="text-center mb-4">
+                  {buildJobStatus.status === "success" ? (
+                    <div className="text-5xl text-emerald-600">✓</div>
+                  ) : (
+                    <div className="text-5xl text-red-600">✕</div>
+                  )}
+                </div>
+              )}
+
+              {/* Build Logs */}
+              <div className="bg-gray-50 rounded border border-gray-200 p-4 max-h-64 overflow-y-auto font-mono text-xs">
+                {buildJobStatus.logs && buildJobStatus.logs.length > 0 ? (
+                  <div className="space-y-1">
+                    {buildJobStatus.logs.map((log, idx) => (
+                      <div key={idx} className="text-gray-700">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No logs yet...</p>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {buildJobStatus.error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="text-sm text-red-700">{buildJobStatus.error}</p>
+                </div>
+              )}
+
+              {/* Status Summary */}
+              {buildJobStatus.status === "success" && (
+                <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded">
+                  <p className="text-sm text-emerald-700">
+                    Module activated successfully. Application restarting...
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            {buildJobStatus.status !== "running" && (
+              <div className="bg-gray-50 px-6 py-4 flex justify-end">
+                <button
+                  className="px-4 py-2 rounded bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
+                  onClick={() => {
+                    setBuildJobStatus(null);
+                    loadPlugins(); // Refresh plugin list
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

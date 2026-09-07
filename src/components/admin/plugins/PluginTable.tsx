@@ -80,10 +80,10 @@ export function PluginTable({ plugins, onAction, disabled }: PluginTableProps) {
                   <div className="flex justify-end items-center gap-2 text-xs">
                     <button
                       className="font-medium text-purple-600 hover:text-purple-700 disabled:opacity-50"
-                      onClick={() => onAction?.(plugin, "activate")}
+                      onClick={() => onAction?.(plugin, "activate-build")}
                       disabled={disabled}
                     >
-                      Activate
+                      Activate & Build
                     </button>
                     <span className="text-gray-300">|</span>
                     <button

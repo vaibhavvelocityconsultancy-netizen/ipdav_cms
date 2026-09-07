@@ -220,7 +220,11 @@ async function downloadGitHubDirectory(
   }
 }
 
-export async function downloadModuleDirectory(moduleName, destinationPath, ref = "main") {
+export async function downloadModuleDirectory(
+  moduleName,
+  destinationPath,
+  ref = "main",
+) {
   await requirePermission("modules_install");
 
   console.log("========== MODULE DOWNLOAD ==========");
@@ -232,7 +236,7 @@ export async function downloadModuleDirectory(moduleName, destinationPath, ref =
   );
   console.log("=====================================");
 
-  await downloadGitHubDirectory(moduleName, destinationPath, ref);   // ← removed "modules/" prefix
+  await downloadGitHubDirectory(moduleName, destinationPath, ref); // ← removed "modules/" prefix
   return destinationPath;
 }
 
@@ -299,7 +303,11 @@ export async function removeCopiedFiles(copiedPaths) {
 
 // ─── Schema merge ──────────────────────────────────────────
 
-export async function mergeSchemaFragment(moduleDir, schemaFragmentName) {
+export async function mergeSchemaFragment(
+  moduleDir,
+  schemaFragmentName,
+  moduleName = path.basename(moduleDir),
+) {
   await requirePermission("modules_install");
 
   const fragmentPath = path.join(moduleDir, schemaFragmentName);
@@ -310,6 +318,23 @@ export async function mergeSchemaFragment(moduleDir, schemaFragmentName) {
 
   const fragment = fs.readFileSync(fragmentPath, "utf-8");
   let schema = fs.readFileSync(SCHEMA_PATH, "utf-8");
+
+  // ---------------------------------------------------------
+  // Check whether this module's schema is already installed
+  // ---------------------------------------------------------
+
+  const moduleStartMarker = `// --- MODULE:${moduleName} START ---`;
+  const moduleEndMarker = `// --- MODULE:${moduleName} END ---`;
+
+  if (schema.includes(moduleStartMarker) && schema.includes(moduleEndMarker)) {
+    console.log(
+      `Schema for module "${moduleName}" already exists. Skipping merge.`,
+    );
+    return {
+      alreadyInstalled: true,
+      skipped: true,
+    };
+  }
 
   // ---------------------------------------------------------
   // 1. Extract INJECT_INTO blocks
@@ -341,9 +366,9 @@ export async function mergeSchemaFragment(moduleDir, schemaFragmentName) {
 
   if (modelsOnly) {
     schema +=
-      `\n\n// --- MODULE:${path.basename(moduleDir)} START ---\n` +
+      `\n\n// --- MODULE:${moduleName} START ---\n` +
       modelsOnly +
-      `\n// --- MODULE:${path.basename(moduleDir)} END ---\n`;
+      `\n// --- MODULE:${moduleName} END ---\n`;
   }
 
   // ---------------------------------------------------------
@@ -392,15 +417,126 @@ export async function runMigrations() {
   execSync("npx prisma migrate deploy", { cwd: PROJECT_ROOT, stdio: "pipe" });
 }
 
+export async function syncSchemaToDatabase() {
+  await requirePermission("modules_install");
+  execSync("npx prisma db push", { cwd: PROJECT_ROOT, stdio: "pipe" });
+}
+
 export async function buildProject() {
-  execSync("npm run build", { cwd: PROJECT_ROOT, stdio: "pipe" });
+  console.log("========== BUILD DEBUG ==========");
+  console.log("PROJECT_ROOT:", PROJECT_ROOT);
+  console.log("NODE_ENV before:", process.env.NODE_ENV);
+  console.log("NODE VERSION:", process.version);
+  console.log("=================================");
+
+  execSync("npm run build", {
+    cwd: PROJECT_ROOT,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+    },
+  });
+}
+
+export async function activateModuleAfterBuild(moduleName) {
+  const cfg = readInstalledModules();
+
+  if (!cfg.installedModules.includes(moduleName)) {
+    throw new Error(`Module "${moduleName}" is not installed`);
+  }
+
+  const active = new Set(cfg.activeModules || []);
+  active.add(moduleName);
+
+  cfg.activeModules = [...active];
+
+  writeInstalledModules(cfg);
+
+  return cfg;
+}
+
+export async function activateAndBuildModule(moduleName, jobId) {
+  await requireAuth();
+  await requirePermission("modules_install");
+
+  const cfg = readInstalledModules();
+
+  if (!cfg.installedModules.includes(moduleName)) {
+    throw new Error(`Module "${moduleName}" is not installed`);
+  }
+
+  const activeModules = cfg.activeModules || [];
+
+  if (activeModules.includes(moduleName)) {
+    throw new Error(`Module "${moduleName}" is already active`);
+  }
+
+  await writeJobStatus(jobId, {
+    status: "running",
+    module: moduleName,
+    action: "activate",
+    logs: [],
+  });
+
+  try {
+    await appendJobLog(
+      jobId,
+      `Starting build for ${moduleName}. Module will remain inactive until build succeeds.`,
+    );
+
+    await appendJobLog(jobId, "Running npm run build");
+
+    await buildProject();
+
+    await appendJobLog(jobId, "Build completed successfully.");
+
+    // ONLY NOW activate
+    await activateModuleAfterBuild(moduleName);
+
+    await appendJobLog(jobId, `Module "${moduleName}" activated successfully.`);
+
+    await appendJobLog(jobId, "Restarting application...");
+
+    await triggerAppRestart();
+
+    await appendJobLog(jobId, "Application restart requested.");
+
+    const finalStatus = await readJobStatus(jobId);
+
+    await writeJobStatus(jobId, {
+      ...finalStatus,
+      status: "success",
+      buildRequired: false,
+      active: true,
+    });
+  } catch (err) {
+    await appendJobLog(jobId, `BUILD ERROR: ${err.message}`);
+
+    const finalStatus = await readJobStatus(jobId);
+
+    await writeJobStatus(jobId, {
+      ...finalStatus,
+      status: "failed",
+      buildRequired: true,
+      active: false,
+      error: err.message,
+    });
+  }
 }
 
 // ─── Finalize / restart ─────────────────────────────────────
 
 export async function markModuleInstalled(moduleName) {
   const cfg = readInstalledModules();
-  cfg.installedModules.push(moduleName);
+
+  if (!cfg.installedModules.includes(moduleName)) {
+    cfg.installedModules.push(moduleName);
+  }
+
+  const activeModules = cfg.activeModules || [];
+  cfg.activeModules = activeModules.filter((name) => name !== moduleName);
+
   writeInstalledModules(cfg);
 }
 
@@ -453,7 +589,18 @@ export async function installModule(moduleName, jobId) {
     );
 
     await appendJobLog(jobId, "Merging Prisma schema fragment");
-    await mergeSchemaFragment(moduleDir, manifest.schemaFragment);
+    const mergeResult = await mergeSchemaFragment(
+      moduleDir,
+      manifest.schemaFragment,
+      moduleName,
+    );
+
+    if (mergeResult?.skipped) {
+      await appendJobLog(
+        jobId,
+        "Schema already exists from previous installation. Skipping merge.",
+      );
+    }
 
     if ((manifest.npmDependencies || []).length > 0) {
       await appendJobLog(
@@ -470,20 +617,25 @@ export async function installModule(moduleName, jobId) {
     await runMigrations();
     migrationApplied = true;
 
-    await appendJobLog(jobId, "Building project (this can take a few minutes)");
-    await buildProject();
-
     await markModuleInstalled(moduleName);
-    await triggerAppRestart();
     await clearBackups(backups);
 
     fs.rmSync(extractDir, { recursive: true, force: true });
-    const finalStatus = await readJobStatus(jobId);
-    await writeJobStatus(jobId, { ...finalStatus, status: "success" });
     await appendJobLog(
       jobId,
-      "Install complete. App will restart on next request.",
+      "Installation complete. Module is installed but inactive.",
     );
+    await appendJobLog(
+      jobId,
+      "Build is required before the module can be activated.",
+    );
+    const completedStatus = await readJobStatus(jobId);
+    await writeJobStatus(jobId, {
+      ...completedStatus,
+      status: "success",
+      buildRequired: true,
+      activated: false,
+    });
   } catch (err) {
     await appendJobLog(jobId, `ERROR: ${err.message}`);
     await appendJobLog(jobId, "Rolling back...");
@@ -648,15 +800,23 @@ export async function activateModule(moduleName) {
   await requirePermission("modules_install");
 
   const cfg = readInstalledModules();
+
   if (!cfg.installedModules.includes(moduleName)) {
     throw new Error(`Module "${moduleName}" is not installed`);
   }
 
-  const active = new Set(cfg.activeModules || cfg.installedModules);
-  active.add(moduleName);
-  cfg.activeModules = [...active];
-  writeInstalledModules(cfg);
-  return cfg;
+  // Check if already active
+  const activeModules = cfg.activeModules || [];
+  if (activeModules.includes(moduleName)) {
+    return cfg; // Already active
+  }
+
+  // Module is installed but inactive.
+  // Use activateAndBuildModule() to build and then activate.
+  return {
+    ...cfg,
+    message: `Module "${moduleName}" is installed but inactive. Use "Activate & Build" to build and activate it.`,
+  };
 }
 
 export function isModuleActive(moduleName) {
@@ -669,15 +829,19 @@ export function isModuleActive(moduleName) {
 
 export async function removeSchemaFragment(moduleName) {
   const content = fs.readFileSync(SCHEMA_PATH, "utf-8");
+  const escapedName = moduleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
-    `\\n// --- MODULE:${moduleName} START ---[\\s\\S]*?// --- MODULE:${moduleName} END ---\\n`,
+    `\\n?// --- MODULE:${escapedName} START ---[\\s\\S]*?// --- MODULE:${escapedName} END ---\\n?`,
+    "m",
   );
   if (!pattern.test(content)) {
     throw new Error(
       `Could not find schema block for module "${moduleName}" — remove it manually from schema.prisma`,
     );
   }
-  fs.writeFileSync(SCHEMA_PATH, content.replace(pattern, "\n"));
+
+  fs.writeFileSync(SCHEMA_PATH, content.replace(pattern, "\n"), "utf-8");
+  console.log(`Removed Prisma schema block for module: ${moduleName}`);
 }
 
 export async function checkNoDependents(moduleName) {
@@ -774,12 +938,20 @@ export async function uninstallModule(
       force: true,
     });
 
-    await appendJobLog(jobId, "Building project");
-    await buildProject();
-    await triggerAppRestart();
+    await appendJobLog(
+      jobId,
+      "Uninstall complete. Build is required before the changes become active.",
+    );
+
+    // await triggerAppRestart();
 
     const finalStatus = await readJobStatus(jobId);
-    await writeJobStatus(jobId, { ...finalStatus, status: "success" });
+
+    await writeJobStatus(jobId, {
+      ...finalStatus,
+      status: "success",
+      buildRequired: true,
+    });
   } catch (err) {
     await appendJobLog(jobId, `ERROR: ${err.message}`);
     const finalStatus = await readJobStatus(jobId);

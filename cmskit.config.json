@@ -1,3 +1,7 @@
 {
-  "installedModules": ["forms"]
+  "installedModules": [
+    "forms",
+    "seo"
+  ],
+  "activeModules": []
 }

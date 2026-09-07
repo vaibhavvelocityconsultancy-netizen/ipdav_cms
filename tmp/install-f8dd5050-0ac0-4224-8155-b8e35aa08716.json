@@ -1,0 +1,17 @@
+{
+  "status": "success",
+  "module": "seo",
+  "logs": [
+    "[2026-09-07T09:32:44.298Z] Backing up schema.prisma and package.json",
+    "[2026-09-07T09:32:44.339Z] Downloading seo from GitHub",
+    "[2026-09-07T09:33:44.381Z] Copying module files into project",
+    "[2026-09-07T09:33:45.184Z] Merging Prisma schema fragment",
+    "[2026-09-07T09:33:45.194Z] Schema already exists from previous installation. Skipping merge.",
+    "[2026-09-07T09:33:45.197Z] Validating Prisma schema",
+    "[2026-09-07T09:33:49.263Z] Running database migration",
+    "[2026-09-07T09:33:53.036Z] Installation complete. Module is installed but inactive.",
+    "[2026-09-07T09:33:53.039Z] Build is required before the module can be activated."
+  ],
+  "buildRequired": true,
+  "activated": false
+}
