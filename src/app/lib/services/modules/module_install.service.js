@@ -22,7 +22,7 @@ function githubRepoPath() {
 
   if (!org || !repo) {
     throw new Error(
-      "CMSKIT_MODULES_ORG and CMSKIT_MODULES_REPO must be configured"
+      "CMSKIT_MODULES_ORG and CMSKIT_MODULES_REPO must be configured",
     );
   }
 
@@ -165,10 +165,13 @@ function githubRequest(url) {
   });
 }
 
-async function downloadGitHubDirectory(githubPath, destinationPath, ref = "main") {
+async function downloadGitHubDirectory(
+  githubPath,
+  destinationPath,
+  ref = "main",
+) {
   const repoPath = githubRepoPath();
-  const url =
-      `https://api.github.com/repos/${repoPath}/tarball/${ref}`;
+  const url = `https://api.github.com/repos/${repoPath}/contents/${githubPath}?ref=${encodeURIComponent(ref)}`;
   const response = await githubRequest(url);
 
   if (response.statusCode !== 200) {
@@ -225,11 +228,11 @@ export async function downloadModuleDirectory(moduleName, destinationPath, ref =
   console.log("Repository:", githubRepoPath());
   console.log(
     "URL:",
-    `https://api.github.com/repos/${githubRepoPath()}/contents/modules/${encodeURIComponent(moduleName)}?ref=${encodeURIComponent(ref)}`,
+    `https://api.github.com/repos/${githubRepoPath()}/contents/${encodeURIComponent(moduleName)}?ref=${encodeURIComponent(ref)}`,
   );
   console.log("=====================================");
 
-  await downloadGitHubDirectory(`modules/${moduleName}`, destinationPath, ref);
+  await downloadGitHubDirectory(moduleName, destinationPath, ref);   // ← removed "modules/" prefix
   return destinationPath;
 }
 
@@ -330,9 +333,7 @@ export async function mergeSchemaFragment(moduleDir, schemaFragmentName) {
   // 2. Remove injection blocks from the fragment
   // ---------------------------------------------------------
 
-  const modelsOnly = fragment
-    .replace(injectionRegex, "")
-    .trim();
+  const modelsOnly = fragment.replace(injectionRegex, "").trim();
 
   // ---------------------------------------------------------
   // 3. Add module marker + actual models
@@ -369,7 +370,6 @@ export async function mergeSchemaFragment(moduleDir, schemaFragmentName) {
 
   fs.writeFileSync(SCHEMA_PATH, schema, "utf-8");
 }
-
 
 // ─── npm / prisma / build steps ─────────────────────────────
 
@@ -550,8 +550,8 @@ export async function fetchModulesIndex() {
       repoPath = `${GITHUB_ORG}/${repoPath}`;
     }
 
-    const apiUrl = `https://api.github.com/repos/${repoPath}/contents/module-index.json`;
-    const apiPath = new URL(apiUrl).pathname;   
+    const apiUrl = `https://api.github.com/repos/${repoPath}/contents/modules-index.json`;
+    const apiPath = new URL(apiUrl).pathname;
 
     console.log("========== GITHUB MODULE INDEX DEBUG ==========");
     console.log("GITHUB_REPO:", GITHUB_REPO);
@@ -586,7 +586,7 @@ export async function fetchModulesIndex() {
           if (res.statusCode !== 200) {
             reject(
               new Error(
-                `Failed to fetch module-index.json: ${res.statusCode} - ${data}`,
+                `Failed to fetch modules-index.json: ${res.statusCode} - ${data}`,
               ),
             );
             return;
