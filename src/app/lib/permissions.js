@@ -28,10 +28,6 @@ export const DEFAULT_ROLE_PERMISSIONS = {
 
   posts_publish: ["SUPER_ADMIN", "ADMIN", "EDITOR", "AUTHOR"],
 
-  // Comments
-  comments_moderate: ["SUPER_ADMIN", "ADMIN", "EDITOR"],
-  comments_delete: ["SUPER_ADMIN", "ADMIN", "EDITOR"],
-
   // Media
   media_upload: ["SUPER_ADMIN", "ADMIN", "EDITOR", "AUTHOR"],
   media_delete: ["SUPER_ADMIN", "ADMIN", "EDITOR"],
@@ -68,7 +64,6 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   courses_delete: ["SUPER_ADMIN", "ADMIN"],
   courses_edit: ["SUPER_ADMIN", "ADMIN"],
   course_content_manage: ["SUPER_ADMIN", "ADMIN"],
-
 
   // plans
   plans_update: ["SUPER_ADMIN", "ADMIN"],

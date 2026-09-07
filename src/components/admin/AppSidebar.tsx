@@ -113,14 +113,6 @@ const adminNavItems: NavItem[] = [
         href: "/admin/posts",
       },
       {
-        id: "comments",
-        label: "Comments",
-        icon: FileText,
-        description: "View all comments",
-        requiresModule: "comments",
-        href: "/admin/comments",
-      },
-      {
         id: "categories",
         label: "Categories",
         icon: FolderOpen,

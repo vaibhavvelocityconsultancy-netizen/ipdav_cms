@@ -57,7 +57,6 @@ export async function getAllPosts() {
       updatedAt: true,
       category: { select: { id: true, name: true } },
       tag: { select: { id: true, name: true } },
-      _count: { select: { comment: true } },
     },
   });
 }

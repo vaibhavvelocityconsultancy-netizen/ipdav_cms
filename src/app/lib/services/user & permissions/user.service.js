@@ -22,7 +22,6 @@ const safeSelect = {
   _count: {
     select: {
       post: true,
-      comment: true,
     },
   },
   userpermission: {

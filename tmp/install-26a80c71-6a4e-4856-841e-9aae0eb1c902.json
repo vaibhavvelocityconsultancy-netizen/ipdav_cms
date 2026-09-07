@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "module": "forms",
+  "action": "activate",
+  "logs": [
+    "[2026-09-07T10:59:01.284Z] Starting build for forms. Module will remain inactive until build succeeds.",
+    "[2026-09-07T10:59:01.289Z] Running npm run build",
+    "[2026-09-07T11:02:16.886Z] Build completed successfully.",
+    "[2026-09-07T11:02:16.898Z] Module \"forms\" activated successfully.",
+    "[2026-09-07T11:02:16.904Z] Restarting application...",
+    "[2026-09-07T11:02:16.942Z] Application restart requested."
+  ],
+  "buildRequired": false,
+  "active": true
+}

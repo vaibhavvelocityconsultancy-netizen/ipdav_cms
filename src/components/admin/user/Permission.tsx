@@ -19,7 +19,6 @@ function getCategory(name: string): string {
   const map: Record<string, string> = {
     pages: "Pages",
     posts: "Posts",
-    comments: "Comments",
     media: "Media",
     taxonomy: "Taxonomy",
     menus: "Menus",

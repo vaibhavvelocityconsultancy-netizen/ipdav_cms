@@ -3,5 +3,10 @@
     "forms",
     "seo"
   ],
-  "activeModules": []
+  "activeModules": [
+    "forms"
+  ],
+  "builtModules": [
+    "forms"
+  ]
 }

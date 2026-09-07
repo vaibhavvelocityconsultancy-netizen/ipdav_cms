@@ -58,7 +58,6 @@ export const fetchers = {
 
   // posts
   post: (slug: string) => fetcher(`/api/posts/slug/${slug}`),
-  postComments: (postId: string) => fetcher(`/api/posts/${postId}/comments`),
   posts: () => fetcher("/api/posts"),
 
   // categories

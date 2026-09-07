@@ -301,6 +301,22 @@ export async function removeCopiedFiles(copiedPaths) {
   }
 }
 
+function cacheInstalledModuleManifest(moduleName, manifest, installedPaths) {
+  const cachePath = path.join(PROJECT_ROOT, "modules-cache", moduleName);
+  fs.mkdirSync(cachePath, { recursive: true });
+  fs.writeFileSync(
+    path.join(cachePath, "module.json"),
+    JSON.stringify(
+      {
+        ...manifest,
+        installedPaths,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 // ─── Schema merge ──────────────────────────────────────────
 
 export async function mergeSchemaFragment(
@@ -316,11 +332,27 @@ export async function mergeSchemaFragment(
     throw new Error(`Schema fragment not found: ${schemaFragmentName}`);
   }
 
-  const fragment = fs.readFileSync(fragmentPath, "utf-8");
   let schema = fs.readFileSync(SCHEMA_PATH, "utf-8");
 
   // ---------------------------------------------------------
-  // Check whether this module's schema is already installed
+  // 1. Check whether this module is already installed
+  // ---------------------------------------------------------
+
+  const cfg = readInstalledModules();
+
+  if (cfg.installedModules?.includes(moduleName)) {
+    console.log(
+      `Module "${moduleName}" is already installed. Skipping schema merge.`,
+    );
+
+    return {
+      alreadyInstalled: true,
+      skipped: true,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 2. Check schema markers
   // ---------------------------------------------------------
 
   const moduleStartMarker = `// --- MODULE:${moduleName} START ---`;
@@ -330,6 +362,7 @@ export async function mergeSchemaFragment(
     console.log(
       `Schema for module "${moduleName}" already exists. Skipping merge.`,
     );
+
     return {
       alreadyInstalled: true,
       skipped: true,
@@ -337,14 +370,19 @@ export async function mergeSchemaFragment(
   }
 
   // ---------------------------------------------------------
-  // 1. Extract INJECT_INTO blocks
+  // 3. Read module schema fragment
+  // ---------------------------------------------------------
+
+  const fragment = fs.readFileSync(fragmentPath, "utf-8");
+
+  // ---------------------------------------------------------
+  // 4. Extract INJECT_INTO blocks
   // ---------------------------------------------------------
 
   const injectionRegex =
-    /\/\/\s*INJECT_INTO:([A-Za-z0-9_]+)\s*\n([\s\S]*?)\/\/\s*END_INJECT:\1/g;
+    /\/\/\s*INJECT_INTO:([A-Za-z0-9_]+)\s*\r?\n([\s\S]*?)\/\/\s*END_INJECT:\1/g;
 
   const injections = [];
-
   let match;
 
   while ((match = injectionRegex.exec(fragment)) !== null) {
@@ -355,29 +393,32 @@ export async function mergeSchemaFragment(
   }
 
   // ---------------------------------------------------------
-  // 2. Remove injection blocks from the fragment
+  // 5. Remove injection blocks
   // ---------------------------------------------------------
 
   const modelsOnly = fragment.replace(injectionRegex, "").trim();
 
   // ---------------------------------------------------------
-  // 3. Add module marker + actual models
+  // 6. Add module models
   // ---------------------------------------------------------
 
   if (modelsOnly) {
     schema +=
-      `\n\n// --- MODULE:${moduleName} START ---\n` +
-      modelsOnly +
-      `\n// --- MODULE:${moduleName} END ---\n`;
+      `\n\n${moduleStartMarker}\n` + modelsOnly + `\n${moduleEndMarker}\n`;
   }
 
   // ---------------------------------------------------------
-  // 4. Inject fields inside their target Prisma models
+  // 7. Inject fields into existing models
   // ---------------------------------------------------------
 
   for (const injection of injections) {
+    const escapedModelName = injection.model.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&",
+    );
+
     const modelRegex = new RegExp(
-      `(model\\s+${injection.model}\\s*\\{)([\\s\\S]*?)(\\n\\})`,
+      `(model\\s+${escapedModelName}\\s*\\{)([\\s\\S]*?)(\\n\\})`,
       "m",
     );
 
@@ -393,9 +434,18 @@ export async function mergeSchemaFragment(
     );
   }
 
-  fs.writeFileSync(SCHEMA_PATH, schema, "utf-8");
-}
+  // ---------------------------------------------------------
+  // 8. Save schema
+  // ---------------------------------------------------------
 
+  fs.writeFileSync(SCHEMA_PATH, schema, "utf-8");
+
+  return {
+    alreadyInstalled: false,
+    skipped: false,
+    injectionTargets: injections.map((injection) => injection.model),
+  };
+}
 // ─── npm / prisma / build steps ─────────────────────────────
 
 export async function installNpmDependencies(deps) {
@@ -451,6 +501,12 @@ export async function activateModuleAfterBuild(moduleName) {
 
   cfg.activeModules = [...active];
 
+  // Ensure builtModules tracking exists
+  if (!cfg.builtModules) cfg.builtModules = [];
+  if (!cfg.builtModules.includes(moduleName)) {
+    cfg.builtModules.push(moduleName);
+  }
+
   writeInstalledModules(cfg);
 
   return cfg;
@@ -472,6 +528,10 @@ export async function activateAndBuildModule(moduleName, jobId) {
     throw new Error(`Module "${moduleName}" is already active`);
   }
 
+  // Check if module has been built before
+  const builtModules = cfg.builtModules || [];
+  const alreadyBuilt = builtModules.includes(moduleName);
+
   await writeJobStatus(jobId, {
     status: "running",
     module: moduleName,
@@ -480,18 +540,27 @@ export async function activateAndBuildModule(moduleName, jobId) {
   });
 
   try {
-    await appendJobLog(
-      jobId,
-      `Starting build for ${moduleName}. Module will remain inactive until build succeeds.`,
-    );
+    if (alreadyBuilt) {
+      // Module was built before → just activate
+      await appendJobLog(
+        jobId,
+        `Module "${moduleName}" already built. Activating now (no rebuild needed).`,
+      );
+    } else {
+      // First time activation → need to build
+      await appendJobLog(
+        jobId,
+        `Starting build for ${moduleName}. Module will remain inactive until build succeeds.`,
+      );
 
-    await appendJobLog(jobId, "Running npm run build");
+      await appendJobLog(jobId, "Running npm run build");
 
-    await buildProject();
+      await buildProject();
 
-    await appendJobLog(jobId, "Build completed successfully.");
+      await appendJobLog(jobId, "Build completed successfully.");
+    }
 
-    // ONLY NOW activate
+    // ONLY NOW activate (whether we just built or not)
     await activateModuleAfterBuild(moduleName);
 
     await appendJobLog(jobId, `Module "${moduleName}" activated successfully.`);
@@ -511,14 +580,14 @@ export async function activateAndBuildModule(moduleName, jobId) {
       active: true,
     });
   } catch (err) {
-    await appendJobLog(jobId, `BUILD ERROR: ${err.message}`);
+    await appendJobLog(jobId, `ERROR: ${err.message}`);
 
     const finalStatus = await readJobStatus(jobId);
 
     await writeJobStatus(jobId, {
       ...finalStatus,
       status: "failed",
-      buildRequired: true,
+      buildRequired: !alreadyBuilt, // Only needs build if it was never built
       active: false,
       error: err.message,
     });
@@ -534,8 +603,13 @@ export async function markModuleInstalled(moduleName) {
     cfg.installedModules.push(moduleName);
   }
 
+  // Mark as inactive (not built yet)
   const activeModules = cfg.activeModules || [];
   cfg.activeModules = activeModules.filter((name) => name !== moduleName);
+
+  // Ensure builtModules exists (module is not built yet)
+  if (!cfg.builtModules) cfg.builtModules = [];
+  // Don't add to builtModules — it hasn't been built yet
 
   writeInstalledModules(cfg);
 }
@@ -581,12 +655,6 @@ export async function installModule(moduleName, jobId) {
 
     await appendJobLog(jobId, "Copying module files into project");
     copiedPaths = await copyModuleFiles(moduleDir, manifest.targetPaths);
-    const cachePath = path.join(PROJECT_ROOT, "modules-cache", moduleName);
-    fs.mkdirSync(cachePath, { recursive: true });
-    fs.writeFileSync(
-      path.join(cachePath, "module.json"),
-      JSON.stringify(manifest, null, 2),
-    );
 
     await appendJobLog(jobId, "Merging Prisma schema fragment");
     const mergeResult = await mergeSchemaFragment(
@@ -599,6 +667,12 @@ export async function installModule(moduleName, jobId) {
       await appendJobLog(
         jobId,
         "Schema already exists from previous installation. Skipping merge.",
+      );
+    } else {
+      const injectionTargets = mergeResult?.injectionTargets || [];
+      await appendJobLog(
+        jobId,
+        `Extracted ${injectionTargets.length} INJECT_INTO block(s): ${injectionTargets.join(", ") || "none"}`,
       );
     }
 
@@ -618,6 +692,7 @@ export async function installModule(moduleName, jobId) {
     migrationApplied = true;
 
     await markModuleInstalled(moduleName);
+    cacheInstalledModuleManifest(moduleName, manifest, copiedPaths);
     await clearBackups(backups);
 
     fs.rmSync(extractDir, { recursive: true, force: true });
@@ -788,6 +863,7 @@ export async function deactivateModule(moduleName) {
     throw new Error(`Module "${moduleName}" is not installed`);
   }
 
+  // Only remove from activeModules — keep in builtModules for faster reactivation
   cfg.activeModules = (cfg.activeModules || cfg.installedModules).filter(
     (m) => m !== moduleName,
   );
@@ -887,25 +963,46 @@ export async function uninstallModule(
     await appendJobLog(jobId, "Checking no other module depends on this one");
     await checkNoDependents(moduleName);
 
-    // manifest was saved locally at install time — see note below
     const manifestPath = path.join(
       PROJECT_ROOT,
       "modules-cache",
       moduleName,
       "module.json",
     );
-    if (!fs.existsSync(manifestPath)) {
-      throw new Error(
-        `Could not find local manifest for "${moduleName}" — cannot safely remove files`,
+
+    let manifest;
+
+    if (fs.existsSync(manifestPath)) {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    } else {
+      await appendJobLog(
+        jobId,
+        "Local module manifest not found. Fetching manifest from GitHub...",
       );
+
+      const extractDir = path.join(PROJECT_ROOT, "tmp", `uninstall-${jobId}`);
+      const moduleDir = await downloadModuleDirectory(moduleName, extractDir);
+
+      manifest = await readModuleManifest(moduleDir);
+
+      fs.rmSync(extractDir, {
+        recursive: true,
+        force: true,
+      });
+
+      await appendJobLog(jobId, "Module manifest fetched successfully");
     }
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 
     await appendJobLog(jobId, "Removing module files");
-    for (const dest of Object.values(manifest.targetPaths || {})) {
-      const destPath = path.join(PROJECT_ROOT, dest);
-      if (fs.existsSync(destPath)) {
-        fs.rmSync(destPath, { recursive: true, force: true });
+    const installedPaths = Array.isArray(manifest.installedPaths)
+      ? manifest.installedPaths
+      : Object.values(manifest.targetPaths || {}).map((dest) =>
+          path.join(PROJECT_ROOT, dest),
+        );
+
+    for (const installedPath of installedPaths) {
+      if (fs.existsSync(installedPath)) {
+        fs.rmSync(installedPath, { recursive: true, force: true });
       }
     }
 
@@ -929,6 +1026,9 @@ export async function uninstallModule(
       (m) => m !== moduleName,
     );
     updatedCfg.activeModules = (updatedCfg.activeModules || []).filter(
+      (m) => m !== moduleName,
+    );
+    updatedCfg.builtModules = (updatedCfg.builtModules || []).filter(
       (m) => m !== moduleName,
     );
     writeInstalledModules(updatedCfg);
