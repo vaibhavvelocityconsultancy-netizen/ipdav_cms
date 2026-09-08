@@ -63,8 +63,8 @@ export default function CommentsSection() {
 
   const fetchCounts = useCallback(async () => {
     const res = await fetch(`${getBaseUrl()}/api/comments/counts`);
-    const data: CommentCounts = await res.json();
-    setCounts(data.data);
+    const data: { data?: CommentCounts | null } = await res.json();
+    setCounts(data.data ?? {});
   }, []);
 
   const fetchComments = useCallback(async () => {
@@ -77,8 +77,8 @@ export default function CommentsSection() {
     });
     const res = await fetch(`${getBaseUrl()}/api/comments?${params}`);
     const data: CommentsResponse = await res.json();
-    setComments(data.data.comments ?? []);
-    setTotalPages(data.data.totalPages ?? 1);
+    setComments(data.data?.comments ?? []);
+    setTotalPages(data.data?.totalPages ?? 1);
     setSelected([]);
     setLoading(false);
   }, [tab, page, search]);

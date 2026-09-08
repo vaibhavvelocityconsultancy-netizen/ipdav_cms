@@ -56,6 +56,7 @@ model tenant {
 
   users          user[]
   pages          page[]
+  searchSettings SearchSettings?
   menus          menu[]
   posts          post[]
   collections    collection[]
@@ -240,12 +241,13 @@ model post {
   user     user?      @relation(fields: [authorId], references: [id])
   category category[] @relation("categorytopost")
   tag      tag[]      @relation("posttotag")
-  tenant   tenant     @relation(fields: [tenantId], references: [id])@@unique([tenantId, slug])
-  @@index([authorId])
-  @@index([tenantId])
-
+  tenant   tenant     @relation(fields: [tenantId], references: [id])
 
   comments comment[] @relation("PostComments")
+
+  @@unique([tenantId, slug])
+  @@index([authorId])
+  @@index([tenantId])
 }
 
 model category {
@@ -1432,9 +1434,6 @@ model InternalLinkRule {
 // ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
 // --- MODULE:seo END ---
 
-
-
-
 // --- MODULE:comments START ---
 // ── comments module ─────────────────────────────────────────
 
@@ -1455,21 +1454,43 @@ model comment {
   userAgent   String?
   status      comment_status @default(PENDING)
 
-  postId      String
-  userId      Int?
-  parentId    String?
+  postId   String
+  userId   Int?
+  parentId String?
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  post        post           @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
-  user        user?          @relation("UserComments", fields: [userId], references: [id], onDelete: SetNull)
+  post post  @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+  user user? @relation("UserComments", fields: [userId], references: [id], onDelete: SetNull)
 
-  comment     comment?       @relation("commentTocomment", fields: [parentId], references: [id])
-  other_comment comment[]    @relation("commentTocomment")
+  comment       comment?  @relation("commentTocomment", fields: [parentId], references: [id])
+  other_comment comment[] @relation("commentTocomment")
 
   @@index([parentId])
   @@index([postId])
   @@index([userId])
 }
+
 // --- MODULE:comments END ---
+
+// --- MODULE:search START ---
+
+model SearchSettings {
+  id       Int @id @default(autoincrement())
+  tenantId Int @unique
+
+  enabled Boolean @default(true)
+
+  searchPages Boolean @default(true)
+  searchPosts Boolean @default(true)
+
+  placeholder String @default("Search...")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// --- MODULE:search END ---
