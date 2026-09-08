@@ -126,7 +126,10 @@ model user {
   planSubscriptions PlanSubscription[]
   planEnrollments   PlanEnrollment[]
   uploadedFiles     UploadedFile[]
-  fileShares        FileShareLink[]}
+  fileShares        FileShareLink[]
+
+  comments comment[] @relation("UserComments")
+}
 
 model permission {
   id             Int              @id @default(autoincrement())
@@ -240,6 +243,9 @@ model post {
   tenant   tenant     @relation(fields: [tenantId], references: [id])@@unique([tenantId, slug])
   @@index([authorId])
   @@index([tenantId])
+
+
+  comments comment[] @relation("PostComments")
 }
 
 model category {
@@ -1427,3 +1433,43 @@ model InternalLinkRule {
 // --- MODULE:seo END ---
 
 
+
+
+// --- MODULE:comments START ---
+// ── comments module ─────────────────────────────────────────
+
+enum comment_status {
+  PENDING
+  APPROVED
+  SPAM
+  TRASH
+}
+
+model comment {
+  id          String         @id @default(uuid())
+  content     String         @db.Text
+  authorName  String
+  authorEmail String
+  authorUrl   String?
+  ipAddress   String?
+  userAgent   String?
+  status      comment_status @default(PENDING)
+
+  postId      String
+  userId      Int?
+  parentId    String?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  post        post           @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+  user        user?          @relation("UserComments", fields: [userId], references: [id], onDelete: SetNull)
+
+  comment     comment?       @relation("commentTocomment", fields: [parentId], references: [id])
+  other_comment comment[]    @relation("commentTocomment")
+
+  @@index([parentId])
+  @@index([postId])
+  @@index([userId])
+}
+// --- MODULE:comments END ---

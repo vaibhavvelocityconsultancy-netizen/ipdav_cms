@@ -1,10 +1,12 @@
 {
   "installedModules": [
-    "forms",
-    "seo"
+    "seo",
+    "comments"
   ],
-  "activeModules": [],
+  "activeModules": [
+    "comments"
+  ],
   "builtModules": [
-    "forms"
+    "comments"
   ]
 }
