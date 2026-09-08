@@ -2,27 +2,8 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis;
 
-const getPrismaUrl = () => {
-  const baseUrl =
-    process.env.DATABASE_URL ||
-    process.env.MYSQL_URL ||
-    process.env.PRISMA_DATABASE_URL ||
-    "";
-
-  if (!baseUrl) return baseUrl;
-
-  if (baseUrl.includes("connection_limit=")) return baseUrl;
-
-  return `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}connection_limit=10`;
-};
-
 const createPrismaClient = () =>
   new PrismaClient({
-    datasources: {
-      db: {
-        url: getPrismaUrl(),
-      },
-    },
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
