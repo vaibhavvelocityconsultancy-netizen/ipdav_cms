@@ -83,6 +83,28 @@ export const fetchers = {
 
   publicPlans: () => fetcher("/api/public/plans"),
 
+  products: (params?: {
+    search?: string;
+    status?: string;
+    brandId?: string;
+    categoryId?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    fetcher(
+      buildUrl("/api/ecommerce/products", {
+        search: params?.search,
+        status: params?.status,
+        brandId: params?.brandId,
+        categoryId: params?.categoryId,
+        page: params?.page,
+        limit: params?.limit,
+      }),
+    ),
+  product: (id: string) => fetcher(`/api/ecommerce/products/${id}`),
+  brands: () => fetcher("/api/ecommerce/brands"),
+  productCategories: () => fetcher("/api/ecommerce/product-categories"),
+
   // customers
   customersList: (params?: {
     search?: string;

@@ -92,6 +92,11 @@ export const apiMutations = {
   toggleCourseStatus: (id: string, data: { isPublished: boolean }) =>
     mutationRequest(`/api/courses/${id}/toggle-status`, "PATCH", data),
 
+  createProduct: (data: any) =>
+    mutationRequest("/api/ecommerce/products", "POST", data),
+  updateProduct: (id: string, data: any) =>
+    mutationRequest(`/api/ecommerce/products/${id}`, "PATCH", data),
+
   // Content taxonomy
   createCategory: (data: any) =>
     mutationRequest("/api/categories", "POST", data),
