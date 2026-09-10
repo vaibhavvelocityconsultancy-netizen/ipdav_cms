@@ -92,78 +92,10 @@ export const apiMutations = {
   toggleCourseStatus: (id: string, data: { isPublished: boolean }) =>
     mutationRequest(`/api/courses/${id}/toggle-status`, "PATCH", data),
 
-  // ── E-commerce ─────────────────────────────────────────────
-  createProduct: (data: any) =>
-    mutationRequest("/api/ecommerce/products", "POST", data),
-
-  updateProduct: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/products/${id}`, "PATCH", data),
-
-  deleteProduct: (id: string) =>
-    mutationRequest(`/api/ecommerce/products/${id}`, "DELETE"),
-
   // Content taxonomy
   createCategory: (data: any) =>
     mutationRequest("/api/categories", "POST", data),
   createTag: (data: any) => mutationRequest("/api/tags", "POST", data),
-
-  // Categories
-  createProductCategory: (data: any) =>
-    mutationRequest("/api/ecommerce/product-categories", "POST", data),
-  updateProductCategory: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/product-categories/${id}`, "PATCH", data),
-  deleteProductCategory: (id: string) =>
-    mutationRequest(`/api/ecommerce/product-categories/${id}`, "DELETE"),
-
-  // Brands
-  createBrand: (data: any) =>
-    mutationRequest("/api/ecommerce/brands", "POST", data),
-  updateBrand: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/brands/${id}`, "PATCH", data),
-  deleteBrand: (id: string) =>
-    mutationRequest(`/api/ecommerce/brands/${id}`, "DELETE"),
-
-  // Attributes
-  createAttribute: (data: any) =>
-    mutationRequest("/api/ecommerce/attributes", "POST", data),
-  updateAttribute: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/attributes/${id}`, "PATCH", data),
-  deleteAttribute: (id: string) =>
-    mutationRequest(`/api/ecommerce/attributes/${id}`, "DELETE"),
-
-  // Shipping zones
-  createShippingZone: (data: any) =>
-    mutationRequest("/api/ecommerce/shipping-zones", "POST", data),
-  updateShippingZone: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/shipping-zones/${id}`, "PATCH", data),
-  deleteShippingZone: (id: string) =>
-    mutationRequest(`/api/ecommerce/shipping-zones/${id}`, "DELETE"),
-
-  // Tax classes
-  createTaxClass: (data: any) =>
-    mutationRequest("/api/ecommerce/tax-classes", "POST", data),
-  updateTaxClass: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/tax-classes/${id}`, "PATCH", data),
-  deleteTaxClass: (id: string) =>
-    mutationRequest(`/api/ecommerce/tax-classes/${id}`, "DELETE"),
-
-  // Coupons
-  createCoupon: (data: any) =>
-    mutationRequest("/api/ecommerce/coupons", "POST", data),
-  updateCoupon: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/coupons/${id}`, "PATCH", data),
-  deleteCoupon: (id: string) =>
-    mutationRequest(`/api/ecommerce/coupons/${id}`, "DELETE"),
-
-  // Orders
-  updateOrder: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/orders/${id}`, "PATCH", data),
-  addOrderNote: (id: string, data: any) =>
-    mutationRequest(`/api/ecommerce/orders/${id}/notes`, "POST", data),
-
-  // Ecommerce Settings
-  updateEcomSettings: (data: any) =>
-    mutationRequest("/api/ecommerce/settings", "PATCH", data),
 
   // customers
   deleteOrder: (orderId: string) =>

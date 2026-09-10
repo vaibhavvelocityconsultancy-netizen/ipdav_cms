@@ -2,33 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
-import { isModuleInstalled } from "@/src/lib/core/isModuleInstalled";
-
-const EcommerceCartLink = dynamic(
-  () =>
-    import("@/src/lib/storefront/cart").then(({ useCart }) => {
-      function CartLink() {
-        const { count } = useCart();
-
-        return (
-          <Link className="login-link" href="/cart">
-            Cart{count > 0 ? ` (${count})` : ""}
-          </Link>
-        );
-      }
-
-      return CartLink;
-    }),
-  { ssr: false, loading: () => null },
-);
-
 type SiteSettings = {
   logo?: string;
   siteName?: string;
@@ -111,8 +90,6 @@ function isActivePage(pathname: string, href: string): boolean {
 export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
   const pathname = usePathname();
   const { user } = useCurrentUser();
-  const ecommerceInstalled = isModuleInstalled("ecommerce");
-
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openMobileSubmenus, setOpenMobileSubmenus] = useState<Set<string>>(
     new Set(),
@@ -143,34 +120,7 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
 
   const finalMenuItems = useMemo(() => {
     if (menuItems.length === 0) {
-      const items = [
-        {
-          id: "shop-static",
-          label: "Shop",
-          type: "custom",
-          url: "/shop",
-          children: [],
-        },
-        {
-          id: "new-static",
-          label: "New arrivals",
-          type: "custom",
-          url: "/ecommerce/categories/new-arrivals",
-          children: [],
-        },
-      ];
-
-      if (ecommerceInstalled) {
-        items.push({
-          id: "cart-static",
-          label: "Cart",
-          type: "custom",
-          url: "/cart",
-          children: [],
-        });
-      }
-
-      return items;
+      return [];
     }
 
     return [
@@ -183,7 +133,7 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
         children: [],
       },
     ];
-  }, [ecommerceInstalled, menuItems]);
+  }, [menuItems]);
 
   const logo = settings?.logo;
   const siteName = settings?.siteName || "iPDAV";
@@ -376,10 +326,6 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
                   Dashboard
                 </Link>
               )}
-
-              <span className="top-separator" aria-hidden="true" />
-
-              {ecommerceInstalled ? <EcommerceCartLink /> : null}
             </div>
 
             <button

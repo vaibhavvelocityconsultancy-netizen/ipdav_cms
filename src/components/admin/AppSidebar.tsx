@@ -248,57 +248,6 @@ const adminNavItems: NavItem[] = [
     href: "/admin/files-category",
   },
   {
-    id: "ecommerce",
-    label: "E-commerce",
-    icon: ShoppingBag,
-    requiresModule: "ecommerce",
-    children: [
-      {
-        id: "products",
-        label: "Products",
-        icon: ShoppingBag,
-        description: "Manage products",
-        href: "/admin/ecommerce/products",
-      },
-      {
-        id: "orders",
-        label: "Orders",
-        icon: ShoppingBag,
-        description: "Manage orders",
-        href: "/admin/ecommerce/orders",
-      },
-      {
-        id: "coupons",
-        label: "Coupons",
-        icon: ShoppingBag,
-        description: "Manage coupons",
-        href: "/admin/ecommerce/coupons",
-      },
-      {
-        id: "shipping",
-        label: "Shipping",
-        icon: Truck,
-        description: "Manage shipping",
-        href: "/admin/ecommerce/shipping",
-      },
-      {
-        id: "taxes",
-        label: "Taxes",
-        icon: Percent,
-        description: "Manage taxes",
-        href: "/admin/ecommerce/taxes",
-      },
-      {
-        id: "payment-gateways",
-        label: "Payment Gateways",
-        icon: CreditCard,
-        description: "Manage payment gateways",
-        href: "/admin/ecommerce/payment-gateways",
-      },
-    ],
-  },
-
-  {
     id: "settings",
     label: "Settings",
     icon: Settings,
