@@ -1,0 +1,23 @@
+{
+  "name": "forms",
+  "version": "1.0.0",
+  "description": "forms module for CMSKit",
+  "schemaFragment": "schema.forms.prisma",
+  "fileCount": 13,
+  "targetPaths": {
+    "src/components/admin/form/Page.tsx": "src/components/admin/form/Page.tsx",
+    "src/components/admin/form/FormSubmissions.tsx": "src/components/admin/form/FormSubmissions.tsx",
+    "src/components/admin/form/formeditor.txt": "src/components/admin/form/formeditor.txt",
+    "src/components/admin/form/FormsSection.tsx": "src/components/admin/form/FormsSection.tsx",
+    "src/components/admin/form/FormEditor.tsx": "src/components/admin/form/FormEditor.tsx",
+    "src/app/admin/forms/page.tsx": "src/app/admin/forms/page.tsx",
+    "src/app/api/form/route.js": "src/app/api/form/route.js",
+    "src/app/api/form/[id]/route.js": "src/app/api/form/[id]/route.js",
+    "src/app/api/form/[id]/submissions/route.js": "src/app/api/form/[id]/submissions/route.js",
+    "src/app/api/form/[id]/submissions/mark-read/route.js": "src/app/api/form/[id]/submissions/mark-read/route.js",
+    "src/app/api/form/unread-count/route.js": "src/app/api/form/unread-count/route.js",
+    "src/app/api/form/submit/[slug]/route.js": "src/app/api/form/submit/[slug]/route.js",
+    "src/app/api/form/slug/[slug]/route.js": "src/app/api/form/slug/[slug]/route.js"
+  },
+  "dependencies": []
+}

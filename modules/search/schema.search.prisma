@@ -1,0 +1,33 @@
+model SearchConfiguration {
+    id               String   @id @default(cuid())
+    name             String
+    slug             String
+    placeholder      String   @default("Search...")
+    buttonText       String   @default("Search")
+    searchPages      Boolean  @default(true)
+    searchPosts      Boolean  @default(true)
+    resultsPerPage   Int      @default(10)
+    noResultsMessage String   @default("No results found.")
+    customClass      String?
+    isActive         Boolean  @default(true)
+    tenantId         Int
+    tenant           tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    @@unique([tenantId, slug])
+    @@index([tenantId])
+    @@index([tenantId, isActive])
+}
+
+// INJECT_INTO:tenant
+searchConfigurations SearchConfiguration[]
+// END_INJECT:tenant
+
+// INJECT_INTO:page
+searchText        String? @db.Text
+// END_INJECT:page
+
+// INJECT_INTO:post
+searchText String? @db.Text
+// END_INJECT:post

@@ -1,12 +1,15 @@
 {
   "installedModules": [
     "seo",
-    "comments"
+    "comments",
+    "forms"
   ],
   "activeModules": [
-    "comments"
+    "comments",
+    "forms"
   ],
   "builtModules": [
-    "comments"
+    "comments",
+    "forms"
   ]
 }

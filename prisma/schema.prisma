@@ -101,6 +101,9 @@ model tenant {
 
   internalLinkRules    InternalLinkRule[]
   searchConfigurations SearchConfiguration[]
+
+
+  forms                form[]
 }
 
 model SearchConfiguration {
@@ -1105,6 +1108,10 @@ model pricingPageSettings {
   updatedAt DateTime @updatedAt
 
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+
+  formId Int?
+  form   form? @relation(fields: [formId], references: [id], onDelete: SetNull)
 }
 
 // ── file-sharing module ─────────────────────────────────────────
@@ -1517,3 +1524,54 @@ model SearchSettings {
 }
 
 // --- MODULE:search END ---
+
+
+// --- MODULE:forms START ---
+// ── forms module ─────────────────────────────────────────
+
+model form {
+  id     Int    @id @default(autoincrement())
+  title  String
+  slug   String
+  fields Json
+
+  submitButtonLabel        String?  @default("Submit")
+  submitButtonClass        String?
+  confirmationType         String   @default("message")
+  confirmationMessage      String?  @db.Text
+  confirmationMessageClass String?
+  redirectUrl              String?
+  emails                   Json?
+  status                   String   @default("active")
+  hideRequiredIndicator    Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  layout                   String   @default("default")
+  twoColumnHeading         String?  @db.Text
+  twoColumnParagraph       String?  @db.Text
+
+  formsubmission      formsubmission[]
+  tenantId            Int
+  tenant              tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pricingPageSettings pricingPageSettings[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model formsubmission {
+  id        Int       @id @default(autoincrement())
+  formId    Int
+  data      Json
+  ipAddress String?
+  createdAt DateTime  @default(now())
+  read      Boolean   @default(false)
+  readAt    DateTime?
+
+  form form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+}
+
+// ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
+// --- MODULE:forms END ---
