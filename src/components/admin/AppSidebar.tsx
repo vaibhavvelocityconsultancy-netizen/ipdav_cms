@@ -317,13 +317,6 @@ const adminNavItems: NavItem[] = [
         description: "Footer content",
         href: "/admin/footer-settings",
       },
-      {
-        id: "search-configurations",
-        label: "Search Configurations",
-        icon: Search,
-        description: "Manage reusable search fields",
-        href: "/admin/search",
-      },
     ],
   },
   {

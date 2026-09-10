@@ -12,7 +12,7 @@ datasource db {
 // ENUMS
 // ─────────────────────────────mod────────────────────────────────────────────────
 
-enum rolepermission_role { 
+enum rolepermission_role {
   SUPER_ADMIN
   ADMIN
   EDITOR
@@ -56,7 +56,6 @@ model tenant {
 
   users          user[]
   pages          page[]
-  searchSettings SearchSettings?
   menus          menu[]
   posts          post[]
   collections    collection[]
@@ -99,33 +98,8 @@ model tenant {
 
   breadcrumbSettings BreadcrumbSettings?
 
-  internalLinkRules    InternalLinkRule[]
-  searchConfigurations SearchConfiguration[]
-
-
-  forms                form[]
-}
-
-model SearchConfiguration {
-  id               String   @id @default(cuid())
-  name             String
-  slug             String
-  placeholder      String   @default("Search...")
-  buttonText       String   @default("Search")
-  searchPages      Boolean  @default(true)
-  searchPosts      Boolean  @default(true)
-  resultsPerPage   Int      @default(10)
-  noResultsMessage String   @default("No results found.")
-  customClass      String?
-  isActive         Boolean  @default(true)
-  tenantId         Int
-  tenant           tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@unique([tenantId, slug])
-  @@index([tenantId])
-  @@index([tenantId, isActive])
+  internalLinkRules InternalLinkRule[]
+  forms             form[]
 }
 
 model user {
@@ -207,7 +181,6 @@ model page {
   seoData           Json?
   sitemapEnabled    Boolean @default(true)
   componentSettings Json?
-  searchText        String? @db.Text
 
   sitemapPriority      Decimal                @default(0.8) @db.Decimal(2, 1)
   sitemapChangeFreq    sitemapChangeFrequency @default(WEEKLY)
@@ -252,8 +225,6 @@ model post {
   authorId      Int?
   seoData       Json?
   publishedAt   DateTime?
-
-  searchText String? @db.Text
 
   sitemapEnabled Boolean @default(true)
 
@@ -1109,7 +1080,6 @@ model pricingPageSettings {
 
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-
   formId Int?
   form   form? @relation(fields: [formId], references: [id], onDelete: SetNull)
 }
@@ -1503,28 +1473,6 @@ model comment {
 }
 
 // --- MODULE:comments END ---
-
-// --- MODULE:search START ---
-
-model SearchSettings {
-  id       Int @id @default(autoincrement())
-  tenantId Int @unique
-
-  enabled Boolean @default(true)
-
-  searchPages Boolean @default(true)
-  searchPosts Boolean @default(true)
-
-  placeholder String @default("Search...")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-}
-
-// --- MODULE:search END ---
-
 
 // --- MODULE:forms START ---
 // ── forms module ─────────────────────────────────────────

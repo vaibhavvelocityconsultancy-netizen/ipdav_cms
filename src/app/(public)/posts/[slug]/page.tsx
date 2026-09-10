@@ -11,7 +11,6 @@ import {
   injectBreadcrumb,
   renderBreadcrumbHtml,
 } from "@/src/lib/shortcode/renderBreadcrumbHtml";
-import { injectSearch } from "@/src/lib/shortcode/renderSearchHtml";
 interface Post {
   id: string;
   title: string;
@@ -164,11 +163,10 @@ export default function PublicPostPage() {
   // but won't auto-inject (since we already render it separately above)
   const processedPostContent = useMemo(() => {
     if (!post?.content) return "";
-    const contentWithSearch = injectSearch(post.content).html;
-    if (!contentWithSearch.includes("[breadcrumb]")) return contentWithSearch;
+    if (!post.content.includes("[breadcrumb]")) return post.content;
 
     return injectBreadcrumb(
-      contentWithSearch,
+      post.content,
       [
         { label: settings?.homeLabel || "Home", href: "newweb" },
         { label: "Posts", href: "newweb/posts" },

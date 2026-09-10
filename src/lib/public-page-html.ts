@@ -1,5 +1,4 @@
 import { injectBreadcrumb } from "./shortcode/renderBreadcrumbHtml";
-import { injectSearch } from "./shortcode/renderSearchHtml";
 import { injectForms } from "./form-renderer";
 
 interface PublicPageHtmlOptions {
@@ -20,7 +19,6 @@ export async function processPublicPageHtml(
 ): Promise<{
   html: string;
   hasForms: boolean;
-  hasSearch: boolean;
 }> {
   // ── Forms ─────────────────────────────────────────────
   const { html: formsHtml, hasForms } = await injectForms(
@@ -28,34 +26,22 @@ export async function processPublicPageHtml(
     options.baseUrl ?? "",
   );
 
-  // ── Search ────────────────────────────────────────────
-  const {
-    html: searchHtml,
-    hasSearch,
-  } = injectSearch(formsHtml);
-
   // ── Breadcrumb ────────────────────────────────────────
   const breadcrumbItems = options.breadcrumbItems ?? [];
   const breadcrumbSettings = options.breadcrumbSettings;
 
-  const context = options.context ?? {
-    isHome: false,
-    is404: false,
-    isSearch: false,
+  const context = {
+    isHome: options.context?.isHome ?? false,
+    is404: options.context?.is404 ?? false,
+    isSearch: options.context?.isSearch ?? false,
   };
 
   const htmlWithBreadcrumb = breadcrumbItems.length
-    ? injectBreadcrumb(
-        searchHtml,
-        breadcrumbItems,
-        breadcrumbSettings,
-        context,
-      )
-    : searchHtml;
+    ? injectBreadcrumb(formsHtml, breadcrumbItems, breadcrumbSettings, context)
+    : formsHtml;
 
   return {
     html: htmlWithBreadcrumb,
     hasForms,
-    hasSearch,
   };
 }

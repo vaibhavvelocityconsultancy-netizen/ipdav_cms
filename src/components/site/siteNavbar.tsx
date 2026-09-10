@@ -4,13 +4,11 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/lib/query-key";
 import { fetchers } from "@/src/lib/fetchers";
 import { useCurrentUser } from "@/src/hooks/use-current-user";
-import { appUrl } from "@/src/lib/base-path";
-import { getBaseUrl } from "@/src/lib/config";
 import { isModuleInstalled } from "@/src/lib/core/isModuleInstalled";
 
 const EcommerceCartLink = dynamic(
@@ -116,60 +114,9 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
   const ecommerceInstalled = isModuleInstalled("ecommerce");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [searchResults, setSearchResults] = useState([]); // ← ADD
-  const [isSearching, setIsSearching] = useState(false); // ← ADD
   const [openMobileSubmenus, setOpenMobileSubmenus] = useState<Set<string>>(
     new Set(),
   );
-
-  function highlightMatch(text, query) {
-    if (!text || !query) return text;
-
-    const parts = text.split(new RegExp(`(${escapeRegex(query)})`, "gi"));
-
-    return parts.map((part, i) =>
-      part.toLowerCase() === query.toLowerCase() ? (
-        <mark key={i} className="bg-yellow-200 text-inherit rounded-sm px-0.5">
-          {part}
-        </mark>
-      ) : (
-        part
-      ),
-    );
-  }
-
-  function escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-
-  useEffect(() => {
-    const query = searchValue.trim();
-
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `${getBaseUrl()}/api/search?q=${encodeURIComponent(query)}`,
-        );
-        const json = await res.json();
-        setSearchResults(json.data ?? []);
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchValue]);
 
   const queryClient = useQueryClient(); // ← add this
 
@@ -243,7 +190,6 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    setIsSearchOpen(false);
     setOpenMobileSubmenus(new Set());
   }, [pathname]);
 
@@ -263,7 +209,6 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsMobileMenuOpen(false);
-        setIsSearchOpen(false);
       }
     };
 
@@ -273,20 +218,6 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
-
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const query = searchValue.trim();
-
-    if (!query) {
-      return;
-    }
-
-    setIsSearchOpen(false);
-    setIsMobileMenuOpen(false);
-    window.location.assign(appUrl(`/search?q=${encodeURIComponent(query)}`));
-  };
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
@@ -448,15 +379,6 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
 
               <span className="top-separator" aria-hidden="true" />
 
-              <button
-                type="button"
-                className="search-button"
-                aria-label="Open search"
-                aria-expanded={isSearchOpen}
-                onClick={() => setIsSearchOpen((current) => !current)}
-              >
-                <span />
-              </button>
               {ecommerceInstalled ? <EcommerceCartLink /> : null}
             </div>
 
@@ -472,76 +394,6 @@ export default function SiteNavbar({ settings, headerMenu }: SiteNavbarProps) {
               <span />
               <span />
             </button>
-
-            {isSearchOpen ? (
-              <div className="absolute right-0 top-[calc(100%+12px)] z-[70] hidden w-[360px] md:block">
-                <form
-                  onSubmit={(e) => e.preventDefault()} // ← no more navigation
-                  className="flex overflow-hidden rounded-md border border-black/10 bg-white shadow-xl"
-                >
-                  <label className="sr-only" htmlFor="desktop-site-search">
-                    Search
-                  </label>
-
-                  <input
-                    id="desktop-site-search"
-                    type="search"
-                    value={searchValue}
-                    onChange={(event) => setSearchValue(event.target.value)}
-                    placeholder="Search..."
-                    className="min-w-0 flex-1 px-4 py-3 text-sm text-[#152539] outline-none"
-                    autoFocus
-                  />
-                </form>
-
-                {searchValue.trim().length >= 2 && (
-                  <div className="mt-1 max-h-80 overflow-y-auto rounded-md border border-black/10 bg-white shadow-xl">
-                    {isSearching && (
-                      <div className="p-3 text-sm text-gray-500">
-                        Searching...
-                      </div>
-                    )}
-
-                    {!isSearching && searchResults.length === 0 && (
-                      <div className="p-3 text-sm text-gray-500">
-                        No results found
-                      </div>
-                    )}
-
-                    {!isSearching &&
-                      searchResults.map((r) => (
-                        <Link
-                          key={`${r.type}-${r.id}`}
-                          href={
-                            r.type === "post"
-                              ? `/posts/${r.slug}`
-                              : `/${r.slug}`
-                          }
-                          className="block border-b border-black/5 p-3 last:border-0 hover:bg-gray-50"
-                          onClick={() => {
-                            setIsSearchOpen(false);
-                            setSearchValue("");
-                          }}
-                        >
-                          <span className="text-xs uppercase tracking-wide text-gray-400">
-                            {r.type}
-                          </span>
-                          <div className="text-sm font-medium text-[#152539]">
-                            {highlightMatch(r.title, searchValue.trim())}{" "}
-                            {/* ← CHANGED */}
-                          </div>
-                          {r.excerpt && (
-                            <div className="mt-1 text-xs text-gray-500">
-                              {highlightMatch(r.excerpt, searchValue.trim())}{" "}
-                              {/* ← CHANGED */}
-                            </div>
-                          )}
-                        </Link>
-                      ))}
-                  </div>
-                )}
-              </div>
-            ) : null}
           </div>
 
           <nav className="main-nav" aria-label="Primary navigation">
