@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "forms module for CMSKit",
   "schemaFragment": "schema.forms.prisma",
-  "fileCount": 13,
+  "fileCount": 14,
+  "dependencies": ["subscription-billing"],
   "targetPaths": {
     "src/components/admin/form/Page.tsx": "src/components/admin/form/Page.tsx",
     "src/components/admin/form/FormSubmissions.tsx": "src/components/admin/form/FormSubmissions.tsx",
@@ -17,9 +18,9 @@
     "src/app/api/form/[id]/submissions/mark-read/route.js": "src/app/api/form/[id]/submissions/mark-read/route.js",
     "src/app/api/form/unread-count/route.js": "src/app/api/form/unread-count/route.js",
     "src/app/api/form/submit/[slug]/route.js": "src/app/api/form/submit/[slug]/route.js",
-    "src/app/api/form/slug/[slug]/route.js": "src/app/api/form/slug/[slug]/route.js"
+    "src/app/api/form/slug/[slug]/route.js": "src/app/api/form/slug/[slug]/route.js",
+    "migrations/20260910140000_forms_baseline/migration.sql": "prisma/migrations/20260910140000_forms_baseline/migration.sql"
   },
-  "dependencies": [],
   "installedPaths": [
     "C:\\Users\\Velocity\\Desktop\\ipdav_cms\\src\\components\\admin\\form\\Page.tsx",
     "C:\\Users\\Velocity\\Desktop\\ipdav_cms\\src\\components\\admin\\form\\FormSubmissions.tsx",

@@ -194,6 +194,15 @@ const adminNavItems: NavItem[] = [
   },
 
   {
+    id: "search",
+    label: "Search",
+    icon: Search,
+    description: "Manage site search",
+    requiresModule: "search",
+    href: "/admin/search",
+  },
+
+  {
     id: "customize",
     label: "Customize",
     icon: Layout,

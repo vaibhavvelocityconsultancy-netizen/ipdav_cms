@@ -100,6 +100,9 @@ model tenant {
 
   internalLinkRules InternalLinkRule[]
   forms             form[]
+
+
+  searchConfigurations SearchConfiguration[]
 }
 
 model user {
@@ -192,6 +195,9 @@ model page {
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+
+
+  searchText        String? @db.Text
 }
 
 model PageElementOverride {
@@ -245,6 +251,9 @@ model post {
   @@unique([tenantId, slug])
   @@index([authorId])
   @@index([tenantId])
+
+
+  searchText String? @db.Text
 }
 
 model category {
@@ -1523,3 +1532,28 @@ model formsubmission {
 
 // ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
 // --- MODULE:forms END ---
+
+
+// --- MODULE:search START ---
+model SearchConfiguration {
+    id               String   @id @default(cuid())
+    name             String
+    slug             String
+    placeholder      String   @default("Search...")
+    buttonText       String   @default("Search")
+    searchPages      Boolean  @default(true)
+    searchPosts      Boolean  @default(true)
+    resultsPerPage   Int      @default(10)
+    noResultsMessage String   @default("No results found.")
+    customClass      String?
+    isActive         Boolean  @default(true)
+    tenantId         Int
+    tenant           tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    @@unique([tenantId, slug])
+    @@index([tenantId])
+    @@index([tenantId, isActive])
+}
+// --- MODULE:search END ---
