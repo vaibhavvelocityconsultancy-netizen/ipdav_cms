@@ -1101,6 +1101,7 @@ enum PopupType {
 
 enum PopupTarget {
   GLOBAL
+  HOME_PAGE
   SPECIFIC_PAGES
 }
 
@@ -1114,6 +1115,7 @@ enum PopupFrequency {
   EVERY_TIME
   ONCE_SESSION
   ONCE_DAY
+  ONCE_VISITOR
   ONCE_WEEK
 }
 

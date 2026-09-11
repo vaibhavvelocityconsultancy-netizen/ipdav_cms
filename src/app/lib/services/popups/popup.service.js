@@ -26,6 +26,7 @@ export function sanitizePopupHtml(html) {
  */
 export function scopePopupCss(css, elementClass) {
   if (!css) return "";
+  if (css.includes(`.${elementClass}`)) return css;
   // Wrap all selectors in the popup element class
   return css
     .split("\n")
@@ -42,13 +43,26 @@ export function scopePopupCss(css, elementClass) {
 /**
  * Get all popups for a tenant (admin).
  */
-export async function getPopups(tenantId, { status, sortBy = "updatedAt", order = "desc" } = {}) {
+export async function getPopups(
+  tenantId,
+  { status, sortBy = "updatedAt", order = "desc" } = {},
+) {
   const where = { tenantId };
   if (status) where.status = status;
 
-  return prisma.popup.findMany({
+  const popups = await prisma.popup.findMany({
     where,
     orderBy: { [sortBy]: order },
+  });
+  return Promise.all(popups.map((popup) => ensureElementClass(popup)));
+}
+
+async function ensureElementClass(popup) {
+  if (popup.type !== "ELEMENT" || popup.elementClass) return popup;
+  const elementClass = generatePopupElementClass();
+  return prisma.popup.update({
+    where: { id: popup.id },
+    data: { elementClass },
   });
 }
 
@@ -77,7 +91,7 @@ export async function createPopup(
     html,
     css,
   },
-  tenantId
+  tenantId,
 ) {
   // Validate required fields
   if (!name || !html) {
@@ -88,14 +102,15 @@ export async function createPopup(
   const sanitizedHtml = sanitizePopupHtml(html);
   const elementClass = generatePopupElementClass();
   const scopedCss = scopePopupCss(css || "", elementClass);
+  const isElementPopup = type === "ELEMENT";
 
   return prisma.popup.create({
     data: {
       name,
       type,
-      target,
-      pageIds: target === "GLOBAL" ? null : pageIds,
-      trigger,
+      target: isElementPopup ? "SPECIFIC_PAGES" : target,
+      pageIds: isElementPopup || target === "SPECIFIC_PAGES" ? pageIds : null,
+      trigger: isElementPopup ? "ELEMENT_CLICK" : trigger,
       delayMs: Number(delayMs),
       frequency,
       status,
@@ -124,20 +139,31 @@ export async function updatePopup(
     html,
     css,
   },
-  tenantId
+  tenantId,
 ) {
   const popup = await getPopupById(id, tenantId);
   if (!popup) throw new Error("Popup not found");
+  const popupWithClass = await ensureElementClass(popup);
 
   const updateData = {};
+  const nextType = type ?? popup.type;
 
   if (name !== undefined) updateData.name = name;
   if (type !== undefined) updateData.type = type;
-  if (target !== undefined) updateData.target = target;
-  if (pageIds !== undefined) {
-    updateData.pageIds = target === "GLOBAL" ? null : pageIds;
+  if (target !== undefined || type !== undefined) {
+    updateData.target =
+      nextType === "ELEMENT" ? "SPECIFIC_PAGES" : (target ?? popup.target);
   }
-  if (trigger !== undefined) updateData.trigger = trigger;
+  if (pageIds !== undefined || target !== undefined || type !== undefined) {
+    updateData.pageIds =
+      (updateData.target ?? popup.target) === "SPECIFIC_PAGES"
+        ? (pageIds ?? popup.pageIds ?? [])
+        : null;
+  }
+  if (trigger !== undefined || type !== undefined) {
+    updateData.trigger =
+      nextType === "ELEMENT" ? "ELEMENT_CLICK" : (trigger ?? popup.trigger);
+  }
   if (delayMs !== undefined) updateData.delayMs = Number(delayMs);
   if (frequency !== undefined) updateData.frequency = frequency;
   if (status !== undefined) updateData.status = status;
@@ -147,7 +173,7 @@ export async function updatePopup(
   }
 
   if (css !== undefined) {
-    updateData.css = scopePopupCss(css || "", popup.elementClass);
+    updateData.css = scopePopupCss(css || "", popupWithClass.elementClass);
   }
 
   return prisma.popup.update({
@@ -212,19 +238,44 @@ export async function duplicatePopup(id, tenantId) {
  * Returns only ACTIVE popups that target the given page.
  */
 export async function getPublicPopups(tenantId, pageSlug) {
-  return prisma.popup.findMany({
+  if (!tenantId) return [];
+
+  const normalizedSlug =
+    String(pageSlug || "")
+      .split("?")[0]
+      .split("#")[0]
+      .replace(/^\/+|\/+$/g, "") || "home";
+  const settings = await prisma.sitesettings.findUnique({
+    where: { tenantId: Number(tenantId) },
+    select: { homepagePageId: true },
+  });
+  const page = await prisma.page.findFirst({
     where: {
-      tenantId,
-      status: "ACTIVE",
+      tenantId: Number(tenantId),
+      status: "PUBLISHED",
       OR: [
-        { target: "GLOBAL" },
-        {
-          target: "SPECIFIC_PAGES",
-          pageIds: {
-            not: null,
-          },
-        },
+        { slug: normalizedSlug },
+        { slug: `/${normalizedSlug}` },
+        ...(normalizedSlug === "home" ? [{ slug: "" }] : []),
       ],
     },
+    select: { id: true },
+  });
+  const resolvedPage =
+    page ||
+    (normalizedSlug === "home" && settings?.homepagePageId
+      ? { id: settings.homepagePageId }
+      : null);
+
+  const popups = await prisma.popup.findMany({
+    where: { tenantId: Number(tenantId), status: "ACTIVE" },
+  });
+  return popups.filter((popup) => {
+    if (popup.target === "GLOBAL") return true;
+    if (popup.target === "HOME_PAGE")
+      return resolvedPage?.id === settings?.homepagePageId;
+    if (!resolvedPage?.id || popup.target !== "SPECIFIC_PAGES") return false;
+    const pageIds = Array.isArray(popup.pageIds) ? popup.pageIds : [];
+    return pageIds.some((pageId) => Number(pageId) === resolvedPage.id);
   });
 }
