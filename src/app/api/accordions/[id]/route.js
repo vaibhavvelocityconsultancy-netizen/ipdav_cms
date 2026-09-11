@@ -1,0 +1,8 @@
+import { asyncHandler } from "@/src/app/lib/utils/asyncHandler";
+import { requirePermission } from "@/src/app/lib/withPermission";
+import { deleteAccordion, duplicateAccordion, getAccordion, updateAccordion } from "@/src/app/lib/services/accordions/accordion.service";
+
+export const GET = asyncHandler(async (_request, { params }) => { const { session } = await requirePermission("settings_manage"); const data = await getAccordion(params.id, Number(session.user.tenantId)); if (!data) return Response.json({ success: false, error: "Not found" }, { status: 404 }); return Response.json({ success: true, data }); });
+export const PUT = asyncHandler(async (request, { params }) => { const { session } = await requirePermission("settings_manage"); const data = await updateAccordion(params.id, await request.json(), Number(session.user.tenantId)); if (!data) return Response.json({ success: false, error: "Not found" }, { status: 404 }); return Response.json({ success: true, data }); });
+export const DELETE = asyncHandler(async (_request, { params }) => { const { session } = await requirePermission("settings_manage"); await deleteAccordion(params.id, Number(session.user.tenantId)); return Response.json({ success: true }); });
+export const POST = asyncHandler(async (request, { params }) => { const { session } = await requirePermission("settings_manage"); const body = await request.json(); if (body.action !== "duplicate") return Response.json({ success: false, error: "Unsupported action" }, { status: 400 }); return Response.json({ success: true, data: await duplicateAccordion(params.id, Number(session.user.tenantId)) }, { status: 201 }); });
