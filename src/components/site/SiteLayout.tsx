@@ -7,6 +7,7 @@ import { buildAdminToolbarHtml } from "@/src/lib/admin-toolbar";
 import { fetchers } from "@/src/lib/fetchers";
 import SiteNavbar from "./siteNavbar";
 import SiteFooter from "./SiteFooter";
+import PopupRuntime from "./PopupRuntime";
 
 import AnalyticsScripts from "./AnalyticsScripts";
 
@@ -190,6 +191,7 @@ export default function SiteLayout({
       )}
 
       <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
+      <PopupRuntime />
 
       {breadcrumbSettings?.customCss && (
         <style
