@@ -101,8 +101,8 @@ model tenant {
   internalLinkRules InternalLinkRule[]
   forms             form[]
 
-
   searchConfigurations SearchConfiguration[]
+  popups               Popup[]
 }
 
 model user {
@@ -193,11 +193,10 @@ model page {
   tenantId             Int
   pageElementOverrides PageElementOverride[]
 
+  searchText String? @db.Text
+
   @@unique([tenantId, slug])
   @@index([tenantId])
-
-
-  searchText        String? @db.Text
 }
 
 model PageElementOverride {
@@ -248,12 +247,11 @@ model post {
 
   comments comment[] @relation("PostComments")
 
+  searchText String? @db.Text
+
   @@unique([tenantId, slug])
   @@index([authorId])
   @@index([tenantId])
-
-
-  searchText String? @db.Text
 }
 
 model category {
@@ -1093,6 +1091,60 @@ model pricingPageSettings {
   form   form? @relation(fields: [formId], references: [id], onDelete: SetNull)
 }
 
+// ── popup module ─────────────────────────────────────────
+
+enum PopupType {
+  MODAL
+  BAR
+  ELEMENT
+}
+
+enum PopupTarget {
+  GLOBAL
+  SPECIFIC_PAGES
+}
+
+enum PopupTrigger {
+  PAGE_LOAD
+  DELAY
+  ELEMENT_CLICK
+}
+
+enum PopupFrequency {
+  EVERY_TIME
+  ONCE_SESSION
+  ONCE_DAY
+  ONCE_WEEK
+}
+
+enum PopupStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+}
+
+model Popup {
+  id           Int            @id @default(autoincrement())
+  tenantId     Int
+  name         String
+  type         PopupType      @default(MODAL)
+  target       PopupTarget    @default(GLOBAL)
+  pageIds      Json?
+  trigger      PopupTrigger   @default(PAGE_LOAD)
+  delayMs      Int            @default(0)
+  frequency    PopupFrequency @default(EVERY_TIME)
+  status       PopupStatus    @default(DRAFT)
+  html         String         @db.LongText
+  css          String?        @db.LongText
+  elementClass String?        @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  tenant       tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, updatedAt])
+}
+
 // ── file-sharing module ─────────────────────────────────────────
 
 model FileCategory {
@@ -1533,27 +1585,27 @@ model formsubmission {
 // ---- Fields requiring this module, to be spliced back into their owner model at merge time ----
 // --- MODULE:forms END ---
 
-
 // --- MODULE:search START ---
 model SearchConfiguration {
-    id               String   @id @default(cuid())
-    name             String
-    slug             String
-    placeholder      String   @default("Search...")
-    buttonText       String   @default("Search")
-    searchPages      Boolean  @default(true)
-    searchPosts      Boolean  @default(true)
-    resultsPerPage   Int      @default(10)
-    noResultsMessage String   @default("No results found.")
-    customClass      String?
-    isActive         Boolean  @default(true)
-    tenantId         Int
-    tenant           tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    createdAt        DateTime @default(now())
-    updatedAt        DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  slug             String
+  placeholder      String   @default("Search...")
+  buttonText       String   @default("Search")
+  searchPages      Boolean  @default(true)
+  searchPosts      Boolean  @default(true)
+  resultsPerPage   Int      @default(10)
+  noResultsMessage String   @default("No results found.")
+  customClass      String?
+  isActive         Boolean  @default(true)
+  tenantId         Int
+  tenant           tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-    @@unique([tenantId, slug])
-    @@index([tenantId])
-    @@index([tenantId, isActive])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
 }
+
 // --- MODULE:search END ---

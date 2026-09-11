@@ -167,6 +167,14 @@ const adminNavItems: NavItem[] = [
     ],
   },
   {
+    id: "popups",
+    label: "Popups",
+    icon: Sparkles,
+    description: "Manage website popups",
+    modulePermission: "settings_manage",
+    href: "/admin/popups",
+  },
+  {
     id: "menus",
     label: "Menus",
     icon: Menu,
