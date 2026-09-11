@@ -167,6 +167,14 @@ const adminNavItems: NavItem[] = [
     ],
   },
   {
+    id: "accordions",
+    label: "Accordion / FAQ",
+    icon: HelpCircle,
+    description: "Manage FAQ accordions",
+    modulePermission: "settings_manage",
+    href: "/admin/accordions",
+  },
+  {
     id: "popups",
     label: "Popups",
     icon: Sparkles,

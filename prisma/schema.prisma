@@ -103,6 +103,7 @@ model tenant {
 
   searchConfigurations SearchConfiguration[]
   popups               Popup[]
+  accordions            Accordion[]
 }
 
 model user {
@@ -192,6 +193,7 @@ model page {
   tenant               tenant                 @relation(fields: [tenantId], references: [id])
   tenantId             Int
   pageElementOverrides PageElementOverride[]
+  accordions           Accordion[]
 
   searchText String? @db.Text
 
@@ -1147,7 +1149,53 @@ model Popup {
   @@index([tenantId, updatedAt])
 }
 
-// ── file-sharing module ─────────────────────────────────────────
+enum AccordionStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+}
+
+model Accordion {
+  id              Int             @id @default(autoincrement())
+  tenantId        Int
+  name            String
+  identifier      String          @unique
+  status          AccordionStatus @default(DRAFT)
+  css             String          @db.LongText
+  settings        Json?
+  icons           Json?
+  wrapperClass    String?
+  itemClass       String?
+  questionClass   String?
+  answerClass     String?
+  iconClass       String?
+  pageId          Int?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  tenant          tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  page            page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  items           AccordionItem[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, updatedAt])
+  @@index([pageId])
+}
+
+model AccordionItem {
+  id            Int       @id @default(autoincrement())
+  accordionId   Int
+  question      String
+  answer        String    @db.LongText
+  customClass   String?
+  sortOrder     Int       @default(0)
+  accordion     Accordion @relation(fields: [accordionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([accordionId, sortOrder])
+}
+
+// ── file-sharing module ──────────────��──────────────────────────
 
 model FileCategory {
   id          String  @id @default(cuid())

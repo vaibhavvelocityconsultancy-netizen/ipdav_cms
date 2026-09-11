@@ -8,6 +8,7 @@ import { fetchers } from "@/src/lib/fetchers";
 import SiteNavbar from "./siteNavbar";
 import SiteFooter from "./SiteFooter";
 import PopupRuntime from "./PopupRuntime";
+import AccordionRuntime from "./AccordionRuntime";
 
 import AnalyticsScripts from "./AnalyticsScripts";
 
@@ -192,6 +193,7 @@ export default function SiteLayout({
 
       <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
       <PopupRuntime />
+      <AccordionRuntime />
 
       {breadcrumbSettings?.customCss && (
         <style
