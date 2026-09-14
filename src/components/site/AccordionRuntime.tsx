@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
 
 type Item = {
   id: number;
@@ -115,34 +116,42 @@ export default function AccordionRuntime() {
   }, []);
   useEffect(() => {
     if (!data.length) return;
-    document
-      .querySelectorAll<HTMLElement>("[class*='accordion-']")
-      .forEach((node) => {
-        const match = Array.from(node.classList).find((name) =>
+
+    const roots: Root[] = [];
+    const mountedNodes = new WeakSet<HTMLElement>();
+
+    const mountAccordions = () => {
+      document.querySelectorAll<HTMLElement>("[class*='accordion-']").forEach((node) => {
+        const identifier = Array.from(node.classList).find((name) =>
           /^accordion-[a-f0-9]{6}$/.test(name),
         );
-        const item = data.find((entry) => entry.identifier === match);
+        const item = data.find((entry) => entry.identifier === identifier);
+
         if (
-          item &&
-          !node.querySelector("[data-accordion]") &&
-          node instanceof HTMLElement
+          !item ||
+          mountedNodes.has(node) ||
+          node.hasAttribute("data-accordion") ||
+          node.querySelector("[data-accordion]")
         ) {
-          node.replaceChildren();
-          node.appendChild(
-            Object.assign(document.createElement("div"), {
-              className: "cms-accordion-placeholder",
-            }),
-          );
+          return;
         }
+
+        mountedNodes.add(node);
+        const root = createRoot(node);
+        root.render(<Instance data={item} />);
+        roots.push(root);
       });
+    };
+
+    mountAccordions();
+    const observer = new MutationObserver(mountAccordions);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      roots.forEach((root) => root.unmount());
+    };
   }, [data]);
-  return (
-    <>
-      {data.map((item) => (
-        <div key={item.identifier} className="cms-accordion-runtime">
-          <Instance data={item} />
-        </div>
-      ))}
-    </>
-  );
+
+  return null;
 }

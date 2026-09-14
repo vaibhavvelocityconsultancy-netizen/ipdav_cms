@@ -50,7 +50,7 @@ export function FormEmbed({ slug }: { slug: string }) {
     Object.values(files).some((fl) => fl && fl.length > 0);
 
   useEffect(() => {
-    fetch(apiPath(`/api/form/slug/${slug}`))
+    void fetch(apiPath(`/api/form/slug/${slug}`))
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
