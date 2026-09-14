@@ -1,5 +1,6 @@
 import { injectBreadcrumb } from "./shortcode/renderBreadcrumbHtml";
 import { injectForms } from "./form-renderer";
+import { renderGalleryShortcodes } from "./shortcode/renderGalleryHtml";
 
 interface PublicPageHtmlOptions {
   breadcrumbItems?: Array<{ label: string; href: string }>;
@@ -25,6 +26,7 @@ export async function processPublicPageHtml(
     html,
     options.baseUrl ?? "",
   );
+  const galleryHtml = await renderGalleryShortcodes(formsHtml);
 
   // ── Breadcrumb ────────────────────────────────────────
   const breadcrumbItems = options.breadcrumbItems ?? [];
@@ -37,8 +39,8 @@ export async function processPublicPageHtml(
   };
 
   const htmlWithBreadcrumb = breadcrumbItems.length
-    ? injectBreadcrumb(formsHtml, breadcrumbItems, breadcrumbSettings, context)
-    : formsHtml;
+    ? injectBreadcrumb(galleryHtml, breadcrumbItems, breadcrumbSettings, context)
+    : galleryHtml;
 
   return {
     html: htmlWithBreadcrumb,
