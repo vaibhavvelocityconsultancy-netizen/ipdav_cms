@@ -23,6 +23,7 @@ import {
   Form,
   BookOpen,
   HelpCircle,
+  Image as ImageIcon,
   Search,
   ArrowRight,
   Route,
@@ -173,6 +174,14 @@ const adminNavItems: NavItem[] = [
     description: "Manage FAQ accordions",
     modulePermission: "settings_manage",
     href: "/admin/accordions",
+  },
+  {
+    id: "galleries",
+    label: "Galleries",
+    icon: ImageIcon,
+    description: "Manage image galleries",
+    modulePermission: "settings_manage",
+    href: "/admin/galleries",
   },
   {
     id: "popups",
