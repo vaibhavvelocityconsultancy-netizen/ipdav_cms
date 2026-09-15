@@ -73,6 +73,7 @@ export async function getPageById(id) {
       id: Number(id),
       tenantId,
     },
+    include: { template: true },
   });
 }
 
@@ -86,6 +87,7 @@ export async function getPageBySlug(slug, { preview = false } = {}) {
 
   return prisma.page.findFirst({
     where: buildPageWhere(slug, status, tenantId),
+    include: { template: true },
   });
 }
 
