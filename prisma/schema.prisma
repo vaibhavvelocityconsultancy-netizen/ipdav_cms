@@ -47,18 +47,6 @@ enum sitemapChangeFrequency {
   NEVER
 }
 
-enum template_type {
-  PAGE
-  HEADER
-  FOOTER
-  SECTION
-}
-
-enum template_status {
-  ACTIVE
-  INACTIVE
-}
-
 model tenant {
   id        Int      @id @default(autoincrement())
   name      String
@@ -117,7 +105,6 @@ model tenant {
   popups               Popup[]
   accordions            Accordion[]
   galleries             Gallery[]
-  templates             Template[]
 }
 
 model user {
@@ -201,11 +188,10 @@ model page {
   componentSettings Json?
   parentId           Int?
   order              Int      @default(0)
-  templateId         Int?
+  template           String   @default("default")
 
   parent   page?      @relation("PageParent", fields: [parentId], references: [id], onDelete: SetNull)
   children page[]     @relation("PageParent")
-  template Template?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   sitemapPriority      Decimal                @default(0.8) @db.Decimal(2, 1)
   sitemapChangeFreq    sitemapChangeFrequency @default(WEEKLY)
@@ -220,29 +206,6 @@ model page {
 
   @@unique([tenantId, slug])
   @@index([tenantId])
-}
-
-model Template {
-  id          Int            @id @default(autoincrement())
-  name        String
-  slug        String
-  type        template_type  @default(PAGE)
-  description String?         @db.Text
-  header      String?         @db.Text
-  content     String?         @db.Text
-  sidebar     String?         @db.Text
-  footer      String?         @db.Text
-  customCss   String?         @db.Text
-  status      template_status @default(ACTIVE)
-  tenantId    Int
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pages  page[]
-
-  @@unique([tenantId, slug])
-  @@index([tenantId, type, status])
 }
 
 model PageElementOverride {

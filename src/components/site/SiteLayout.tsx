@@ -184,7 +184,7 @@ export default function SiteLayout({
   }, [highlightAutoLinks]);
 
   const content = (
-    <div className="min-h-screen flex flex-col">
+    <div className="site-layout-shell min-h-screen flex flex-col"><style dangerouslySetInnerHTML={{ __html: `.site-layout-shell:has(main[data-page-template="no-header"]) > header, .site-layout-shell:has(main[data-page-template="blank"]) > header, .site-layout-shell:has(main[data-page-template="no-footer"]) > footer, .site-layout-shell:has(main[data-page-template="blank"]) > footer { display: none; } .site-layout-shell:has(main[data-page-template="full-width"]) main[data-page-content], .site-layout-shell:has(main[data-page-template="blank"]) main[data-page-content] { width: 100%; max-width: none; }` }} />
       {globalCss && (
         <style
           id="global-cms-css"

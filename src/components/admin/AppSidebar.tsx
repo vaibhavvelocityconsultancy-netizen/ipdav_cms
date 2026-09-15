@@ -44,7 +44,6 @@ import {
   BarChart3,
   Mail,
   Share2,
-  LayoutTemplate,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -145,14 +144,7 @@ const adminNavItems: NavItem[] = [
     modulePermission: "pages_view",
     href: "/admin/pages",
   },
-  {
-  id: "templates",
-  label: "Templates",
-  icon: LayoutTemplate,
-  description: "Reusable page layouts",
-  modulePermission: "pages_view",
-  href: "/admin/templates",
-  },
+
   {
   id: "media",
   label: "Media Library",
