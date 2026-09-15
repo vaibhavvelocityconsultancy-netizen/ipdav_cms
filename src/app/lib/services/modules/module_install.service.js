@@ -325,6 +325,86 @@ function cacheInstalledModuleManifest(
 
 // ─── Schema merge ──────────────────────────────────────────
 
+function getSchemaDefinitions(schemaText) {
+  const definitions = [];
+  const definitionRegex =
+    /(^\s*(?:model|enum)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{[\s\S]*?^\})/gm;
+  let match;
+
+  while ((match = definitionRegex.exec(schemaText)) !== null) {
+    definitions.push({ text: match[1], name: match[2] });
+  }
+
+  return definitions;
+}
+
+function getModelBody(schemaText, modelName) {
+  const escapedName = modelName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const modelRegex = new RegExp(
+    `^model\\s+${escapedName}\\s*\\{([\\s\\S]*?)^\\}`,
+    "m",
+  );
+
+  return schemaText.match(modelRegex)?.[1] || null;
+}
+
+function getPrismaFieldNames(body) {
+  return new Set(
+    String(body || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(
+        (line) => line && !line.startsWith("//") && !line.startsWith("@@"),
+      )
+      .map((line) => line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s/))
+      .filter(Boolean)
+      .map((match) => match[1]),
+  );
+}
+
+function getSchemaInjections(fragment) {
+  const injectionRegex =
+    /\/\/\s*INJECT_INTO:([A-Za-z0-9_]+)\s*\r?\n([\s\S]*?)\/\/\s*END_INJECT:\1/g;
+  const injections = [];
+  let match;
+
+  while ((match = injectionRegex.exec(fragment)) !== null) {
+    injections.push({ model: match[1], fields: match[2].trim() });
+  }
+
+  return { injectionRegex, injections };
+}
+
+// This covers installations made before installedModules was introduced or
+// repaired. A fragment is considered present only when every model/enum and
+// every injected field from that fragment already exists in the host schema.
+function isSchemaFragmentAlreadyPresent(schema, fragment) {
+  const definitions = getSchemaDefinitions(fragment);
+  const definitionNames = new Set(
+    getSchemaDefinitions(schema).map(({ name }) => name),
+  );
+  const { injections } = getSchemaInjections(fragment);
+
+  const definitionsPresent = definitions.every(({ name }) =>
+    definitionNames.has(name),
+  );
+  const injectionsPresent = injections.every((injection) => {
+    const existingFields = getPrismaFieldNames(
+      getModelBody(schema, injection.model),
+    );
+    const requiredFields = getPrismaFieldNames(injection.fields);
+    return [...requiredFields].every((fieldName) =>
+      existingFields.has(fieldName),
+    );
+  });
+
+  return (
+    (definitions.length > 0 || injections.length > 0) &&
+    definitionsPresent &&
+    injectionsPresent
+  );
+}
+
 export async function mergeSchemaFragment(
   moduleDir,
   schemaFragmentName,
@@ -357,14 +437,19 @@ export async function mergeSchemaFragment(
     };
   }
 
+  const fragment = fs.readFileSync(fragmentPath, "utf-8");
+
   // ---------------------------------------------------------
-  // 2. Check schema markers
+  // 2. Check schema markers and existing fragment contents
   // ---------------------------------------------------------
 
   const moduleStartMarker = `// --- MODULE:${moduleName} START ---`;
   const moduleEndMarker = `// --- MODULE:${moduleName} END ---`;
 
-  if (schema.includes(moduleStartMarker) && schema.includes(moduleEndMarker)) {
+  if (
+    (schema.includes(moduleStartMarker) && schema.includes(moduleEndMarker)) ||
+    isSchemaFragmentAlreadyPresent(schema, fragment)
+  ) {
     console.log(
       `Schema for module "${moduleName}" already exists. Skipping merge.`,
     );
@@ -376,49 +461,38 @@ export async function mergeSchemaFragment(
   }
 
   // ---------------------------------------------------------
-  // 3. Read module schema fragment
+  // 3. Extract INJECT_INTO blocks
   // ---------------------------------------------------------
 
-  const fragment = fs.readFileSync(fragmentPath, "utf-8");
+  const { injectionRegex, injections } = getSchemaInjections(fragment);
 
   // ---------------------------------------------------------
-  // 4. Extract INJECT_INTO blocks
-  // ---------------------------------------------------------
-
-  const injectionRegex =
-    /\/\/\s*INJECT_INTO:([A-Za-z0-9_]+)\s*\r?\n([\s\S]*?)\/\/\s*END_INJECT:\1/g;
-
-  const injections = [];
-  let match;
-
-  while ((match = injectionRegex.exec(fragment)) !== null) {
-    injections.push({
-      model: match[1],
-      fields: match[2].trim(),
-    });
-  }
-
-  // ---------------------------------------------------------
-  // 5. Remove injection blocks
+  // 4. Remove injection blocks
   // ---------------------------------------------------------
 
   const modelsOnly = fragment.replace(injectionRegex, "").trim();
 
   // ---------------------------------------------------------
-  // 6. Add module models
+  // 5. Add only models/enums that do not already exist. This makes a merge
+  // safe even if a previous interrupted installation wrote part of a fragment.
   // ---------------------------------------------------------
 
-  if (modelsOnly) {
+  const existingDefinitionNames = new Set(
+    getSchemaDefinitions(schema).map(({ name }) => name),
+  );
+  const missingDefinitions = getSchemaDefinitions(modelsOnly).filter(
+    ({ name }) => !existingDefinitionNames.has(name),
+  );
+
+  if (missingDefinitions.length > 0) {
     schema +=
-      `\n\n${moduleStartMarker}\n` + modelsOnly + `\n${moduleEndMarker}\n`;
+      `\n\n${moduleStartMarker}\n` +
+      missingDefinitions.map(({ text }) => text.trim()).join("\n\n") +
+      `\n${moduleEndMarker}\n`;
   }
 
   // ---------------------------------------------------------
-  // 7. Inject fields into existing models
-  // ---------------------------------------------------------
-
-  // ---------------------------------------------------------
-  // 7. Inject fields into existing models
+  // 6. Inject fields into existing models
   // ---------------------------------------------------------
 
   for (const injection of injections) {
@@ -443,13 +517,18 @@ export async function mergeSchemaFragment(
     }
 
     const existingBody = match[2];
+    const existingFieldNames = getPrismaFieldNames(existingBody);
 
-    // Prevent duplicate injection
+    // Prevent duplicate injection by Prisma field name, rather than exact
+    // whitespace-sensitive text matching.
     const fieldsToInject = injection.fields
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
-      .filter((field) => !existingBody.includes(field));
+      .filter((field) => {
+        const fieldName = field.match(/^([A-Za-z_][A-Za-z0-9_]*)\s/)?.[1];
+        return fieldName && !existingFieldNames.has(fieldName);
+      });
 
     if (fieldsToInject.length === 0) {
       console.log(
@@ -475,7 +554,7 @@ export async function mergeSchemaFragment(
     );
   }
   // ---------------------------------------------------------
-  // 8. Save schema
+  // 7. Save schema
   // ---------------------------------------------------------
 
   fs.writeFileSync(SCHEMA_PATH, schema, "utf-8");
@@ -677,6 +756,7 @@ export async function installModule(moduleName, jobId) {
   let copiedPaths = [];
   let migrationApplied = false;
   let dbBackupPath = null;
+  let extractDir = null;
 
   await writeJobStatus(jobId, {
     status: "running",
@@ -685,6 +765,56 @@ export async function installModule(moduleName, jobId) {
   });
 
   try {
+    await appendJobLog(jobId, `Downloading ${moduleName} from GitHub`);
+    extractDir = path.join(PROJECT_ROOT, "tmp", `extract-${jobId}`);
+    const moduleDir = await downloadModuleDirectory(moduleName, extractDir);
+    const manifest = await readModuleManifest(moduleDir);
+
+    await checkModuleDependencies(manifest);
+
+    // Some older installations have their schema but were never recorded in
+    // cmskit.config.json. Detect that state before copying any files or
+    // merging again, then repair the existing registry entry.
+    const fragmentPath = path.join(moduleDir, manifest.schemaFragment);
+    const schema = fs.readFileSync(SCHEMA_PATH, "utf-8");
+    const fragment = fs.readFileSync(fragmentPath, "utf-8");
+    if (isSchemaFragmentAlreadyPresent(schema, fragment)) {
+      const installedPaths = [];
+      for (const [src, dest] of Object.entries(manifest.targetPaths || {})) {
+        const sourcePath = path.join(moduleDir, src);
+        const destinationPath = path.join(PROJECT_ROOT, dest);
+
+        if (!fs.existsSync(destinationPath)) {
+          fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+          fs.cpSync(sourcePath, destinationPath, { recursive: true });
+          await appendJobLog(jobId, `Restored missing module file: ${dest}`);
+        }
+
+        installedPaths.push(destinationPath);
+      }
+
+      const message = `Module ${moduleName} was already installed; missing files were restored`;
+      await markModuleInstalled(moduleName);
+      cacheInstalledModuleManifest(
+        moduleName,
+        manifest,
+        installedPaths,
+        getSchemaInjections(fragment).injections,
+      );
+      fs.rmSync(extractDir, { recursive: true, force: true });
+      extractDir = null;
+      await appendJobLog(jobId, message);
+      const status = await readJobStatus(jobId);
+      await writeJobStatus(jobId, {
+        ...status,
+        status: "success",
+        alreadyInstalled: true,
+        repaired: true,
+        message,
+      });
+      return { alreadyInstalled: true, repaired: true, message };
+    }
+
     await appendJobLog(jobId, "Backing up schema.prisma and package.json");
     backups = await backupBeforeInstall(jobId);
 
@@ -692,13 +822,6 @@ export async function installModule(moduleName, jobId) {
     if (dbBackupPath) {
       await appendJobLog(jobId, `Database backed up to ${dbBackupPath}`);
     }
-
-    await appendJobLog(jobId, `Downloading ${moduleName} from GitHub`);
-    const extractDir = path.join(PROJECT_ROOT, "tmp", `extract-${jobId}`);
-    const moduleDir = await downloadModuleDirectory(moduleName, extractDir);
-    const manifest = await readModuleManifest(moduleDir);
-
-    await checkModuleDependencies(manifest);
 
     await appendJobLog(jobId, "Copying module files into project");
     copiedPaths = await copyModuleFiles(moduleDir, manifest.targetPaths);
@@ -748,6 +871,7 @@ export async function installModule(moduleName, jobId) {
     await clearBackups(backups);
 
     fs.rmSync(extractDir, { recursive: true, force: true });
+    extractDir = null;
     await appendJobLog(
       jobId,
       "Installation complete. Module is installed but inactive.",
@@ -769,6 +893,10 @@ export async function installModule(moduleName, jobId) {
 
     if (Array.isArray(err.copiedPaths)) {
       copiedPaths = err.copiedPaths;
+    }
+
+    if (extractDir && fs.existsSync(extractDir)) {
+      fs.rmSync(extractDir, { recursive: true, force: true });
     }
 
     try {

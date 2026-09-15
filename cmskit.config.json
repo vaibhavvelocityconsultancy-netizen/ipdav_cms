@@ -2,17 +2,14 @@
   "installedModules": [
     "seo",
     "comments",
-    "forms",
     "search"
   ],
   "activeModules": [
     "comments",
-    "forms",
     "search"
   ],
   "builtModules": [
     "comments",
-    "forms",
     "search"
   ]
 }

@@ -185,8 +185,14 @@ export async function getPublicPlans(tenantId) {
 }
 
 export async function getPublicBootstrapData(tenantId) {
-  const settings = await getPublicSettings(tenantId);
-  const resolvedTenantId = tenantId ?? settings.tenantId;
+  const settings = (await getPublicSettings(tenantId)) ?? {
+    tenantId: tenantId ?? undefined,
+    homepageType: "posts",
+    homepagePageId: null,
+    globalCss: null,
+    globalJs: null,
+  };
+  const resolvedTenantId = tenantId ?? settings.tenantId ?? undefined;
 
   const [
     menus,
@@ -198,16 +204,34 @@ export async function getPublicBootstrapData(tenantId) {
     analyticsSettings,
   ] = await Promise.all([
     getPublicMenus(resolvedTenantId),
-    getPublicFooterSettings(resolvedTenantId),
+    resolvedTenantId !== undefined
+      ? getPublicFooterSettings(resolvedTenantId)
+      : Promise.resolve({
+          footerLogo: "",
+          footerBrandTitle: "",
+          footerDescription: "",
+          footerAddress: "",
+          footerEmail: "",
+          footerCopyright: "",
+          socialLinks: [],
+        }),
     settings.homepageType === "page" && settings.homepagePageId
       ? getPublicPageById(settings.homepagePageId, resolvedTenantId)
       : Promise.resolve(null),
-    prisma.breadcrumbSettings.findUnique({
-      where: { tenantId: resolvedTenantId },
-    }),
-    getPublicNavbarConfig(resolvedTenantId),
-    getPublicFooterConfig(resolvedTenantId),
-    getPublicAnalyticsSettings(resolvedTenantId),
+    resolvedTenantId !== undefined
+      ? prisma.breadcrumbSettings.findUnique({
+          where: { tenantId: resolvedTenantId },
+        })
+      : Promise.resolve(null),
+    resolvedTenantId !== undefined
+      ? getPublicNavbarConfig(resolvedTenantId)
+      : Promise.resolve(null),
+    resolvedTenantId !== undefined
+      ? getPublicFooterConfig(resolvedTenantId)
+      : Promise.resolve(null),
+    resolvedTenantId !== undefined
+      ? getPublicAnalyticsSettings(resolvedTenantId)
+      : Promise.resolve(null),
   ]);
 
   return {
