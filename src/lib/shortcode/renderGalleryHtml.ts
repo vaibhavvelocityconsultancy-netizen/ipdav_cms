@@ -1,18 +1,49 @@
 import { prisma } from "@/src/app/lib/prisma";
-const escape = (value = "") => String(value).replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&#39;" }[char]));
+const escape = (value = "") =>
+  String(value).replace(
+    /[&<>\"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '\"': "&quot;",
+        "'": "&#39;",
+      })[char],
+  );
 export async function renderGalleryShortcodes(html) {
   const pattern = /\[gallery\s+([^\]]+)\]/gi;
   const matches = [...html.matchAll(pattern)];
   let output = html;
   for (const match of matches) {
-    const attrs = Object.fromEntries([...match[1].matchAll(/(\w+)=[\"']([^\"']+)[\"']/g)].map((item) => [item[1], item[2]]));
-    const gallery = await prisma.gallery.findFirst({ where: { id: Number(attrs.id) }, include: { images: { include: { media: true }, orderBy: { order: "asc" } } } });
-    output = output.replace(match[0], gallery ? renderGalleryHtml(gallery, Number(attrs.columns) || gallery.columns) : "");
+    const attrs = Object.fromEntries(
+      [...match[1].matchAll(/(\w+)=[\"']([^\"']+)[\"']/g)].map((item) => [
+        item[1],
+        item[2],
+      ]),
+    );
+    const gallery = await prisma.gallery.findFirst({
+      where: { id: Number(attrs.id) },
+      include: {
+        images: { include: { media: true }, orderBy: { order: "asc" } },
+      },
+    });
+    output = output.replace(
+      match[0],
+      gallery
+        ? renderGalleryHtml(gallery, Number(attrs.columns) || gallery.columns)
+        : "",
+    );
   }
   return output;
 }
 export function renderGalleryHtml(gallery, columns = 3) {
   const id = `gallery-${gallery.id}`;
-  const images = gallery.images.map((image) => `<button type="button" class="cms-gallery-item" data-gallery-index="${image.order}" aria-label="View ${escape(image.caption || image.media.altText || image.media.originalName)}"><img src="${escape(image.media.url)}" alt="${escape(image.caption || image.media.altText || image.media.originalName)}" loading="lazy" />${image.caption ? `<span>${escape(image.caption)}</span>` : ""}</button>`).join("");
+  const images = gallery.images
+    .map(
+      (image) =>
+        `<button type="button" class="cms-gallery-item" data-gallery-index="${image.order}" aria-label="View ${escape(image.caption || image.media.altText || image.media.originalName)}"><img src="${escape(image.media.url)}" alt="${escape(image.caption || image.media.altText || image.media.originalName)}" loading="lazy" />${image.caption ? `<span>${escape(image.caption)}</span>` : ""}</button>`,
+    )
+    .join("");
   return `<div id="${id}" class="cms-gallery" style="--gallery-columns:${Math.min(6, Math.max(1, columns))}" data-gallery="${id}"><div class="cms-gallery-grid">${images}</div><div class="cms-gallery-lightbox" hidden role="dialog" aria-modal="true"><button class="cms-gallery-close" aria-label="Close">×</button><button class="cms-gallery-prev" aria-label="Previous">‹</button><img class="cms-gallery-lightbox-image" alt="" /><button class="cms-gallery-next" aria-label="Next">›</button></div><style>.cms-gallery-grid{display:grid;grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));gap:1rem}.cms-gallery-item{border:0;background:transparent;padding:0;text-align:left;cursor:pointer}.cms-gallery-item img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:.5rem}.cms-gallery-item span{display:block;padding:.5rem 0;font-size:.875rem}.cms-gallery-lightbox{position:fixed;inset:0;z-index:9999;background:rgb(0 0 0/.9);display:flex;align-items:center;justify-content:center;gap:2rem}.cms-gallery-lightbox[hidden]{display:none}.cms-gallery-lightbox-image{max-width:80vw;max-height:85vh;object-fit:contain}.cms-gallery-close,.cms-gallery-prev,.cms-gallery-next{position:absolute;color:white;background:transparent;border:0;font-size:3rem;cursor:pointer}.cms-gallery-close{top:1rem;right:2rem}.cms-gallery-prev{left:2rem}.cms-gallery-next{right:2rem}@media(max-width:640px){.cms-gallery-grid{grid-template-columns:repeat(min(2,var(--gallery-columns)),minmax(0,1fr))}}</style><script>(()=>{const root=document.getElementById('${id}');if(!root||root.dataset.ready)return;root.dataset.ready='1';const items=[...root.querySelectorAll('.cms-gallery-item')],box=root.querySelector('.cms-gallery-lightbox'),image=root.querySelector('.cms-gallery-lightbox-image');let index=0;const show=()=>{const source=items[index]?.querySelector('img');if(source){image.src=source.src;image.alt=source.alt}box.hidden=false};items.forEach((item,i)=>item.addEventListener('click',()=>{index=i;show()}));root.querySelector('.cms-gallery-close').onclick=()=>box.hidden=true;root.querySelector('.cms-gallery-prev').onclick=()=>{index=(index-1+items.length)%items.length;show()};root.querySelector('.cms-gallery-next').onclick=()=>{index=(index+1)%items.length;show()};document.addEventListener('keydown',e=>{if(box.hidden)return;if(e.key==='Escape')box.hidden=true;if(e.key==='ArrowLeft')root.querySelector('.cms-gallery-prev').click();if(e.key==='ArrowRight')root.querySelector('.cms-gallery-next').click()})})();</script></div>`;
 }
