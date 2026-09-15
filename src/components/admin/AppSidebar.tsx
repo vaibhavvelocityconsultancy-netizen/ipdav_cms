@@ -88,6 +88,7 @@ interface NavItem {
 
 interface SidebarProps {
   userRole?: string | null;
+  visibleModules?: Record<string, boolean>;
 }
 
 // ── Admin nav ─────────────────────────────────────────────────
@@ -98,6 +99,14 @@ const adminNavItems: NavItem[] = [
     icon: LayoutDashboard,
     description: "Overview & analytics",
     href: "/admin",
+  },
+  {
+    id: "ai-assistant",
+    label: "AI Assistant",
+    icon: Bot,
+    description: "Work with your CMS using AI",
+    modulePermission: "settings_manage",
+    href: "/admin/ai-assistant",
   },
   {
     id: "posts",
