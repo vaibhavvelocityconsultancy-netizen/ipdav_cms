@@ -12,6 +12,7 @@ type Gallery = {
   title: string;
   slug: string;
   columns: number;
+  categoriesEnabled?: boolean;
   _count?: { images: number };
 };
 type GalleryImage = {
@@ -21,6 +22,7 @@ type GalleryImage = {
   originalName?: string;
   altText?: string;
   caption?: string;
+  category?: string;
   media?: { url?: string; originalName?: string; altText?: string };
 };
 type GalleryEditor = Gallery & { images: GalleryImage[] };
@@ -51,7 +53,7 @@ export default function GalleriesPage() {
     load();
   }, []);
   const blank = () =>
-    setEditing({ id: 0, title: "", slug: "", columns: 3, images: [] });
+    setEditing({ id: 0, title: "", slug: "", columns: 3, categoriesEnabled: false, images: [] });
 
   const editGallery = async (item: Gallery) => {
     const response = await fetch(`/api/galleries/${item.id}`);
@@ -76,6 +78,7 @@ export default function GalleriesPage() {
       .map((image) => ({
         mediaId: Number(image.mediaId ?? image.id),
         caption: image.caption || "",
+        category: image.category || "",
       }))
       .filter((image) => Number.isInteger(image.mediaId));
     setSaving(true);
@@ -89,6 +92,7 @@ export default function GalleriesPage() {
             title: editing.title,
             slug: editing.slug,
             columns: editing.columns,
+            categoriesEnabled: Boolean(editing.categoriesEnabled),
             images,
           }),
         },
@@ -111,7 +115,7 @@ export default function GalleriesPage() {
     }
   };
 
-  const addImage = (media: GalleryImage) => {
+  const addImage = (media: any) => {
     if (
       !editing ||
       editing.images.some(
@@ -272,6 +276,14 @@ export default function GalleriesPage() {
                 setEditing({ ...editing, slug: event.target.value })
               }
             />
+            <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(editing.categoriesEnabled)}
+                onChange={(event) => setEditing({ ...editing, categoriesEnabled: event.target.checked })}
+              />
+              <span>Enable categories</span>
+            </label>
             <div className="flex items-end gap-4">
               <div className="max-w-40 flex-1">
                 <label className="text-sm font-medium">Columns</label>
@@ -345,10 +357,15 @@ export default function GalleriesPage() {
                       <Input
                         placeholder="Caption (optional)"
                         value={image.caption || ""}
-                        onChange={(event) =>
-                          updateImage(index, { caption: event.target.value })
-                        }
+                        onChange={(event) => updateImage(index, { caption: event.target.value })}
                       />
+                      {editing.categoriesEnabled ? (
+                        <Input
+                          placeholder="Category (optional)"
+                          value={image.category || ""}
+                          onChange={(event) => updateImage(index, { category: event.target.value })}
+                        />
+                      ) : null}
                       <p
                         className="truncate text-xs text-muted-foreground"
                         title={image.altText}

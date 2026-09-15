@@ -19,14 +19,14 @@ async function imageRows(input, tenantId) {
   if (!unique.length) return [];
   const media = await prisma.media.findMany({ where: { id: { in: unique.map(([mediaId]) => mediaId) }, tenantId }, select: { id: true } });
   const available = new Set(media.map((item) => item.id));
-  return unique.flatMap(([mediaId, image], order) => available.has(mediaId) ? [{ mediaId, order, caption: String(image.caption || "") }] : []);
+  return unique.flatMap(([mediaId, image], order) => available.has(mediaId) ? [{ mediaId, order, caption: String(image.caption || ""), category: String(image.category || "").trim() || null }] : []);
 }
 
 export async function createGallery(input, tenantId) {
   const title = String(input.title || "Untitled gallery").trim();
   const slug = String(input.slug || title).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const images = await imageRows(input, tenantId);
-  return prisma.gallery.create({ data: { tenantId, title, slug, columns: Math.min(6, Math.max(1, Number(input.columns) || 3)), ...(images.length ? { images: { create: images } } : {}) }, include });
+  return prisma.gallery.create({ data: { tenantId, title, slug, columns: Math.min(6, Math.max(1, Number(input.columns) || 3)), categoriesEnabled: Boolean(input.categoriesEnabled), ...(images.length ? { images: { create: images } } : {}) }, include });
 }
 
 export async function updateGallery(id, input, tenantId) {
@@ -34,7 +34,7 @@ export async function updateGallery(id, input, tenantId) {
   if (!gallery) return null;
   const hasImages = Array.isArray(input.images) || Array.isArray(input.mediaIds);
   const images = hasImages ? await imageRows(input, tenantId) : null;
-  const data = { ...(input.title !== undefined ? { title: String(input.title).trim() } : {}), ...(input.slug !== undefined ? { slug: String(input.slug).trim() } : {}), ...(input.columns !== undefined ? { columns: Math.min(6, Math.max(1, Number(input.columns) || 3)) } : {}) };
+  const data = { ...(input.title !== undefined ? { title: String(input.title).trim() } : {}), ...(input.slug !== undefined ? { slug: String(input.slug).trim() } : {}), ...(input.columns !== undefined ? { columns: Math.min(6, Math.max(1, Number(input.columns) || 3)) } : {}), ...(input.categoriesEnabled !== undefined ? { categoriesEnabled: Boolean(input.categoriesEnabled) } : {}) };
   if (!images) return prisma.gallery.update({ where: { id: gallery.id }, data, include });
   await prisma.$transaction(async (tx) => {
     await tx.gallery.update({ where: { id: gallery.id }, data });
