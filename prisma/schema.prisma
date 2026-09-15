@@ -335,8 +335,9 @@ model Gallery {
   tenantId  Int
   title     String
   slug      String
-  columns   Int           @default(3)
-  createdAt DateTime      @default(now())
+  columns          Int           @default(3)
+  categoriesEnabled Boolean      @default(false)
+  createdAt        DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   tenant    tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   images    GalleryImage[]
@@ -350,6 +351,7 @@ model GalleryImage {
   mediaId   Int
   order     Int      @default(0)
   caption   String?  @db.Text
+  category  String?
   gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
   media     media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
   @@unique([galleryId, mediaId])

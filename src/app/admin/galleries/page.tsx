@@ -25,6 +25,7 @@ export default function GalleriesPage() {
       title: "",
       slug: "",
       columns: 3,
+      categoriesEnabled: false,
       images: [],
     });
 
@@ -34,9 +35,11 @@ export default function GalleriesPage() {
       title: editing.title,
       slug: editing.slug,
       columns: editing.columns,
+      categoriesEnabled: Boolean(editing.categoriesEnabled),
       images: editing.images.map((img: any) => ({
         mediaId: img.mediaId || img.id,
         caption: img.caption || "",
+        category: editing.categoriesEnabled ? img.category || "" : null,
       })),
     };
 
@@ -66,6 +69,7 @@ export default function GalleriesPage() {
         url: image.media?.url || image.url,
         originalName: image.media?.originalName || image.originalName,
         altText: image.media?.altText || "",
+        category: image.category || "",
       })),
     });
   };
@@ -74,7 +78,7 @@ export default function GalleriesPage() {
     if (editing.images.some((image: any) => Number(image.mediaId || image.id) === Number(media.id))) return;
     setEditing({
       ...editing,
-      images: [...editing.images, { mediaId: media.id, url: media.url, originalName: media.originalName, altText: media.altText || "", caption: "" }],
+      images: [...editing.images, { mediaId: media.id, url: media.url, originalName: media.originalName, altText: media.altText || "", caption: "", category: "" }],
     });
     setPicker(false);
   };
@@ -154,6 +158,18 @@ export default function GalleriesPage() {
                 setEditing({ ...editing, slug: e.target.value })
               }
             />
+            <label className="flex items-center gap-3 rounded-lg border bg-muted/20 p-4 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(editing.categoriesEnabled)}
+                onChange={(e) => setEditing({ ...editing, categoriesEnabled: e.target.checked })}
+                className="size-4 accent-primary"
+              />
+              <span>
+                <span className="block font-medium">Enable image categories</span>
+                <span className="text-muted-foreground">Add a category to each image and show filters on the public gallery.</span>
+              </span>
+            </label>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <label className="text-sm font-medium">Columns</label>
@@ -225,10 +241,22 @@ export default function GalleriesPage() {
                       </div>
                       <Input
                         placeholder="Caption (optional)"
-                        value={image.caption}
+                        value={image.caption || ""}
                         onChange={(e) => updateCaption(index, e.target.value)}
                         className="text-sm"
                       />
+                      {editing.categoriesEnabled && (
+                        <Input
+                          placeholder="Category name (optional)"
+                          value={image.category || ""}
+                          onChange={(e) => {
+                            const updated = [...editing.images];
+                            updated[index] = { ...updated[index], category: e.target.value };
+                            setEditing({ ...editing, images: updated });
+                          }}
+                          className="text-sm"
+                        />
+                      )}
                       <p className="text-xs text-muted-foreground truncate">
                         {image.originalName}
                       </p>
