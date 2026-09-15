@@ -7,7 +7,6 @@
   ],
   "activeModules": [
     "comments",
-    "forms",
     "search"
   ],
   "builtModules": [
