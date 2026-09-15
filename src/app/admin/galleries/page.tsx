@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/src/ui/button";
 import { Input } from "@/src/ui/input";
 import { MediaPickerModal } from "@/src/components/media-manager/MediaPicker";
@@ -14,14 +14,26 @@ type Gallery = {
   columns: number;
   _count?: { images: number };
 };
-
-type GalleryEditor = Gallery & {
-  images: any[];
+type GalleryImage = {
+  id?: number;
+  mediaId: number;
+  url?: string;
+  originalName?: string;
+  altText?: string;
+  caption?: string;
+  media?: { url?: string; originalName?: string; altText?: string };
 };
+type GalleryEditor = Gallery & { images: GalleryImage[] };
 
-function getShortcode(id: number) {
-  return `[gallery id="${id}"]`;
-}
+const gridClasses = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 sm:grid-cols-2",
+  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
+  6: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6",
+};
+const getShortcode = (id: number) => `[gallery id="${id}"]`;
 
 export default function GalleriesPage() {
   const [items, setItems] = useState<Gallery[]>([]);
@@ -29,27 +41,43 @@ export default function GalleriesPage() {
   const [picker, setPicker] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [draggedImage, setDraggedImage] = useState<number | null>(null);
 
   const load = () =>
     fetch("/api/galleries")
       .then((response) => response.json())
       .then((json) => setItems(json.data?.items || []));
-
   useEffect(() => {
     load();
   }, []);
-
   const blank = () =>
     setEditing({ id: 0, title: "", slug: "", columns: 3, images: [] });
 
+  const editGallery = async (item: Gallery) => {
+    const response = await fetch(`/api/galleries/${item.id}`);
+    const result = await response.json();
+    const gallery = result.data || item;
+    setEditing({
+      ...gallery,
+      images: (gallery.images || []).map((image: GalleryImage) => ({
+        ...image,
+        mediaId: image.mediaId,
+        url: image.media?.url || image.url,
+        originalName: image.media?.originalName || image.originalName,
+        altText: image.media?.altText || image.altText || "",
+      })),
+    });
+  };
+
   const save = async () => {
     if (!editing || saving) return;
-
     const isNew = !editing.id;
-    const mediaIds = editing.images
-      .map((image) => Number(image.mediaId ?? image.id))
-      .filter(Number.isInteger);
-
+    const images = editing.images
+      .map((image) => ({
+        mediaId: Number(image.mediaId ?? image.id),
+        caption: image.caption || "",
+      }))
+      .filter((image) => Number.isInteger(image.mediaId));
     setSaving(true);
     try {
       const response = await fetch(
@@ -61,31 +89,73 @@ export default function GalleriesPage() {
             title: editing.title,
             slug: editing.slug,
             columns: editing.columns,
-            mediaIds,
+            images,
           }),
         },
       );
       const data = await response.json();
-      if (!response.ok || !data.success) {
+      if (!response.ok || !data.success)
         throw new Error(data.error || "Unable to save the gallery.");
-      }
-
-      // New galleries persist their selected media in the create request.  Do
-      // not repeat a second attachment request: it can mask a failed create
-      // and can race the nested relation insert.
-      if (data.data.images.length !== mediaIds.length) {
-        throw new Error("Some selected images could not be saved to this gallery.");
-      }
-
+      if (data.data.images.length !== images.length)
+        throw new Error(
+          "Some selected images could not be saved to this gallery.",
+        );
       setEditing(null);
       load();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Unable to save the gallery.");
+      window.alert(
+        error instanceof Error ? error.message : "Unable to save the gallery.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  const addImage = (media: GalleryImage) => {
+    if (
+      !editing ||
+      editing.images.some(
+        (image) => Number(image.mediaId ?? image.id) === Number(media.id),
+      )
+    )
+      return;
+    setEditing({
+      ...editing,
+      images: [
+        ...editing.images,
+        {
+          mediaId: Number(media.id),
+          url: media.url,
+          originalName: media.originalName,
+          altText: media.altText || "",
+          caption: "",
+        },
+      ],
+    });
+    setPicker(false);
+  };
+  const updateImage = (index: number, changes: Partial<GalleryImage>) =>
+    editing &&
+    setEditing({
+      ...editing,
+      images: editing.images.map((image, imageIndex) =>
+        imageIndex === index ? { ...image, ...changes } : image,
+      ),
+    });
+  const removeImage = (index: number) =>
+    editing &&
+    setEditing({
+      ...editing,
+      images: editing.images.filter((_, imageIndex) => imageIndex !== index),
+    });
+  const dropImage = (to: number) => {
+    if (!editing || draggedImage === null || draggedImage === to) return;
+    const images = [...editing.images];
+    const [image] = images.splice(draggedImage, 1);
+    images.splice(to, 0, image);
+    setEditing({ ...editing, images });
+    setDraggedImage(null);
+  };
   const copyShortcode = async (id: number) => {
     await navigator.clipboard.writeText(getShortcode(id));
     setCopiedId(id);
@@ -109,6 +179,7 @@ export default function GalleriesPage() {
       filterable: true,
       filterValue: (item) => item.slug,
     },
+    { key: "columns", header: "Columns", cell: (item) => item.columns },
     {
       key: "images",
       header: "Images",
@@ -117,28 +188,22 @@ export default function GalleriesPage() {
     {
       key: "shortcode",
       header: "Shortcode",
-      cell: (item) => {
-        const shortcode = getShortcode(item.id);
-        const copied = copiedId === item.id;
-
-        return (
-          <div className="flex min-w-56 items-center gap-2">
-            <code className="truncate text-xs text-muted-foreground">
-              {shortcode}
-            </code>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              title={copied ? "Copied" : "Copy shortcode"}
-              aria-label={copied ? "Copied" : "Copy shortcode"}
-              onClick={() => copyShortcode(item.id)}
-            >
-              {copied ? <Check /> : <Copy />}
-            </Button>
-          </div>
-        );
-      },
+      cell: (item) => (
+        <div className="flex min-w-56 items-center gap-2">
+          <code className="truncate text-xs text-muted-foreground">
+            {getShortcode(item.id)}
+          </code>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            title={copiedId === item.id ? "Copied" : "Copy shortcode"}
+            onClick={() => copyShortcode(item.id)}
+          >
+            {copiedId === item.id ? <Check /> : <Copy />}
+          </Button>
+        </div>
+      ),
       hideable: false,
     },
     {
@@ -146,23 +211,17 @@ export default function GalleriesPage() {
       header: "Actions",
       cell: (item) => (
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              fetch(`/api/galleries/${item.id}`)
-                .then((response) => response.json())
-                .then((json) => setEditing(json.data))
-            }
-          >
+          <Button variant="outline" onClick={() => editGallery(item)}>
             Edit
           </Button>
           <Button
             variant="ghost"
-            onClick={() =>
-              fetch(`/api/galleries/${item.id}`, { method: "DELETE" }).then(
-                load,
-              )
-            }
+            onClick={() => {
+              if (window.confirm(`Delete gallery “${item.title}”?`))
+                fetch(`/api/galleries/${item.id}`, { method: "DELETE" }).then(
+                  load,
+                );
+            }}
           >
             Delete
           </Button>
@@ -173,8 +232,12 @@ export default function GalleriesPage() {
   ];
 
   if (editing) {
+    const columnCount = Math.max(
+      1,
+      Math.min(6, Number(editing.columns) || 3),
+    ) as keyof typeof gridClasses;
     return (
-      <main className="max-w-5xl p-6">
+      <main className="max-w-6xl p-6">
         <div className="mb-6 flex justify-between">
           <div>
             <h1 className="text-2xl font-semibold">
@@ -193,85 +256,116 @@ export default function GalleriesPage() {
             </Button>
           </div>
         </div>
-
-        <div className="grid gap-4">
-          <Input
-            placeholder="Title"
-            value={editing.title}
-            onChange={(event) =>
-              setEditing({ ...editing, title: event.target.value })
-            }
-          />
-          <Input
-            placeholder="Slug"
-            value={editing.slug}
-            onChange={(event) =>
-              setEditing({ ...editing, slug: event.target.value })
-            }
-          />
-          <Input
-            type="number"
-            min={1}
-            max={6}
-            placeholder="Columns"
-            value={editing.columns}
-            onChange={(event) =>
-              setEditing({ ...editing, columns: Number(event.target.value) })
-            }
-          />
+        <div className="grid gap-6">
+          <div className="grid gap-4">
+            <Input
+              placeholder="Title"
+              value={editing.title}
+              onChange={(event) =>
+                setEditing({ ...editing, title: event.target.value })
+              }
+            />
+            <Input
+              placeholder="Slug"
+              value={editing.slug}
+              onChange={(event) =>
+                setEditing({ ...editing, slug: event.target.value })
+              }
+            />
+            <div className="flex items-end gap-4">
+              <div className="max-w-40 flex-1">
+                <label className="text-sm font-medium">Columns</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={editing.columns}
+                  onChange={(event) =>
+                    setEditing({
+                      ...editing,
+                      columns: Math.max(
+                        1,
+                        Math.min(6, Number(event.target.value) || 1),
+                      ),
+                    })
+                  }
+                />
+              </div>
+              <p className="pb-2 text-xs text-muted-foreground">
+                {columnCount} per row on desktop; responsive on smaller screens.
+              </p>
+            </div>
+          </div>
           <section className="rounded-lg border p-4">
             <div className="mb-4 flex justify-between">
-              <h2 className="font-medium">Images</h2>
+              <h2 className="font-medium">Images ({editing.images.length})</h2>
               <Button variant="outline" onClick={() => setPicker(true)}>
                 Add images
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {editing.images.map((image, index) => (
-                <div
-                  key={image.id || image.mediaId}
-                  draggable
-                  onDragStart={(event) =>
-                    event.dataTransfer.setData("text/plain", String(index))
-                  }
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
-                    const from = Number(
-                      event.dataTransfer.getData("text/plain"),
-                    );
-                    const next = [...editing.images];
-                    const [moved] = next.splice(from, 1);
-                    next.splice(index, 0, moved);
-                    setEditing({ ...editing, images: next });
-                  }}
-                  className="overflow-hidden rounded-lg border"
-                >
-                  <img
-                    src={image.media?.url || image.url}
-                    alt={image.media?.altText || image.originalName || ""}
-                    className="aspect-square w-full object-cover"
-                  />
-                  <Input
-                    className="rounded-none border-0"
-                    placeholder="Caption"
-                    value={image.caption || ""}
-                    onChange={(event) => {
-                      const next = [...editing.images];
-                      next[index] = { ...image, caption: event.target.value };
-                      setEditing({ ...editing, images: next });
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
+            {editing.images.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">
+                No images selected. Click “Add images” to get started.
+              </p>
+            ) : (
+              <div className={`grid gap-4 ${gridClasses[columnCount]}`}>
+                {editing.images.map((image, index) => (
+                  <div
+                    key={`${image.mediaId}-${index}`}
+                    draggable
+                    onDragStart={() => setDraggedImage(index)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => dropImage(index)}
+                    className={`overflow-hidden rounded-lg border bg-card ${draggedImage === index ? "border-primary opacity-50" : ""}`}
+                  >
+                    <div className="relative group">
+                      <img
+                        src={image.url}
+                        alt={image.altText || image.originalName || ""}
+                        className="aspect-square w-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                        <GripVertical className="text-white" />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon-sm"
+                        className="absolute right-2 top-2"
+                        onClick={() => removeImage(index)}
+                        aria-label={`Remove image ${index + 1}`}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                    <div className="space-y-2 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Position #{index + 1}
+                      </p>
+                      <Input
+                        placeholder="Caption (optional)"
+                        value={image.caption || ""}
+                        onChange={(event) =>
+                          updateImage(index, { caption: event.target.value })
+                        }
+                      />
+                      <p
+                        className="truncate text-xs text-muted-foreground"
+                        title={image.altText}
+                      >
+                        {image.altText || image.originalName}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
         <MediaPickerModal
           open={picker}
           onClose={() => setPicker(false)}
-          onSelect={(item) =>
-            setEditing({ ...editing, images: [...editing.images, item] })
-          }
+          onSelect={addImage}
         />
       </main>
     );
