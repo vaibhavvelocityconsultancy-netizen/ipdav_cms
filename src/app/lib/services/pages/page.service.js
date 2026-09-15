@@ -73,7 +73,6 @@ export async function getPageById(id) {
       id: Number(id),
       tenantId,
     },
-    include: { template: true },
   });
 }
 
@@ -87,7 +86,6 @@ export async function getPageBySlug(slug, { preview = false } = {}) {
 
   return prisma.page.findFirst({
     where: buildPageWhere(slug, status, tenantId),
-    include: { template: true },
   });
 }
 
@@ -111,7 +109,9 @@ export async function createPage(input) {
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  const { id: _, createdAt, updatedAt, ...cleanInput } = input;
+  const { id: _, createdAt, updatedAt, templateId: _templateId, ...cleanInput } = input;
+  const allowedTemplates = new Set(["default", "full-width", "no-header", "no-footer", "blank"]);
+  cleanInput.template = allowedTemplates.has(cleanInput.template) ? cleanInput.template : "default";
 
   const hasSlug = Object.prototype.hasOwnProperty.call(cleanInput, "slug");
   const slug = hasSlug
@@ -149,6 +149,9 @@ export async function createPage(input) {
         cleanInput.status === "PUBLISHED" || cleanInput.status === "published"
           ? "PUBLISHED"
           : "DRAFT",
+      parentId: cleanInput.parentId ?? null,
+      order: Number.isFinite(Number(cleanInput.order)) ? Number(cleanInput.order) : 0,
+      template: cleanInput.template,
       tenantId,
     },
   });
@@ -164,7 +167,9 @@ export async function updatePage(id, input) {
   const session = await requireAuth();
   const tenantId = session.user.tenantId;
 
-  const { id: _, createdAt, updatedAt, ...cleanInput } = input;
+  const { id: _, createdAt, updatedAt, templateId: _templateId, ...cleanInput } = input;
+  const allowedTemplates = new Set(["default", "full-width", "no-header", "no-footer", "blank"]);
+  cleanInput.template = allowedTemplates.has(cleanInput.template) ? cleanInput.template : "default";
 
   const hasSlug = Object.prototype.hasOwnProperty.call(cleanInput, "slug");
   if (hasSlug) {

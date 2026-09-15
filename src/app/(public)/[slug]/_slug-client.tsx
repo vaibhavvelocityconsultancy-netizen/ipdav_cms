@@ -525,8 +525,9 @@ export default function PreviewPage({
       {page?.css && <style id={`page-css-${page.id}`}>{page.css}</style>}
       <SchemaRenderer seoData={page?.seoData} />
       <main
-        data-page-content
-        className="flex-1"
+  data-page-content
+  data-page-template={page?.template ?? "default"}
+  className="flex-1"
         dangerouslySetInnerHTML={{ __html: processedHtml }}
       />
     </>
