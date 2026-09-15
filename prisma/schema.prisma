@@ -99,12 +99,12 @@ model tenant {
   breadcrumbSettings BreadcrumbSettings?
 
   internalLinkRules InternalLinkRule[]
-  forms             form[]
+  // forms             form[]
 
   searchConfigurations SearchConfiguration[]
   popups               Popup[]
-  accordions            Accordion[]
-  galleries             Gallery[]
+  accordions           Accordion[]
+  galleries            Gallery[]
 }
 
 model user {
@@ -331,29 +331,31 @@ model media {
 }
 
 model Gallery {
-  id        Int           @id @default(autoincrement())
-  tenantId  Int
-  title     String
-  slug      String
-  columns          Int           @default(3)
-  categoriesEnabled Boolean      @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  tenant    tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  images    GalleryImage[]
+  id                Int            @id @default(autoincrement())
+  tenantId          Int
+  title             String
+  slug              String
+  columns           Int            @default(3)
+  categoriesEnabled Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  tenant            tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  images            GalleryImage[]
+
   @@unique([tenantId, slug])
   @@index([tenantId])
 }
 
 model GalleryImage {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   galleryId Int
   mediaId   Int
-  order     Int      @default(0)
-  caption   String?  @db.Text
+  order     Int     @default(0)
+  caption   String? @db.Text
   category  String?
-  gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
-  media     media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  gallery   Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  media     media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
   @@unique([galleryId, mediaId])
   @@index([galleryId, order])
   @@index([mediaId])
@@ -1120,8 +1122,8 @@ model pricingPageSettings {
 
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  formId Int?
-  form   form? @relation(fields: [formId], references: [id], onDelete: SetNull)
+  // formId Int?
+  // form   form? @relation(fields: [formId], references: [id], onDelete: SetNull)
 }
 
 // ── popup module ─────────────────────────────────────────
@@ -1187,25 +1189,25 @@ enum AccordionStatus {
 }
 
 model Accordion {
-  id              Int             @id @default(autoincrement())
-  tenantId        Int
-  name            String
-  identifier      String          @unique
-  status          AccordionStatus @default(DRAFT)
-  css             String          @db.LongText
-  settings        Json?
-  icons           Json?
-  wrapperClass    String?
-  itemClass       String?
-  questionClass   String?
-  answerClass     String?
-  iconClass       String?
-  pageId          Int?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  tenant          tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  page            page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
-  items           AccordionItem[]
+  id            Int             @id @default(autoincrement())
+  tenantId      Int
+  name          String
+  identifier    String          @unique
+  status        AccordionStatus @default(DRAFT)
+  css           String          @db.LongText
+  settings      Json?
+  icons         Json?
+  wrapperClass  String?
+  itemClass     String?
+  questionClass String?
+  answerClass   String?
+  iconClass     String?
+  pageId        Int?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  tenant        tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  page          page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  items         AccordionItem[]
 
   @@index([tenantId, status])
   @@index([tenantId, updatedAt])
@@ -1213,15 +1215,15 @@ model Accordion {
 }
 
 model AccordionItem {
-  id            Int       @id @default(autoincrement())
-  accordionId   Int
-  question      String
-  answer        String    @db.LongText
-  customClass   String?
-  sortOrder     Int       @default(0)
-  accordion     Accordion @relation(fields: [accordionId], references: [id], onDelete: Cascade)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          Int       @id @default(autoincrement())
+  accordionId Int
+  question    String
+  answer      String    @db.LongText
+  customClass String?
+  sortOrder   Int       @default(0)
+  accordion   Accordion @relation(fields: [accordionId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([accordionId, sortOrder])
 }
@@ -1615,8 +1617,6 @@ model comment {
 }
 
 // --- MODULE:comments END ---
-
-
 
 // --- MODULE:search START ---
 model SearchConfiguration {

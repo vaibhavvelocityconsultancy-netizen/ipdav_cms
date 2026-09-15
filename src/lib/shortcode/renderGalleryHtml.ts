@@ -14,22 +14,43 @@ type Gallery = {
 };
 
 const escape = (value: unknown = "") =>
-  String(value).replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[char] ?? char));
+  String(value).replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char] ?? char,
+  );
 
 export async function renderGalleryShortcodes(html: string): Promise<string> {
   const pattern = /\[gallery\s+([^\]]+)\]/gi;
   let output = html;
   for (const match of [...html.matchAll(pattern)]) {
     const attrs = Object.fromEntries(
-      [...match[1].matchAll(/(\w+)=(["'])([^"']+)\2/g)].map((item) => [item[1], item[3]]),
+      [...match[1].matchAll(/(\w+)=(["'])([^"']+)\2/g)].map((item) => [
+        item[1],
+        item[3],
+      ]),
     );
     const gallery = await prisma.gallery.findFirst({
       where: { id: Number(attrs.id) },
-      include: { images: { include: { media: true }, orderBy: { order: "asc" } } },
+      include: {
+        images: { include: { media: true }, orderBy: { order: "asc" } },
+      },
     });
-    output = output.replace(match[0], gallery ? renderGalleryHtml(gallery as Gallery, Number(attrs.columns) || gallery.columns) : "");
+    output = output.replace(
+      match[0],
+      gallery
+        ? renderGalleryHtml(
+            gallery as Gallery,
+            Number(attrs.columns) || gallery.columns,
+          )
+        : "",
+    );
   }
   return output;
 }
@@ -37,13 +58,182 @@ export async function renderGalleryShortcodes(html: string): Promise<string> {
 export function renderGalleryHtml(gallery: Gallery, columns = 3): string {
   const id = `gallery-${gallery.id}`;
   const safeColumns = Math.min(6, Math.max(1, Number(columns) || 3));
-  const categories = [...new Set(gallery.images.map((image) => image.category?.trim()).filter(Boolean) as string[])];
-  const filters = gallery.categoriesEnabled && categories.length
-    ? `<div class="cms-gallery-filters" role="group" aria-label="Filter gallery categories"><button type="button" class="cms-gallery-filter is-active" data-gallery-filter="all">All</button>${categories.map((category) => `<button type="button" class="cms-gallery-filter" data-gallery-filter="${escape(category)}">${escape(category)}</button>`).join("")}</div>`
-    : "";
-  const images = gallery.images.map((image, index) => {
-    const label = image.caption || image.media.altText || image.media.originalName || "Gallery image";
-    return `<button type="button" class="cms-gallery-item" data-gallery-index="${index}" data-category="${escape(image.category || "")}" aria-label="View ${escape(label)}"><span class="cms-gallery-image-wrap"><img src="${escape(image.media.url)}" alt="${escape(label)}" loading="lazy"></span>${image.caption ? `<span class="cms-gallery-caption">${escape(image.caption)}</span>` : ""}</button>`;
-  }).join("");
-  return `<div id="${id}" class="cms-gallery" style="--gallery-columns:${safeColumns}" data-gallery="${id}">${filters}<div class="cms-gallery-grid">${images}</div><div class="cms-gallery-lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview"><button type="button" class="cms-gallery-close" aria-label="Close image preview">×</button><button type="button" class="cms-gallery-prev" aria-label="Previous image">‹</button><figure><img class="cms-gallery-lightbox-image" alt=""><figcaption class="cms-gallery-lightbox-caption"></figcaption></figure><button type="button" class="cms-gallery-next" aria-label="Next image">›</button></div><style>.cms-gallery{margin:1.5rem 0}.cms-gallery-grid{display:grid;grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));gap:1rem}.cms-gallery-item{display:block;width:100%;border:0;background:transparent;padding:0;text-align:left;cursor:pointer;color:inherit}.cms-gallery-image-wrap{display:block;overflow:hidden;border-radius:.75rem;background:#f3f4f6;aspect-ratio:4/3}.cms-gallery-item img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .3s ease}.cms-gallery-item:hover img,.cms-gallery-item:focus-visible img{transform:scale(1.04)}.cms-gallery-caption{display:block;padding:.65rem .15rem;font-size:.95rem}.cms-gallery-filters{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem}.cms-gallery-filter{border:1px solid #d1d5db;border-radius:999px;background:transparent;padding:.45rem .85rem;cursor:pointer;font:inherit}.cms-gallery-filter.is-active,.cms-gallery-filter:hover{background:#111827;color:#fff}.cms-gallery-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:1rem;background:rgb(0 0 0/.92);padding:2rem}.cms-gallery-lightbox[hidden]{display:none}.cms-gallery-lightbox figure{margin:0;text-align:center}.cms-gallery-lightbox-image{display:block;max-width:min(85vw,1100px);max-height:82vh;object-fit:contain}.cms-gallery-lightbox-caption{color:#fff;margin-top:.75rem}.cms-gallery-close,.cms-gallery-prev,.cms-gallery-next{border:0;background:rgb(255 255 255/.15);color:#fff;border-radius:999px;cursor:pointer;font-size:2rem;line-height:1;padding:.25rem .7rem}.cms-gallery-close{position:absolute;right:1rem;top:1rem}.cms-gallery-prev,.cms-gallery-next{flex:0 0 auto}@media(max-width:640px){.cms-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}.cms-gallery-lightbox{padding:1rem}.cms-gallery-prev,.cms-gallery-next{position:absolute;bottom:2rem}.cms-gallery-prev{left:1rem}.cms-gallery-next{right:1rem}}</style><script>(function(){const root=document.getElementById('${id}');if(!root||root.dataset.ready)return;root.dataset.ready='1';const cards=[...root.querySelectorAll('.cms-gallery-item')],box=root.querySelector('.cms-gallery-lightbox'),preview=root.querySelector('.cms-gallery-lightbox-image'),caption=root.querySelector('.cms-gallery-lightbox-caption');let index=0;const visible=()=>cards.filter((card)=>!card.hidden);const show=(next)=>{const list=visible();if(!list.length)return;index=(next+list.length)%list.length;const card=list[index],img=card.querySelector('img');preview.src=img.src;preview.alt=img.alt;caption.textContent=card.querySelector('.cms-gallery-caption')?.textContent||'';box.hidden=false;document.body.style.overflow='hidden'};const close=()=>{box.hidden=true;document.body.style.overflow=''};cards.forEach((card)=>card.addEventListener('click',()=>show(visible().indexOf(card))));root.querySelector('.cms-gallery-close').addEventListener('click',close);root.querySelector('.cms-gallery-prev').addEventListener('click',()=>show(index-1));root.querySelector('.cms-gallery-next').addEventListener('click',()=>show(index+1));box.addEventListener('click',(event)=>{if(event.target===box)close()});document.addEventListener('keydown',(event)=>{if(box.hidden)return;if(event.key==='Escape')close();if(event.key==='ArrowLeft')show(index-1);if(event.key==='ArrowRight')show(index+1)});root.querySelectorAll('.cms-gallery-filter').forEach((filter)=>filter.addEventListener('click',()=>{root.querySelectorAll('.cms-gallery-filter').forEach((item)=>item.classList.remove('is-active'));filter.classList.add('is-active');const category=filter.dataset.galleryFilter;cards.forEach((card)=>{card.hidden=category!=='all'&&card.dataset.category!==category})}))})()</script></div>`;
+  const categories = [
+    ...new Set(
+      gallery.images
+        .map((image) => image.category?.trim())
+        .filter(Boolean) as string[],
+    ),
+  ];
+  const total = gallery.images.length;
+
+  const filters =
+    gallery.categoriesEnabled && categories.length
+      ? `<nav class="cms-gallery-filters" aria-label="Filter gallery categories">
+        <button type="button" class="cms-gallery-filter is-active" data-gallery-filter="all">All</button>
+        ${categories.map((category) => `<button type="button" class="cms-gallery-filter" data-gallery-filter="${escape(category)}">${escape(category)}</button>`).join("")}
+      </nav>`
+      : "";
+
+  const images = gallery.images
+    .map((image, index) => {
+      const label =
+        image.caption ||
+        image.media.altText ||
+        image.media.originalName ||
+        "Gallery image";
+      return `<figure class="cms-gallery-item" data-category="${escape(image.category || "")}">
+      <button type="button" class="cms-gallery-frame" data-gallery-index="${index}" aria-label="View ${escape(label)}">
+        <img src="${escape(image.media.url)}" alt="${escape(label)}" loading="lazy">
+      </button>
+      ${image.caption ? `<figcaption class="cms-gallery-caption">${escape(image.caption)}</figcaption>` : ""}
+    </figure>`;
+    })
+    .join("");
+
+  return `<div id="${id}" class="cms-gallery" style="--gallery-columns:${safeColumns}" data-gallery="${id}">
+    ${filters}
+    <div class="cms-gallery-grid">${images}</div>
+    <div class="cms-gallery-lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview">
+      <div class="cms-gallery-lightbox-bar">
+        <span class="cms-gallery-count"><span data-gallery-current>1</span> / ${total}</span>
+        <button type="button" class="cms-gallery-close" aria-label="Close image preview">Close</button>
+      </div>
+      <div class="cms-gallery-lightbox-body">
+        <button type="button" class="cms-gallery-nav cms-gallery-prev" aria-label="Previous image">‹</button>
+        <figure>
+          <img class="cms-gallery-lightbox-image" alt="">
+          <figcaption class="cms-gallery-lightbox-caption"></figcaption>
+        </figure>
+        <button type="button" class="cms-gallery-nav cms-gallery-next" aria-label="Next image">›</button>
+      </div>
+    </div>
+    <style>
+      .cms-gallery{
+        --gallery-ink:#1a1a18;
+        --gallery-muted:#6b6a66;
+        --gallery-border:#dcdad4;
+        --gallery-surface:#f6f5f2;
+        margin:2rem 0;
+        color:var(--gallery-ink);
+      }
+      .cms-gallery-filters{
+        display:flex;
+        flex-wrap:wrap;
+        align-items:center;
+        gap:0;
+        margin-bottom:1.5rem;
+        border-bottom:1px solid var(--gallery-border);
+        padding-bottom:.75rem;
+      }
+      .cms-gallery-filter{
+        border:0;
+        background:transparent;
+        color:var(--gallery-muted);
+        font:inherit;
+        font-size:.9rem;
+        cursor:pointer;
+        padding:.25rem .75rem;
+        border-left:1px solid var(--gallery-border);
+        line-height:1;
+      }
+      .cms-gallery-filter:first-child{border-left:0;padding-left:0}
+      .cms-gallery-filter:hover{color:var(--gallery-ink)}
+      .cms-gallery-filter.is-active{color:var(--gallery-ink);font-weight:600;text-decoration:underline;text-underline-offset:.3em}
+      .cms-gallery-grid{
+        display:grid;
+        grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));
+        gap:1.75rem 1.25rem;
+      }
+      .cms-gallery-item{margin:0}
+      .cms-gallery-frame{
+        display:block;
+        width:100%;
+        border:1px solid var(--gallery-border);
+        background:var(--gallery-surface);
+        padding:.4rem;
+        cursor:zoom-in;
+      }
+      .cms-gallery-frame img{
+        display:block;
+        width:100%;
+        aspect-ratio:4/5;
+        object-fit:cover;
+        transition:transform .35s ease;
+      }
+      .cms-gallery-frame:hover img,
+      .cms-gallery-frame:focus-visible img{transform:scale(1.03)}
+      .cms-gallery-frame:focus-visible{outline:2px solid var(--gallery-ink);outline-offset:2px}
+      .cms-gallery-caption{
+        margin-top:.6rem;
+        padding-top:.6rem;
+        border-top:1px solid var(--gallery-border);
+        font-size:.85rem;
+        color:var(--gallery-muted);
+      }
+      .cms-gallery-lightbox{
+        position:fixed;
+        inset:0;
+        z-index:9999;
+        display:flex;
+        flex-direction:column;
+        background:#0e0e0d;
+      }
+      .cms-gallery-lightbox[hidden]{display:none}
+      .cms-gallery-lightbox-bar{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:1rem 1.25rem;
+        color:#e9e8e4;
+        font-size:.85rem;
+      }
+      .cms-gallery-close{
+        border:1px solid rgb(255 255 255/.3);
+        background:transparent;
+        color:inherit;
+        font:inherit;
+        padding:.4rem .9rem;
+        cursor:pointer;
+      }
+      .cms-gallery-close:hover{border-color:rgb(255 255 255/.7)}
+      .cms-gallery-lightbox-body{
+        flex:1;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:1.5rem;
+        padding:0 1.5rem 2rem;
+        min-height:0;
+      }
+      .cms-gallery-lightbox-body figure{margin:0;min-width:0;text-align:center}
+      .cms-gallery-lightbox-image{
+        display:block;
+        max-width:min(82vw,1100px);
+        max-height:72vh;
+        object-fit:contain;
+        margin:0 auto;
+      }
+      .cms-gallery-lightbox-caption{color:#c9c8c3;margin-top:1rem;font-size:.9rem}
+      .cms-gallery-nav{
+        flex:0 0 auto;
+        border:0;
+        background:transparent;
+        color:#e9e8e4;
+        font-size:2.25rem;
+        line-height:1;
+        cursor:pointer;
+        padding:.25rem .5rem;
+      }
+      .cms-gallery-nav:hover{color:#fff}
+      @media(prefers-reduced-motion:reduce){
+        .cms-gallery-frame img{transition:none}
+      }
+      @media(max-width:640px){
+        .cms-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem .75rem}
+        .cms-gallery-lightbox-body{padding:0 .5rem 1.5rem;gap:.5rem}
+        .cms-gallery-nav{font-size:1.75rem}
+      }
+    </style>
+  </div>`;
 }
