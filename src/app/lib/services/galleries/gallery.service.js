@@ -14,7 +14,12 @@ export const getGalleryById = (id, tenantId) => prisma.gallery.findFirst({ where
 export async function createGallery(input, tenantId) {
   const title = String(input.title || "Untitled gallery").trim();
   const slug = String(input.slug || title).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return prisma.gallery.create({ data: { tenantId, title, slug, columns: Math.min(6, Math.max(1, Number(input.columns) || 3)), images: { create: await imageRows(input.mediaIds || [], tenantId) } }, include });
+  const requestedImages = Array.isArray(input.images) ? input.images : (input.mediaIds || []).map((mediaId) => ({ mediaId }));
+  const ids = [...new Set(requestedImages.map((image) => Number(image.mediaId)).filter(Number.isInteger))];
+  const media = await prisma.media.findMany({ where: { id: { in: ids }, tenantId }, select: { id: true } });
+  const valid = new Set(media.map((item) => item.id));
+  const imageRows = requestedImages.filter((image) => valid.has(Number(image.mediaId))).map((image, index) => ({ mediaId: Number(image.mediaId), order: index, caption: String(image.caption || "") }));
+  return prisma.gallery.create({ data: { tenantId, title, slug, columns: Math.min(6, Math.max(1, Number(input.columns) || 3)), images: { create: imageRows } }, include });
 }
 async function imageRows(mediaIds, tenantId) {
   const ids = [...new Set(mediaIds.map(Number).filter(Number.isInteger))];
@@ -22,8 +27,20 @@ async function imageRows(mediaIds, tenantId) {
   return media.map((item, index) => ({ mediaId: item.id, order: index }));
 }
 export async function updateGallery(id, input, tenantId) {
-  const gallery = await prisma.gallery.findFirst({ where: { id: Number(id), tenantId } }); if (!gallery) return null;
-  return prisma.gallery.update({ where: { id: gallery.id }, data: { ...(input.title !== undefined ? { title: String(input.title).trim() } : {}), ...(input.slug !== undefined ? { slug: String(input.slug).trim() } : {}), ...(input.columns !== undefined ? { columns: Math.min(6, Math.max(1, Number(input.columns) || 3)) } : {}) }, include });
+  const gallery = await prisma.gallery.findFirst({ where: { id: Number(id), tenantId }, include: { images: true } }); if (!gallery) return null;
+  const columns = input.columns === undefined ? gallery.columns : Math.min(6, Math.max(1, Number(input.columns) || 3));
+  const data = { ...(input.title !== undefined ? { title: String(input.title).trim() } : {}), ...(input.slug !== undefined ? { slug: String(input.slug).trim() } : {}), columns };
+  if (!Array.isArray(input.images)) return prisma.gallery.update({ where: { id: gallery.id }, data, include });
+  const requested = [...new Map(input.images.map((image, index) => [Number(image.mediaId), { mediaId: Number(image.mediaId), order: index, caption: String(image.caption || "") }])).values()].filter((image) => Number.isInteger(image.mediaId));
+  const validMedia = await prisma.media.findMany({ where: { id: { in: requested.map((image) => image.mediaId) }, tenantId }, select: { id: true } });
+  const valid = new Set(validMedia.map((media) => media.id));
+  const rows = requested.filter((image) => valid.has(image.mediaId));
+  await prisma.$transaction(async (tx) => {
+    await tx.gallery.update({ where: { id: gallery.id }, data });
+    await tx.galleryImage.deleteMany({ where: { galleryId: gallery.id } });
+    if (rows.length) await tx.galleryImage.createMany({ data: rows.map((image) => ({ galleryId: gallery.id, mediaId: image.mediaId, order: image.order, caption: image.caption })) });
+  });
+  return getGalleryById(id, tenantId);
 }
 export async function deleteGallery(id, tenantId) { return prisma.gallery.deleteMany({ where: { id: Number(id), tenantId } }); }
 export async function addImagesToGallery(id, mediaIds, tenantId) {
