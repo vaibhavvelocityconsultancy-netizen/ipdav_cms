@@ -62,11 +62,13 @@ export default function GalleryRuntime() {
           handlers.push([element, type, handler]);
         };
 
-        cards.forEach((card) =>
-          listen(card.querySelector(".cms-gallery-frame"), "click", () =>
-            show(card),
-          ),
-        );
+        listen(root, "click", (event) => {
+          const target = event.target as HTMLElement;
+          const frame = target.closest<HTMLElement>(".cms-gallery-frame");
+          if (!frame || !root.contains(frame)) return;
+          const card = frame.closest<HTMLElement>(".cms-gallery-item");
+          if (card) show(card);
+        });
         listen(root.querySelector(".cms-gallery-close"), "click", close);
         listen(lightbox, "click", (event) => {
           if (event.target === lightbox) close();
@@ -106,7 +108,7 @@ export default function GalleryRuntime() {
       observer.disconnect();
       cleanupFunctions.forEach((cleanup) => cleanup());
     };
-  });
+  }, []);
 
   return null;
 }
