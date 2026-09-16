@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE `page` ADD COLUMN `order` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `parentId` INTEGER NULL,
+    ADD COLUMN `template` VARCHAR(191) NOT NULL DEFAULT 'default';
+
+-- AddForeignKey
+ALTER TABLE `page` ADD CONSTRAINT `page_parentId_fkey` FOREIGN KEY (`parentId`) REFERENCES `page`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

@@ -23,39 +23,32 @@ export default function GalleryRuntime() {
         const caption = root.querySelector<HTMLElement>(
           ".cms-gallery-lightbox-caption",
         );
-        const counter = root.querySelector<HTMLElement>(
-          "[data-gallery-current]",
-        );
+        let previouslyFocused: HTMLElement | null = null;
 
-        if (!lightbox || !preview || !caption || !counter) return;
+        if (!lightbox || !preview || !caption) return;
 
-        let index = 0;
-        const visible = () => cards.filter((card) => !card.hidden);
-        const show = (next: number) => {
-          const list = visible();
-          if (!list.length) return;
-          index = (next + list.length) % list.length;
-          const card = list[index];
+        const show = (card: HTMLElement) => {
           const image = card.querySelector<HTMLImageElement>("img");
           if (!image) return;
+          previouslyFocused = document.activeElement as HTMLElement | null;
           preview.src = image.src;
           preview.alt = image.alt;
           caption.textContent =
             card.querySelector<HTMLElement>(".cms-gallery-caption")
               ?.textContent || "";
-          counter.textContent = String(index + 1);
           lightbox.hidden = false;
           document.body.style.overflow = "hidden";
+          root.querySelector<HTMLButtonElement>(".cms-gallery-close")?.focus();
         };
         const close = () => {
           lightbox.hidden = true;
           document.body.style.overflow = "";
+          previouslyFocused?.focus();
+          previouslyFocused = null;
         };
         const onKeyDown = (event: KeyboardEvent) => {
           if (lightbox.hidden) return;
           if (event.key === "Escape") close();
-          if (event.key === "ArrowLeft") show(index - 1);
-          if (event.key === "ArrowRight") show(index + 1);
         };
 
         const handlers: Array<[Element, string, EventListener]> = [];
@@ -71,16 +64,10 @@ export default function GalleryRuntime() {
 
         cards.forEach((card) =>
           listen(card.querySelector(".cms-gallery-frame"), "click", () =>
-            show(visible().indexOf(card)),
+            show(card),
           ),
         );
         listen(root.querySelector(".cms-gallery-close"), "click", close);
-        listen(root.querySelector(".cms-gallery-prev"), "click", () =>
-          show(index - 1),
-        );
-        listen(root.querySelector(".cms-gallery-next"), "click", () =>
-          show(index + 1),
-        );
         listen(lightbox, "click", (event) => {
           if (event.target === lightbox) close();
         });

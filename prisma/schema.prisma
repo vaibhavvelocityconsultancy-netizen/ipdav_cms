@@ -103,9 +103,9 @@ model tenant {
 
   searchConfigurations SearchConfiguration[]
   popups               Popup[]
-  accordions            Accordion[]
-  galleries             Gallery[]
-  aiConversations       AIConversation[]
+  accordions           Accordion[]
+  galleries            Gallery[]
+  aiConversations      AIConversation[]
 }
 
 model user {
@@ -135,7 +135,7 @@ model user {
   uploadedFiles     UploadedFile[]
   fileShares        FileShareLink[]
 
-  comments comment[] @relation("UserComments")
+  comments        comment[]        @relation("UserComments")
   aiConversations AIConversation[]
 }
 
@@ -188,12 +188,12 @@ model page {
   seoData           Json?
   sitemapEnabled    Boolean @default(true)
   componentSettings Json?
-  parentId           Int?
-  order              Int      @default(0)
-  template           String   @default("default")
+  parentId          Int?
+  order             Int     @default(0)
+  template          String  @default("default")
 
-  parent   page?      @relation("PageParent", fields: [parentId], references: [id], onDelete: SetNull)
-  children page[]     @relation("PageParent")
+  parent   page?  @relation("PageParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children page[] @relation("PageParent")
 
   sitemapPriority      Decimal                @default(0.8) @db.Decimal(2, 1)
   sitemapChangeFreq    sitemapChangeFrequency @default(WEEKLY)
@@ -1436,18 +1436,19 @@ model EmailSettings {
 }
 
 model EmailLog {
-  id            String    @id @default(cuid())
+  id            String         @id @default(cuid())
   templateId    String?
+  template      EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   triggerEvent  String
   recipientType String
   emailTo       String
   subject       String
   status        String
   provider      String
-  error         String?   @db.Text
+  error         String?        @db.Text
   metadata      Json?
   sentAt        DateTime?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime       @default(now())
 }
 
 model AIConversation {
@@ -1458,8 +1459,8 @@ model AIConversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     user        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant   tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages AIMessage[]
 
   @@index([tenantId, updatedAt])
@@ -1467,12 +1468,12 @@ model AIConversation {
 }
 
 model AIMessage {
-  id             String         @id @default(cuid())
+  id             String   @id @default(cuid())
   conversationId String
   role           String
-  content        String         @db.LongText
+  content        String   @db.LongText
   metadata       Json?
-  createdAt      DateTime       @default(now())
+  createdAt      DateTime @default(now())
 
   conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 

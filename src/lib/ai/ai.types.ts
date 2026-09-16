@@ -3,7 +3,10 @@ export type AIContext = {
   currentEntityId?: string | number;
   currentUrl?: string;
 };
-
+export type AIToolCall = {
+  name: string;
+  arguments: Record<string, any>;
+};
 export type AIAttachment = {
   name: string;
   type: string;
@@ -21,7 +24,11 @@ export type AIChatParams = {
 export type AIResponse = {
   content: string;
   status: "ready" | "not_configured" | "error";
-  pendingAction?: { tool: string; summary: string; risk: "READ" | "LOW" | "MEDIUM" | "HIGH" };
+  pendingAction?: {
+    tool: string;
+    summary: string;
+    risk: "READ" | "LOW" | "MEDIUM" | "HIGH";
+  };
 };
 
 export interface AIProvider {

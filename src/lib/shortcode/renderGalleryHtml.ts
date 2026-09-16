@@ -65,8 +65,6 @@ export function renderGalleryHtml(gallery: Gallery, columns = 3): string {
         .filter(Boolean) as string[],
     ),
   ];
-  const total = gallery.images.length;
-
   const filters =
     gallery.categoriesEnabled && categories.length
       ? `<nav class="cms-gallery-filters" aria-label="Filter gallery categories">
@@ -96,16 +94,13 @@ export function renderGalleryHtml(gallery: Gallery, columns = 3): string {
     <div class="cms-gallery-grid">${images}</div>
     <div class="cms-gallery-lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview">
       <div class="cms-gallery-lightbox-bar">
-        <span class="cms-gallery-count"><span data-gallery-current>1</span> / ${total}</span>
         <button type="button" class="cms-gallery-close" aria-label="Close image preview">Close</button>
       </div>
       <div class="cms-gallery-lightbox-body">
-        <button type="button" class="cms-gallery-nav cms-gallery-prev" aria-label="Previous image">‹</button>
         <figure>
           <img class="cms-gallery-lightbox-image" alt="">
           <figcaption class="cms-gallery-lightbox-caption"></figcaption>
         </figure>
-        <button type="button" class="cms-gallery-nav cms-gallery-next" aria-label="Next image">›</button>
       </div>
     </div>
     <style>
@@ -177,14 +172,18 @@ export function renderGalleryHtml(gallery: Gallery, columns = 3): string {
         z-index:9999;
         display:flex;
         flex-direction:column;
-        background:#0e0e0d;
+        align-items:center;
+        justify-content:center;
+        padding:1rem;
+        background:rgb(14 14 13/.78);
       }
       .cms-gallery-lightbox[hidden]{display:none}
       .cms-gallery-lightbox-bar{
         display:flex;
         align-items:center;
         justify-content:space-between;
-        padding:1rem 1.25rem;
+        width:min(100%,1100px);
+        padding:0 0 .5rem;
         color:#e9e8e4;
         font-size:.85rem;
       }
@@ -198,13 +197,14 @@ export function renderGalleryHtml(gallery: Gallery, columns = 3): string {
       }
       .cms-gallery-close:hover{border-color:rgb(255 255 255/.7)}
       .cms-gallery-lightbox-body{
-        flex:1;
+        width:min(100%,1100px);
         display:flex;
         align-items:center;
         justify-content:center;
-        gap:1.5rem;
-        padding:0 1.5rem 2rem;
-        min-height:0;
+        padding:1rem;
+        border:1px solid rgb(255 255 255/.16);
+        background:#0e0e0d;
+        box-shadow:0 1.5rem 4rem rgb(0 0 0/.35);
       }
       .cms-gallery-lightbox-body figure{margin:0;min-width:0;text-align:center}
       .cms-gallery-lightbox-image{
@@ -215,24 +215,13 @@ export function renderGalleryHtml(gallery: Gallery, columns = 3): string {
         margin:0 auto;
       }
       .cms-gallery-lightbox-caption{color:#c9c8c3;margin-top:1rem;font-size:.9rem}
-      .cms-gallery-nav{
-        flex:0 0 auto;
-        border:0;
-        background:transparent;
-        color:#e9e8e4;
-        font-size:2.25rem;
-        line-height:1;
-        cursor:pointer;
-        padding:.25rem .5rem;
-      }
-      .cms-gallery-nav:hover{color:#fff}
       @media(prefers-reduced-motion:reduce){
         .cms-gallery-frame img{transition:none}
       }
       @media(max-width:640px){
         .cms-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem .75rem}
-        .cms-gallery-lightbox-body{padding:0 .5rem 1.5rem;gap:.5rem}
-        .cms-gallery-nav{font-size:1.75rem}
+        .cms-gallery-lightbox{padding:.75rem}
+        .cms-gallery-lightbox-body{padding:.5rem}
       }
     </style>
   </div>`;
