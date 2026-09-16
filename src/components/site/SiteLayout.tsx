@@ -9,9 +9,10 @@ import SiteNavbar from "./siteNavbar";
 import SiteFooter from "./SiteFooter";
 import PopupRuntime from "./PopupRuntime";
 import AccordionRuntime from "./AccordionRuntime";
-import GalleryRuntime from "./GalleryRuntime";
+import CookieConsent from "./CookieConsent";
 
 import AnalyticsScripts from "./AnalyticsScripts";
+import GalleryRuntime from "./GalleryRuntime";
 
 const DEFAULT_FOOTER_SETTINGS = {
   footerLogo: "",
@@ -195,6 +196,7 @@ export default function SiteLayout({
       <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
       <PopupRuntime />
       <AccordionRuntime />
+      <CookieConsent />
       <GalleryRuntime />
 
       {breadcrumbSettings?.customCss && (
