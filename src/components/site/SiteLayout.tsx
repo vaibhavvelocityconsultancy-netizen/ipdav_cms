@@ -9,6 +9,7 @@ import SiteNavbar from "./siteNavbar";
 import SiteFooter from "./SiteFooter";
 import PopupRuntime from "./PopupRuntime";
 import AccordionRuntime from "./AccordionRuntime";
+import CookieConsent from "./CookieConsent";
 
 import AnalyticsScripts from "./AnalyticsScripts";
 
@@ -194,6 +195,7 @@ export default function SiteLayout({
       <AnalyticsScripts analytics={bootstrapData?.data?.analyticsSettings} />
       <PopupRuntime />
       <AccordionRuntime />
+      <CookieConsent />
 
       {breadcrumbSettings?.customCss && (
         <style

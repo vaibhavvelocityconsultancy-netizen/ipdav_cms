@@ -45,6 +45,7 @@ import {
   Mail,
   Share2,
   Download,
+  Cookie,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -296,6 +297,13 @@ const adminNavItems: NavItem[] = [
         icon: Layout,
         description: "Site configuration",
         href: "/admin/settings",
+      },
+      {
+        id: "cookie-consent",
+        label: "Cookie Consent",
+        icon: Cookie,
+        description: "Manage visitor cookie preferences",
+        href: "/admin/cookie-consent",
       },
       {
         id: "import-export",

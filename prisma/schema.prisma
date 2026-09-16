@@ -106,6 +106,9 @@ model tenant {
   accordions            Accordion[]
   galleries             Gallery[]
   aiConversations       AIConversation[]
+  cookieConsentSettings CookieConsentSettings?
+  cookieCategories      CookieCategory[]
+  cookieDefinitions     CookieDefinition[]
 }
 
 model user {
@@ -1475,6 +1478,61 @@ model AIMessage {
   conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+model CookieConsentSettings {
+  id              String   @id @default(cuid())
+  tenantId        Int      @unique
+  enabled         Boolean  @default(false)
+  consentVersion  String   @default("1")
+  bannerTitle     String   @default("We use cookies")
+  bannerDescription String @db.Text @default("We use cookies to improve your experience and understand how our site is used.")
+  position        String   @default("bottom")
+  acceptAllText   String   @default("Accept All")
+  rejectAllText   String   @default("Reject All")
+  customizeText  String   @default("Customize")
+  privacyPolicyUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model CookieCategory {
+  id          String   @id @default(cuid())
+  tenantId    Int
+  name        String
+  slug        String
+  description String?  @db.Text
+  required    Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cookies CookieDefinition[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, sortOrder])
+}
+
+model CookieDefinition {
+  id          String   @id @default(cuid())
+  tenantId    Int
+  categoryId  String
+  name        String
+  provider    String?
+  description String?  @db.Text
+  duration    String?
+  pattern     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category CookieCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, categoryId])
 }
 
 // --- MODULE:seo START ---
