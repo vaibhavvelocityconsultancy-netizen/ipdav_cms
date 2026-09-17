@@ -46,6 +46,7 @@ import {
   Share2,
   Download,
   Cookie,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
