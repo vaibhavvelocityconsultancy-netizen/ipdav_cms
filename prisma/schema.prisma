@@ -37,6 +37,12 @@ enum status {
   @@map("post_status")
 }
 
+enum mediaOptimizationStatus {
+  PENDING
+  OPTIMIZED
+  FAILED
+}
+
 enum sitemapChangeFrequency {
   ALWAYS
   HOURLY
@@ -54,16 +60,17 @@ model tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users          user[]
-  pages          page[]
-  menus          menu[]
-  posts          post[]
-  collections    collection[]
-  sitesettings   sitesettings?
-  footersettings footersettings[]
-  categories     category[]
-  tags           tag[]
-  media          media[]
+  users                     user[]
+  pages                     page[]
+  menus                     menu[]
+  posts                     post[]
+  collections               collection[]
+  sitesettings              sitesettings?
+  footersettings            footersettings[]
+  categories                category[]
+  tags                      tag[]
+  media                     media[]
+  imageOptimizationSettings ImageOptimizationSettings?
 
   NavbarConfig      NavbarConfig?
   footerConfig      FooterConfig?
@@ -101,8 +108,8 @@ model tenant {
   internalLinkRules InternalLinkRule[]
   // forms             form[]
 
-  searchConfigurations SearchConfiguration[]
-  popups               Popup[]
+  searchConfigurations  SearchConfiguration[]
+  popups                Popup[]
   accordions            Accordion[]
   galleries             Gallery[]
   aiConversations       AIConversation[]
@@ -316,22 +323,34 @@ model tag {
 }
 
 model media {
-  id           Int      @id @default(autoincrement())
-  fileName     String
-  originalName String
-  url          String
-  publicId     String?  @db.VarChar(255)
-  mimeType     String
-  size         Int
-  width        Int?
-  height       Int?
-  altText      String?
-  title        String?
-  caption      String?  @db.Text
-  description  String?  @db.Text
-  createdAt    DateTime @default(now())
-  tenantId     Int
-  collectionId Int?
+  id                 Int                     @id @default(autoincrement())
+  fileName           String
+  originalName       String
+  url                String
+  publicId           String?                 @db.VarChar(255)
+  mimeType           String
+  size               Int
+  width              Int?
+  height             Int?
+  originalFormat     String?
+  optimizedFormat    String?
+  originalSize       Int?
+  optimizedSize      Int?
+  compressionPercent Float?
+  originalWidth      Int?
+  originalHeight     Int?
+  optimizedWidth     Int?
+  optimizedHeight    Int?
+  optimizationStatus mediaOptimizationStatus @default(PENDING)
+  optimizedAt        DateTime?
+  optimizationError  String?                 @db.Text
+  altText            String?
+  title              String?
+  caption            String?                 @db.Text
+  description        String?                 @db.Text
+  createdAt          DateTime                @default(now())
+  tenantId           Int
+  collectionId       Int?
 
   tenant        tenant         @relation(fields: [tenantId], references: [id])
   collection    collection?    @relation(fields: [collectionId], references: [id])
@@ -339,6 +358,20 @@ model media {
 
   @@index([tenantId])
   @@index([collectionId])
+}
+
+model ImageOptimizationSettings {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int      @unique
+  automatic    Boolean  @default(true)
+  compression  Boolean  @default(true)
+  quality      Int      @default(80)
+  maxWidth     Int      @default(1920)
+  maxHeight    Int      @default(1080)
+  keepOriginal Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant       tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Gallery {
@@ -1484,19 +1517,19 @@ model AIMessage {
 }
 
 model CookieConsentSettings {
-  id              String   @id @default(cuid())
-  tenantId        Int      @unique
-  enabled         Boolean  @default(false)
-  consentVersion  String   @default("1")
-  bannerTitle     String   @default("We use cookies")
-  bannerDescription String @db.Text @default("We use cookies to improve your experience and understand how our site is used.")
-  position        String   @default("bottom")
-  acceptAllText   String   @default("Accept All")
-  rejectAllText   String   @default("Reject All")
-  customizeText  String   @default("Customize")
-  privacyPolicyUrl String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  tenantId          Int      @unique
+  enabled           Boolean  @default(false)
+  consentVersion    String   @default("1")
+  bannerTitle       String   @default("We use cookies")
+  bannerDescription String   @default("We use cookies to improve your experience and understand how our site is used.") @db.Text
+  position          String   @default("bottom")
+  acceptAllText     String   @default("Accept All")
+  rejectAllText     String   @default("Reject All")
+  customizeText     String   @default("Customize")
+  privacyPolicyUrl  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
@@ -1513,7 +1546,7 @@ model CookieCategory {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant  tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   cookies CookieDefinition[]
 
   @@unique([tenantId, slug])
@@ -1532,7 +1565,7 @@ model CookieDefinition {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category CookieCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, categoryId])

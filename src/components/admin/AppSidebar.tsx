@@ -170,6 +170,13 @@ const adminNavItems: NavItem[] = [
         description: "View all media",
         href: "/admin/media",
       },
+      {
+        id: "image-optimization",
+        label: "Image Optimization",
+        icon: Zap,
+        description: "Compress and optimize images",
+        href: "/admin/media/optimization",
+      },
       // {
       //   id: "navbar-config",
       //   label: "Navbar Config",

@@ -239,6 +239,17 @@
 
           // Store optimized file size
           size: finalBuffer.length,
+          originalFormat: file.type,
+          optimizedFormat: file.type === "image/jpeg" || file.type === "image/png" || file.type === "image/webp" ? "image/webp" : file.type,
+          originalSize: buffer.length,
+          optimizedSize: finalBuffer.length,
+          compressionPercent: buffer.length > 0 ? Number((((buffer.length - finalBuffer.length) / buffer.length) * 100).toFixed(2)) : 0,
+          originalWidth: width,
+          originalHeight: height,
+          optimizedWidth: width,
+          optimizedHeight: height,
+          optimizationStatus: file.type.startsWith("image/") ? "OPTIMIZED" : "PENDING",
+          optimizedAt: file.type.startsWith("image/") ? new Date() : null,
 
           width,
           height,
