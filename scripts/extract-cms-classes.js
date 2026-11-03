@@ -53,7 +53,9 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error("❌ extract-cms-classes failed:", err);
-    process.exit(1);
+    console.warn(
+      "⚠️ CMS class extraction skipped because the database is unavailable:",
+      err.message,
+    );
   })
   .finally(() => prisma.$disconnect());

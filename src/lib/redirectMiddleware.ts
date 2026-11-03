@@ -19,14 +19,19 @@ function getBaseUrl() {
   return "https://ipdav.com/newweb";
 }
 
+let refreshing = false;
+
 /**
- * Fetch redirects from API (edge runtime safe)
+ * Fetch redirects from API. Never blocks a request for long.
  */
 async function refreshRedirectCache() {
+  if (refreshing) return;
+  refreshing = true;
   try {
     const baseUrl = getBaseUrl();
     const response = await fetch(`${baseUrl}/api/redirects/active`, {
       cache: "no-store",
+      signal: AbortSignal.timeout(2000),
     });
 
     if (!response.ok) {
@@ -41,23 +46,24 @@ async function refreshRedirectCache() {
       redirectsCache.set(key, r);
     });
 
-    cacheLastUpdated = Date.now();
     console.log(
       `✓ Redirect cache updated: ${redirects.length} active redirects`,
     );
   } catch (error) {
     console.error("Failed to refresh redirect cache:", error);
+  } finally {
+    cacheLastUpdated = Date.now();
+    refreshing = false;
   }
 }
 
 /**
- * Get or refresh cache if expired
+ * Refresh in the background if the cache is old. Requests never wait for it.
  */
-async function getRedirects(forceRefresh = false) {
-  if (forceRefresh || Date.now() - cacheLastUpdated > CACHE_DURATION) {
-    await refreshRedirectCache();
+function ensureFreshCache() {
+  if (Date.now() - cacheLastUpdated > CACHE_DURATION) {
+    void refreshRedirectCache();
   }
-  return redirectsCache;
 }
 
 /**
@@ -79,7 +85,7 @@ export async function applyRedirectMiddleware(request: NextRequest) {
     return undefined;
   }
 
-  const redirects = await getRedirects(true);
+  ensureFreshCache();
   const redirect = findRedirect(pathname);
 
   if (redirect) {
@@ -100,7 +106,7 @@ export async function clearRedirectCache() {
   console.log("[Cache] Clearing redirect cache...");
   redirectsCache.clear();
   cacheLastUpdated = 0;
-  await refreshRedirectCache();
+  void refreshRedirectCache();
 }
 
 /**

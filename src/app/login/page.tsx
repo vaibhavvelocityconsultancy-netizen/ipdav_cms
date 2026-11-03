@@ -97,7 +97,7 @@ export default function LoginPage() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Email</label>
+            <label className="text-sm font-medium text-foreground">Emails</label>
             <input
               type="email"
               value={email}
