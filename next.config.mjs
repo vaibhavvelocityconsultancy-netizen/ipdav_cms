@@ -36,6 +36,7 @@ const nextConfig = {
   experimental: {
     cpus: 1,
     workerThreads: false,
+    webpackBuildWorker: false,
     staticGenerationMaxConcurrency: 1,
     proxyClientMaxBodySize: "100mb",
   },
