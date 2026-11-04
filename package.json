@@ -7,7 +7,7 @@
     "postinstall": "prisma generate",
     "dev": "next dev",
     "prebuild": "node scripts/extract-cms-classes.js",
-    "build": "node scripts/vercel-prebuild.mjs && next build --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "email:dev": "email dev --dir emails"
