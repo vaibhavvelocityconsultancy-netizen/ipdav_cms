@@ -15,6 +15,7 @@ const basePath = getBasePath();
 
 const nextConfig = {
   output: "standalone",
+  outputFileTracingRoot: process.cwd(),
 
   basePath: basePath,
   assetPrefix: basePath || undefined,
