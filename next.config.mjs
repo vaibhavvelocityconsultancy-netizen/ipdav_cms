@@ -33,6 +33,8 @@ const nextConfig = {
   },
 
   experimental: {
+    cpus: 1,
+    workerThreads: false,
     proxyClientMaxBodySize: "100mb",
   },
 };
